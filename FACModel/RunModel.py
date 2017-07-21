@@ -125,7 +125,7 @@ class RunModel():
         ##RK4 oxide thickness calculation (no spalling)
         self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.InnerIronOxThickness, self.Section1.OuterFe3O4Thickness, \
         self.Section1.CoThickness, self.Section1.NiThickness, self.Section1.CorrRate, self.Section1.SolutionOxide.FeTotal, \
-        self.Section1.SolutionOxide.NiTotal, self.Section1.SolutionOxide.CoTotal, self.Section1.SolutionOxide.FeSatFe3O4, \
+        self.Section1.SolutionOxide.NiTotal, self.Section1.SolutionOxide.CoTotal,  \
         self.Section1.SolutionOxide.MixedPotential, self.Section1.SolutionOxide.EqmPotentialFe3O4, self.Section1.MetalOxide.FeTotal, \
         self.Section1.KdFe3O4electrochem =\
             RK4.OxideGrowth(self.Section1, self.Section1.Bulk.FeTotal, self.Section1.Bulk.NiTotal, self.Section1.Bulk.CoTotal, \
@@ -153,11 +153,14 @@ class RunModel():
 #        
 
 
+##Plot spalltime and maybe elapsed time alongside (or on different plot) with oxide thicknesses? 
+##Echem plot...mixed potential versus eqm, especially at S/O interface
+
 InnerOx= []         
 import time
 
 start_time = time.time()
-for j in range(500):#nc.SimulationDuration
+for j in range(250):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator, j)
