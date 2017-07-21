@@ -243,7 +243,7 @@ def OxideGrowth(Section, BulkFeTotal, BulkNiTotal, BulkCoTotal, BulkFeSat, Solut
 
     
     return InnerOxThickness, OuterOxThickness, InnerIronOxThickness, OuterFe3O4Thickness, CoThickness, NiThickness, CorrRate, SolutionOxideFeTotal, \
-        SolutionOxideNiTotal, SolutionOxideCoTotal, SolutionOxideFeSat, MixedECP, EqmPotentialFe3O4, MetalOxideFe, KdFe3O4electrochem, KpFe3O4electrochem
+        SolutionOxideNiTotal, SolutionOxideCoTotal, SolutionOxideFeSat, MixedECP, EqmPotentialFe3O4, MetalOxideFe, KdFe3O4electrochem
 
     
 def RK4(Section, InitialThickness, GrowthFunction, approximation):

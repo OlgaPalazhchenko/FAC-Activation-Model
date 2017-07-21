@@ -127,7 +127,7 @@ class RunModel():
         self.Section1.CoThickness, self.Section1.NiThickness, self.Section1.CorrRate, self.Section1.SolutionOxide.FeTotal, \
         self.Section1.SolutionOxide.NiTotal, self.Section1.SolutionOxide.CoTotal, self.Section1.SolutionOxide.FeSatFe3O4, \
         self.Section1.SolutionOxide.MixedPotential, self.Section1.SolutionOxide.EqmPotentialFe3O4, self.Section1.MetalOxide.FeTotal, \
-        self.Section1.KdFe3O4electrochem, self.Section1.KpFe3O4electrochem =\
+        self.Section1.KdFe3O4electrochem =\
             RK4.OxideGrowth(self.Section1, self.Section1.Bulk.FeTotal, self.Section1.Bulk.NiTotal, self.Section1.Bulk.CoTotal, \
             self.Section1.Bulk.FeSatFe3O4, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.NiSatFerrite, \
             self.Section1.SolutionOxide.CoSatFerrite, self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.NiTotal, \
