@@ -108,7 +108,7 @@ def Energy(Section,ExchangeCurrent, Concentration, Acceptor, EquilibriumPotentia
 
 def ECP(Section, FeTotal, FeSatFe3O4, NiTotal, ConcentrationH):
     #if Section==ld.Outlet: print (FeTotal, "echemproblems?")
-  
+   
     ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2 = c.Hydrolysis(Section, FeTotal, NiTotal, ConcentrationH)
     ProductConcentration = Section.MetalOxide.ConcentrationH2
     

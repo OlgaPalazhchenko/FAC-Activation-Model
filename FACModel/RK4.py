@@ -363,8 +363,26 @@ def Spall(Section,j, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4
 #         else: #OuterFe3O4Thickness == 0
 #             InnerOxThickness[i] = InnerIronOxThickness[i] + CoThickness[i] + NiThickness[i]
     
-    for i in range(Section.NodeNumber):
-        if j == 1:
+    for i in range(Section.NodeNumber):    
+#         if Section==ld.Outlet or Section==ld.Inlet or Section==ld.SteamGenerator:
+#             if InnerIronOxThickness[i] <= 1e-6:
+#                 InnerIronOxThickness[i] = 0.00025 #Resets to original thickness (resetting corrosion rate here to ~75 um/a
+#                 #if Section==ld.SteamGenerator:
+#                     #print (i, Section, "too much dissolution")
+            
+        ## Oxide totals for RK4 iterations (M/O Concentration depends on total oxide thickness) and before spalling function
+        if OuterFe3O4Thickness[i]> 0: #from previous time step
+            #With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer  
+            OuterOxThickness[i] = OuterFe3O4Thickness[i] + CoThickness[i] + NiThickness[i]
+            InnerOxThickness[i] = InnerIronOxThickness[i]
+        else: #OuterFe3O4Thickness == 0
+            InnerOxThickness[i] = InnerIronOxThickness[i] + CoThickness[i] + NiThickness[i]
+        
+        
+        
+        
+        
+        if j == 0:
         #First time step call generate particle sizes and calc spalling times, respectively
             x = ParticleSize()
             #Amount of time it will take each node's particle to spall 
@@ -410,7 +428,7 @@ def Spall(Section,j, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4
     
     for i in range(Section.NodeNumber):    
         if Section==ld.Outlet or Section==ld.Inlet or Section==ld.SteamGenerator:
-            if InnerIronOxThickness[i] <= 1e-7:
+            if InnerIronOxThickness[i] <= 1e-6:
                 InnerIronOxThickness[i] = 0.00025 #Resets to original thickness (resetting corrosion rate here to ~75 um/a
                 #if Section==ld.SteamGenerator:
                     #print (i, Section, "too much dissolution")
@@ -426,20 +444,3 @@ def Spall(Section,j, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4
     return InnerIronOxThickness, OuterFe3O4Thickness, CoThickness, NiThickness, InnerOxThickness, OuterOxThickness, Particle, ElapsedTime, SpallTime
 
 
-# b=9
-# def mew(j):
-#     
-#     
-#     if j==0:
-#         b=7
-#     else:
-#         b=1
-#     
-#     a = b+j
-#     return a
-#         
-# for j in range(3):
-#     a=mew(j)
-#     print (a)
-#         
-#         

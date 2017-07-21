@@ -11,7 +11,7 @@ from matplotlib import rc
 rc('mathtext', default='regular')
 
 ##Initial Concentrations 
-#All concentrations are in mol/kg
+#All concentrations in mol/kg
 Sections = [ld.Inlet, ld.Core, ld.Outlet, ld.SteamGenerator] 
 for Section in Sections:
     
@@ -25,14 +25,6 @@ for Section in Sections:
     for Interface in Interfaces:
         Interface.ConcentrationH2 =[nc.H2*nc.H2Density/nc.H2MolarMass]*Section.NodeNumber #makes into array with appropriate # of nodes for that PHTS section
         Interface.ConcentrationH = np.array(c.BulkpHCalculator(Section)).tolist() #from system pH calculation
-            
-#         Interface.NiSatFerrite = Section.SolubilityNi #initial estimate based on non-stoichiometric nickel ferrite solubility (Sandler & Kunig)
-#         Interface.NiSatMetallicNi = Section.SolubilityNi
-#         Interface.NiTotal = Section.SolubilityNi
-#         Interface.CrSat = Section.SolubilityCr
-#         Interface.CoSatFerrite = Section.SolubilityCo
-#         Interface.CrTotal = Section.SolubilityCr
-#         Interface.CoTotal = Section.SolubilityCo
 
         if (Section == ld.Inlet and Interface == Section.SolutionOxide) or (Section == ld.SteamGenerator and Interface == Section.SolutionOxide):
             FeTotal = np.array(Section.SolubilityFe)*0.8
@@ -46,11 +38,7 @@ for Section in Sections:
         if Section == ld.Inlet or Section == ld.Core or Section == ld.Outlet:
             Section.MetalOxide.NiTotal = [0]*Section.NodeNumber
         
-        #Initial hydrolysis and iteration calculations based on above concentrations 
-#          
-#         Interface.ConcentrationFe2, Interface.ConcentrationFeOH2, Interface.ActivityCoefficient1, Interface.ActivityCoefficient2 = \
-#         c.Hydrolysis(Section, Interface.FeTotal, Interface.NiTotal, Interface.ConcentrationH)
-#         ProductConcentration = Section.MetalOxide.ConcentrationH2
+
 class RunModel():
     def __init__(self, Section1, Section2, j):
         #j = overall time step
@@ -98,77 +86,67 @@ class RunModel():
         
         if self.Section1 == ld.Core:
             self.Section2.Bulk.CoTotal[0]=self.Section1.Bulk.CoTotal[end]+nc.CobaltWear
-
-        
-        if j ==0:
-            self.Section1.SolutionOxide.MixedPotential, self.Section1.SolutionOxide.EqmPotentialFe3O4 = \
-            e.ECP(self.Section1, self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.FeSatFe3O4, \
-                  self.Section1.SolutionOxide.NiTotal, self.Section1.SolutionOxide.ConcentrationH)
-             
-            ##Electrochemical adjustement to Kp, Kd, FeSat and Concentration H+ at M/O interface --> uses M/O and S/O interface mixted potentials 
-            self.Section1.KpFe3O4electrochem, self.Section1.KdFe3O4electrochem, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.MetalOxide.ConcentrationH \
-            = e.ElectrochemicalAdjustment(self.Section1, self.Section1.SolutionOxide.EqmPotentialFe3O4, self.Section1.SolutionOxide.MixedPotential, \
-                                    self.Section1.MetalOxide.MixedPotential, self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.FeSatFe3O4, \
-                                    self.Section1.Bulk.FeSatFe3O4, self.Section1.SolutionOxide.ConcentrationH)
-            
-            if self.Section1 == ld.SteamGenerator or self.Section1 == ld.Inlet or self.Section1 == ld.Outlet:
-                #Calculates CS and Alloy-800 corrosion rates based on MO concentrations - for j=1, these are initial concentration values
-                #Not called for core- no "corrosion" here
-                self.Section1.CorrRate, self.Section1.MetalOxide.MixedPotential =it.CorrosionRate(self.Section1, self.Section1.MetalOxide.FeTotal, \
+            self.Section1.CorrRate, self.Section1.MetalOxide.MixedPotential = [0]*self.Section1.NodeNumber, [0]*self.Section1.NodeNumber
+        else:
+            #Calculates CS and Alloy-800 corrosion rates based on MO concentrations - for j=0, these are initial concentration values
+            #Not called for core- no "corrosion" here
+            self.Section1.CorrRate, self.Section1.MetalOxide.MixedPotential =it.CorrosionRate(self.Section1, self.Section1.MetalOxide.FeTotal, \
                                                                 self.Section1.MetalOxide.NiTotal, self.Section1.MetalOxide.ConcentrationH)
             
-            else:
-                self.Section1.CorrRate, self.Section1.MetalOxide.MixedPotential = [0]*self.Section1.NodeNumber, [0]*self.Section1.NodeNumber  
+        
+        self.Section1.SolutionOxide.MixedPotential, self.Section1.SolutionOxide.EqmPotentialFe3O4 = \
+        e.ECP(self.Section1, self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.NiTotal, \
+              self.Section1.SolutionOxide.ConcentrationH)
+        
+        ##Electrochemical adjustement to Kp, Kd, FeSat and Concentration H+ at M/O interface --> uses M/O and S/O interface mixted potentials
+        self.Section1.KpFe3O4electrochem, self.Section1.KdFe3O4electrochem, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.MetalOxide.ConcentrationH \
+        = e.ElectrochemicalAdjustment(self.Section1, self.Section1.SolutionOxide.EqmPotentialFe3O4, self.Section1.SolutionOxide.MixedPotential, \
+            self.Section1.MetalOxide.MixedPotential, self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.FeSatFe3O4, \
+            self.Section1.Bulk.FeSatFe3O4, self.Section1.SolutionOxide.ConcentrationH)
+        ##
+          
+        ##Calculates S/O elemental concentrations based on updated oxide thicknesses at each time step
+        self.Section1.SolutionOxide.FeTotal = it.SolutionOxide(self.Section1, self.Section1.CorrRate, self.Section1.Bulk.FeTotal, \
+        self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.FeTotal, self.Section1.InnerIronOxThickness, \
+        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, \
+        self.Section1.KpFe3O4electrochem, "Fe")
             
-        else:
-            #RK4 oxide thickness calculation (no spalling)
-            self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.InnerIronOxThickness, self.Section1.OuterFe3O4Thickness, \
-            self.Section1.CoThickness, self.Section1.NiThickness, self.Section1.CorrRate, self.Section1.SolutionOxide.FeTotal, \
-            self.Section1.SolutionOxide.NiTotal, self.Section1.SolutionOxide.CoTotal, self.Section1.SolutionOxide.FeSatFe3O4, \
-            self.Section1.SolutionOxide.MixedPotential, self.Section1.SolutionOxide.EqmPotentialFe3O4, self.Section1.MetalOxide.FeTotal, \
-            self.Section1.KdFe3O4electrochem, self.Section1.KpFe3O4electrochem =\
+        self.Section1.SolutionOxide.NiTotal = it.SolutionOxide(self.Section1, self.Section1.CorrRate, self.Section1.Bulk.NiTotal, \
+        self.Section1.SolutionOxide.NiSatFerrite, self.Section1.SolutionOxide.NiTotal, self.Section1.InnerIronOxThickness, \
+        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, \
+        self.Section1.KpFe3O4electrochem, "Ni")
+            
+        self.Section1.SolutionOxide.FeTotal = it.SolutionOxide(self.Section1, self.Section1.CorrRate, self.Section1.Bulk.CoTotal, \
+        self.Section1.SolutionOxide.CoSatFerrite, self.Section1.SolutionOxide.CoTotal, self.Section1.InnerIronOxThickness, \
+        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, \
+        self.Section1.KpFe3O4electrochem, "Co")
+        ##     
+                
+        ##RK4 oxide thickness calculation (no spalling)
+        self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.InnerIronOxThickness, self.Section1.OuterFe3O4Thickness, \
+        self.Section1.CoThickness, self.Section1.NiThickness, self.Section1.CorrRate, self.Section1.SolutionOxide.FeTotal, \
+        self.Section1.SolutionOxide.NiTotal, self.Section1.SolutionOxide.CoTotal, self.Section1.SolutionOxide.FeSatFe3O4, \
+        self.Section1.SolutionOxide.MixedPotential, self.Section1.SolutionOxide.EqmPotentialFe3O4, self.Section1.MetalOxide.FeTotal, \
+        self.Section1.KdFe3O4electrochem, self.Section1.KpFe3O4electrochem =\
             RK4.OxideGrowth(self.Section1, self.Section1.Bulk.FeTotal, self.Section1.Bulk.NiTotal, self.Section1.Bulk.CoTotal, \
-                              self.Section1.Bulk.FeSatFe3O4, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.NiSatFerrite, \
-                              self.Section1.SolutionOxide.CoSatFerrite, self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.NiTotal, \
-                              self.Section1.SolutionOxide.CoTotal, self.Section1.OuterOxThickness, self.Section1.InnerOxThickness, \
-                              self.Section1.InnerIronOxThickness, self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, \
-                              self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, self.Section1.KpFe3O4electrochem, \
-                              self.Section1.SolutionOxide.ConcentrationH, self.Section1.CorrRate)
+            self.Section1.Bulk.FeSatFe3O4, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.NiSatFerrite, \
+            self.Section1.SolutionOxide.CoSatFerrite, self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.NiTotal, \
+            self.Section1.SolutionOxide.CoTotal, self.Section1.OuterOxThickness, self.Section1.InnerOxThickness, self.Section1.InnerIronOxThickness, \
+            self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, \
+            self.Section1.KpFe3O4electrochem, self.Section1.SolutionOxide.ConcentrationH, self.Section1.CorrRate)
             
-            
-            
+               
             #if self.Section1==ld.Outlet: print (self.Section1.OuterOxThickness)
             #Spalling    
-            self.Section1.InnerIronOxThickness, self.Section1.OuterFe3O4Thickness, self.Section1.CoThickness, self.Section1.NiThickness, \
-             self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.Particle, self.Section1.ElapsedTime, \
-             self.Section1.SpallTime = \
+        self.Section1.InnerIronOxThickness, self.Section1.OuterFe3O4Thickness, self.Section1.CoThickness, self.Section1.NiThickness, \
+        self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.Particle, self.Section1.ElapsedTime, \
+        self.Section1.SpallTime = \
              RK4.Spall(self.Section1, j, self.Section1.Particle, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.FeTotal, \
-                 self.Section1.KdFe3O4electrochem, self.Section1.OuterOxThickness, self.Section1.InnerOxThickness, self.Section1.OuterFe3O4Thickness, \
-                 self.Section1.CoThickness, self.Section1.NiThickness, self.Section1.InnerIronOxThickness, self.Section1.ElapsedTime, \
-                 self.Section1.SpallTime, self.Section1.SolutionOxide.NiTotal, self.Section1.SolutionOxide.CoTotal)
+            self.Section1.KdFe3O4electrochem, self.Section1.OuterOxThickness, self.Section1.InnerOxThickness, self.Section1.OuterFe3O4Thickness, \
+            self.Section1.CoThickness, self.Section1.NiThickness, self.Section1.InnerIronOxThickness, self.Section1.ElapsedTime, \
+            self.Section1.SpallTime, self.Section1.SolutionOxide.NiTotal, self.Section1.SolutionOxide.CoTotal)
             
-            
-        
-            
-             
-            
-            
-            
-             
-            
-
-#             
-#             
-#             self.Section1.KpFe3O4electrochem, self.Section1.KdFe3O4electrochem, self.Section1.SolutionOxide.FeSatFe3O4, \
-#             self.Section1.MetalOxide.ConcentrationH \
-#             = e.ElectrochemicalAdjustment(self.Section1, self.Section1.SolutionOxide.EqmPotentialFe3O4, self.Section1.SolutionOxide.MixedPotential, \
-#                                     self.Section1.MetalOxide.MixedPotential, self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.FeSatFe3O4, \
-#                                     self.Section1.Bulk.FeSatFe3O4, self.Section1.SolutionOxide.ConcentrationH)
-#         
-        
-#             
-#        
-#         
+                     
         
 #         a.InCoreActiveDeposit(self.Section1, self.Section2,self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.OuterFe3O4Thickness, \
 #                               self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerOxThickness,j)
@@ -179,7 +157,7 @@ InnerOx= []
 import time
 
 start_time = time.time()
-for j in range(50):#nc.SimulationDuration
+for j in range(500):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator, j)
@@ -375,25 +353,7 @@ plt.show()
 
 
 
-# #Calculates S/O elemental concentrations based on updated oxide thicknesses at each time step
-#             self.Section1.SolutionOxide.FeTotal = it.SolutionOxide(self.Section1, self.Section1.CorrRate, self.Section1.Bulk.FeTotal, \
-#             self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.FeTotal, self.Section1.InnerIronOxThickness, \
-#             self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, \
-#             self.Section1.KpFe3O4electrochem, "Fe")
-#            
-#             self.Section1.SolutionOxide.NiTotal = it.SolutionOxide(self.Section1, self.Section1.CorrRate, self.Section1.Bulk.NiTotal, \
-#             self.Section1.SolutionOxide.NiSatFerrite, self.Section1.SolutionOxide.NiTotal, self.Section1.InnerIronOxThickness, \
-#             self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, \
-#             self.Section1.KpFe3O4electrochem, "Ni")
-#            
-#             self.Section1.SolutionOxide.FeTotal = it.SolutionOxide(self.Section1, self.Section1.CorrRate, self.Section1.Bulk.CoTotal, \
-#             self.Section1.SolutionOxide.CoSatFerrite, self.Section1.SolutionOxide.CoTotal, self.Section1.InnerIronOxThickness, \
-#             self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, \
-#             self.Section1.KpFe3O4electrochem, "Co")
-#             
-#             self.Section1.SolutionOxide.MixedPotential, self.Section1.SolutionOxide.EqmPotentialFe3O4 = \
-#             e.ECP(self.Section1, self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.NiTotal,\
-#             self.Section1.SolutionOxide.ConcentrationH)
+
 #             
 #             self.Section1.KpFe3O4electrochem, self.Section1.KdFe3O4electrochem, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.MetalOxide.ConcentrationH \
 #             = e.ElectrochemicalAdjustment(self.Section1, self.Section1.SolutionOxide.EqmPotentialFe3O4, self.Section1.SolutionOxide.MixedPotential, \
