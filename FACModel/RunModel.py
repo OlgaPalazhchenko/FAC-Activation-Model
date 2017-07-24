@@ -121,12 +121,18 @@ class RunModel():
         self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, \
         self.Section1.KpFe3O4electrochem, "Co")
         ##     
-                
+        
+        if self.Section1 == ld.Core:
+            self.Section1.MetalOxide.FeTotal = [0]*self.Section1.NodeNumber
+        else:    
+            self.Section1.MetalOxide.FeTotal = it.MetalOxideInterfaceConcentration(self.Section1, "Fe", self.Section1.SolutionOxide.FeTotal, \
+                        self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.CorrRate)
+        
         ##RK4 oxide thickness calculation (no spalling)
         self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.InnerIronOxThickness, self.Section1.OuterFe3O4Thickness, \
         self.Section1.CoThickness, self.Section1.NiThickness, self.Section1.CorrRate, self.Section1.SolutionOxide.FeTotal, \
         self.Section1.SolutionOxide.NiTotal, self.Section1.SolutionOxide.CoTotal,  \
-        self.Section1.SolutionOxide.MixedPotential, self.Section1.SolutionOxide.EqmPotentialFe3O4, self.Section1.MetalOxide.FeTotal, \
+        self.Section1.SolutionOxide.MixedPotential, self.Section1.SolutionOxide.EqmPotentialFe3O4,\
         self.Section1.KdFe3O4electrochem =\
             RK4.OxideGrowth(self.Section1, self.Section1.Bulk.FeTotal, self.Section1.Bulk.NiTotal, self.Section1.Bulk.CoTotal, \
             self.Section1.Bulk.FeSatFe3O4, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.NiSatFerrite, \
@@ -155,12 +161,14 @@ class RunModel():
 
 ##Plot spalltime and maybe elapsed time alongside (or on different plot) with oxide thicknesses? 
 ##Echem plot...mixed potential versus eqm, especially at S/O interface
+##Reduce default oxide thickness from 0.00025 g/cm^2 to less than that? Average corrosion rate? 
+#What is the minimum allowable in outlet? SG?
 
 InnerOx= []         
 import time
 
 start_time = time.time()
-for j in range(250):#nc.SimulationDuration
+for j in range(1500):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator, j)
@@ -279,11 +287,13 @@ OuterOxideThickness = OuterOxide[0]+OuterOxide[1]+OuterOxide[2]+OuterOxide[3]
 # #plt.axis([4, 69, -2, 3]) 
 # plt.show()
 
-
-plt.plot(TotalLoopDistance, SolutionOxideNiTotal, 'ro')
-plt.plot(TotalLoopDistance, SolutionOxideNiSat, '-')
-plt.plot(TotalLoopDistance, BulkNiTotal, 'g-')
+fig, ax1 = plt.subplots()
+ax1.plot(TotalLoopDistance, SolutionOxideNiTotal, 'ro')
+ax1.plot(TotalLoopDistance, SolutionOxideNiSat, '-')
+ax1.plot(TotalLoopDistance, BulkNiTotal, 'g-')
  #plt.axis([4, 69, -2, 3]) 
+ax1.set_xlabel('Distance (m)')
+ax1.set_ylabel('$Log_{10}$[Fe Concentration (mol/kg)]')
 plt.show()
 
 plt.plot(TotalLoopDistance, SolutionOxideCoTotal, 'ro')
