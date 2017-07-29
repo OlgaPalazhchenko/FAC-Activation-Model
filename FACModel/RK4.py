@@ -7,16 +7,18 @@ import Electrochemistry as e
 import random
 
 
-def Particulate(Section, ErosionConstant, BulkCrud):
+def Particulate(Section, BulkCrud_0, Diameter, DensityH2O, Velocity, Distance):
     if Section == ld.Core:
         DepositionConstant = nc.Kdeposition_InCore
     else:
         DepositionConstant = nc.Kdeposition_OutCore
 
-    Deposition = [DepositionConstant*(4/x)*100/(y*1000) for x,y in zip(Section.Diameter,Section.DensityH2O)]
+    Deposition = DepositionConstant*(4/Diameter)*100/(DensityH2O*1000) 
     
-    Crud = [((ErosionConstant*100*100)/DepositionConstant)*(1-np.exp((-x/y)*z))+q*np.exp((-x/y)*z) for x,y,z,q in zip(Deposition,Section.Velocity, Section.Distance, BulkCrud)]
-    return Crud
+    ParticulateConcentration = ((nc.ErosionConstant*100*100)/DepositionConstant)*(1-np.exp((-Deposition/Velocity)*Distance)) + \
+    BulkCrud_0*np.exp((-Deposition/Velocity)*Distance) 
+    
+    return ParticulateConcentration
 
 
 def OxideComposition(Section, Element, OxideType, Outer, OuterFe3O4Thickness, NiThickness, CoThickness, InnerIronOxThickness):     
@@ -73,7 +75,6 @@ def OxideGrowth(Section, BulkFeTotal, BulkNiTotal, BulkCoTotal, BulkFeSat, Solut
                 SolutionOxideFeTotal, SolutionOxideNiTotal, SolutionOxideCoTotal, OuterOxThickness, InnerOxThickness, InnerIronOxThickness,\
                  OuterFe3O4Thickness, NiThickness, CoThickness, KdFe3O4electrochem, KpFe3O4electrochem, ConcentrationH, CorrRate):    
     
-    
     RK4_InnerIronOxThickness = InnerIronOxThickness
     RK4_OuterFe3O4Thickness = OuterFe3O4Thickness
     RK4_NiThickness = NiThickness
@@ -104,7 +105,7 @@ def OxideGrowth(Section, BulkFeTotal, BulkNiTotal, BulkCoTotal, BulkFeSat, Solut
     M = []
     N = []
     O = []
-    #if Section ==ld.Outlet: print ()
+
     for approximation in range(4): #4 approximations in the "RK4" method       
         ##Solves S/O elemental concentrations at current approximation of oxide thickness(es)
         #At start of new time step, input S/O concentrations based on previous time step's evaluation (needed inside SolutionOxideBalance function to 
@@ -119,7 +120,7 @@ def OxideGrowth(Section, BulkFeTotal, BulkNiTotal, BulkCoTotal, BulkFeSat, Solut
         SolutionOxideCoTotal = it.SolutionOxide(Section, CorrRate, BulkCoTotal, SolutionOxideCoSat, SolutionOxideCoTotal, RK4_InnerIronOxThickness, \
                                                 RK4_OuterFe3O4Thickness, NiThickness, CoThickness, KdFe3O4electrochem, KpFe3O4electrochem, "Co")
         ##
-        #print (SolutionOxideFeTotal)
+         
         MixedECP, EqmPotentialFe3O4 = e.ECP(Section, SolutionOxideFeTotal, SolutionOxideFeSat, SolutionOxideNiTotal, ConcentrationH)
         
         if Section == ld.SteamGenerator:
@@ -137,12 +138,16 @@ def OxideGrowth(Section, BulkFeTotal, BulkNiTotal, BulkCoTotal, BulkFeSat, Solut
             MetalOxideFe = it.MetalOxideInterfaceConcentration(Section, "Fe", SolutionOxideFeTotal, InnerOxThickness, OuterOxThickness, CorrRate)
             
             CorrRate, MOMixedECP = it.CorrosionRate(Section, MetalOxideFe, MetalOxideNi, ConcentrationH)
-            #if Section==ld.Outlet: print (MetalOxideFe, ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, CorrRate, None, None, None))
+        
+#         if Section==ld.SteamGenerator:
+#             #print (Section.NodeNumber, "Node Number")
+#             print (SolutionOxideFeTotal, "S/O Fe Total")
+#             print (MetalOxideFe, "M/O Fe Total")
+            
         
         KpFe3O4electrochem, KdFe3O4electrochem, SolutionOxideFeSat, MOConcentrationH = e.ElectrochemicalAdjustment(Section, EqmPotentialFe3O4, \
                                             MixedECP, MOMixedECP, SolutionOxideFeTotal, SolutionOxideFeSat, BulkFeSat, ConcentrationH)
-        
-        
+                
         ##Converts all concentration units to be used within RK4 from [mol/kg] to [g/cm^3]
         Concentrations = [SolutionOxideFeTotal, SolutionOxideFeSat, SolutionOxideNiTotal, SolutionOxideNiSat, SolutionOxideCoTotal, SolutionOxideCoSat]
         MolarMasses = [nc.FeMolarMass, nc.FeMolarMass, nc.NiMolarMass, nc.NiMolarMass, nc.CoMolarMass, nc.CoMolarMass]
@@ -240,10 +245,9 @@ def OxideGrowth(Section, BulkFeTotal, BulkNiTotal, BulkCoTotal, BulkFeSat, Solut
         for x in range(Section.NodeNumber):
             if Layers[i][x] < 0:
                 Layers[i][x] = 0       
-
-    
-    return InnerOxThickness, OuterOxThickness, InnerIronOxThickness, OuterFe3O4Thickness, CoThickness, NiThickness, CorrRate, SolutionOxideFeTotal, \
-        SolutionOxideNiTotal, SolutionOxideCoTotal, MixedECP, EqmPotentialFe3O4, KdFe3O4electrochem
+ 
+    return InnerOxThickness, OuterOxThickness, InnerIronOxThickness, OuterFe3O4Thickness, CoThickness, NiThickness, SolutionOxideFeTotal, \
+        SolutionOxideNiTotal
 
     
 def RK4(Section, InitialThickness, GrowthFunction, approximation):
@@ -352,23 +356,7 @@ def Spall(Section,j, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4
     
     FeSat, FeTotal = ConvertedConcentrations
     
-#     for i in range(Section.NodeNumber):    
-#         if Section== ld.Core:
-#             InnerIronOxThickness[i] =0
-#                 
-#         if OuterFe3O4Thickness[i] > 0: #from previous time step
-#             #With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer  
-#             OuterOxThickness[i] = OuterFe3O4Thickness[i] + CoThickness[i] + NiThickness[i]
-#             InnerOxThickness[i] = InnerIronOxThickness[i]
-#         else: #OuterFe3O4Thickness == 0
-#             InnerOxThickness[i] = InnerIronOxThickness[i] + CoThickness[i] + NiThickness[i]
-    
     for i in range(Section.NodeNumber):    
-#         if Section==ld.Outlet or Section==ld.Inlet or Section==ld.SteamGenerator:
-#             if InnerIronOxThickness[i] <= 1e-6:
-#                 InnerIronOxThickness[i] = 0.00025 #Resets to original thickness (resetting corrosion rate here to ~75 um/a
-#                 #if Section==ld.SteamGenerator:
-#                     #print (i, Section, "too much dissolution")
             
         ## Oxide totals for RK4 iterations (M/O Concentration depends on total oxide thickness) and before spalling function
         if OuterFe3O4Thickness[i]> 0: #from previous time step
@@ -377,10 +365,6 @@ def Spall(Section,j, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4
             InnerOxThickness[i] = InnerIronOxThickness[i]
         else: #OuterFe3O4Thickness == 0
             InnerOxThickness[i] = InnerIronOxThickness[i] + CoThickness[i] + NiThickness[i]
-        
-        
-        
-        
         
         if j == 0:
         #First time step call generate particle sizes and calc spalling times, respectively
@@ -391,11 +375,12 @@ def Spall(Section,j, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4
             Particle.append(x) #list of random particle sizes based on input distribution in ParticleSize function
             SpallTime.append(y)
             
-#         if Section == ld.Outlet: #Outlet header spalling corrector 
-#             if SpallTime[7] > 4000:
-#                 SpallTime[7] = 3000 
+            if Section == ld.Outlet: #Outlet header spalling corrector 
+                if SpallTime[i] > 4000:
+                    SpallTime[i] = 3000 
+                
             ElapsedTime = [0]*Section.NodeNumber #No time has elapsed yet at first time step for all nodes    
-        
+#             
         else: #after first time step
             if ElapsedTime[i] >= SpallTime[i]: #enough time elapsed for particle of that size (with respective spall time) to come off
                 if OuterOxThickness[i] >0: 
@@ -409,17 +394,13 @@ def Spall(Section,j, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4
                     CoThickness[i] = Oxide(CoThickness[i], InnerOxThickness[i], Particle[i])
                     NiThickness[i] = Oxide(NiThickness[i], InnerOxThickness[i], Particle[i])
                     InnerOxThickness[i] = Oxide(InnerOxThickness[i], InnerOxThickness[i], Particle[i])#new total inner ox
-                    
-                    if InnerIronOxThickness[i] <=1e-7: 
-                        InnerIronOxThickness[i] = 0.00025
-                        #print (i, Section, "help")
                         
                 Particle[i]= ParticleSize() #once particle spalled off, another particle size (just at that node) is randomly generated (w/i distribution)
             
                 SpallTime[i] = SpallingTime(Section, Particle[i], FeSat[i], FeTotal[i], KdFe3O4electrochem[i], OuterFe3O4Thickness[i], Section.Velocity[i])
                 if Section == ld.Outlet: #Outlet header spalling corrector 
-                    if SpallTime[7] >= 4000:
-                        SpallTime[7] = 3000              
+                    if SpallTime[i] >= 4000:
+                        SpallTime[i] = 3000              
                 ElapsedTime[i] = 0 #once a particle has "spalled" off, elapsed time since spalling resets to zero and counter restarts at that node
         
             else: #not enough time has passed 
@@ -434,12 +415,12 @@ def Spall(Section,j, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4
                     #print (i, Section, "too much dissolution")
             
             ## Oxide totals for RK4 iterations (M/O Concentration depends on total oxide thickness) and before spalling function
-            if OuterFe3O4Thickness[i]> 0: #from previous time step
-                #With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer  
-                OuterOxThickness[i] = OuterFe3O4Thickness[i] + CoThickness[i] + NiThickness[i]
-                InnerOxThickness[i] = InnerIronOxThickness[i]
-            else: #OuterFe3O4Thickness == 0
-                InnerOxThickness[i] = InnerIronOxThickness[i] + CoThickness[i] + NiThickness[i]
+        if OuterFe3O4Thickness[i]> 0: #from previous time step
+            #With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer  
+            OuterOxThickness[i] = OuterFe3O4Thickness[i] + CoThickness[i] + NiThickness[i]
+            InnerOxThickness[i] = InnerIronOxThickness[i]
+        else: #OuterFe3O4Thickness == 0
+            InnerOxThickness[i] = InnerIronOxThickness[i] + CoThickness[i] + NiThickness[i]
     
     return InnerIronOxThickness, OuterFe3O4Thickness, CoThickness, NiThickness, InnerOxThickness, OuterOxThickness, Particle, ElapsedTime, SpallTime
 

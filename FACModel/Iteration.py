@@ -29,12 +29,6 @@ def Diffusion(Section, Element):
         return 1-MetalRetainedInsideInnerOxide #[g metal/ g alloy lost]
 
 def MetalOxideInterfaceConcentration(Section, Element, SolutionOxideInterfaceConcentration, InnerOxThickness, OuterOxThickness, Corrosion):
-#     if Section==ld.Outlet:
-#         import matplotlib.pyplot as plt
-#         plt.plot(InnerOxThickness, 'ro')
-#         plt.plot(OuterOxThickness, 'p')
-#         # plt.axis([4, 69, 0, 10]) 
-#         plt.show()
     
     if Section == ld.SteamGenerator:
         OxideDensity =nc.NiFe2O4Density
@@ -54,8 +48,6 @@ def MetalOxideInterfaceConcentration(Section, Element, SolutionOxideInterfaceCon
     PathLength = [(x*nc.Fe3O4Tortuosity/(OxideDensity*(1-nc.Fe3O4Porosity_inner))) + (y*nc.Fe3O4Tortuosity/(OxideDensity*(1-nc.Fe3O4Porosity_outer))) \
                   for x,y in zip(InnerOxThickness, OuterOxThickness)] 
     
-    #print ( [(x*nc.Fe3O4Tortuosity/(OxideDensity*(1-nc.Fe3O4Porosity_inner))) + (y*nc.Fe3O4Tortuosity/(OxideDensity*(1-nc.Fe3O4Porosity_outer))) \
-                 # for x,y in zip([2000]*Section.NodeNumber, OuterOxThickness)] )
     
 #     for i in range(Section.NodeNumber):
 #         if Section==ld.Outlet and InnerOxThickness[i] <= 0:
@@ -66,15 +58,16 @@ def MetalOxideInterfaceConcentration(Section, Element, SolutionOxideInterfaceCon
     
     DiffusivityTerm = [(x*nc.Fe3O4Porosity_inner)/y for x,y in zip(PathLength, Diffusivity)]
     
-#     if Section==ld.Outlet: print (DiffusivityTerm, InnerOxThickness, OuterOxThickness, \
-#                                   ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Corrosion, None, None, None))
-    
-    
     SolutionConcentration = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", SolutionOxideInterfaceConcentration, None, None, None, MolarMass)
     
     MOConcentration = [(x*Diffusion(Section, Element)/ y) +z for x,y,z in zip(Corrosion, DiffusivityTerm, SolutionConcentration)]
     
-    #if Section==ld.Outlet: print (PathLength, DiffusivityTerm, ld.UnitConverter(Section, "Grams per Cm Cubed", "Mol per Kg", MOConcentration, None, None, None, MolarMass))
+    if Section==ld.SteamGenerator: #or Section==ld.Outlet:
+        #print (Section.NodeNumber)
+        print (PathLength, "Path Length") 
+        print (DiffusivityTerm, "Diffusivity Term") 
+        print (SolutionConcentration, "S/O Conc")
+        print (ld.UnitConverter(Section, "Grams per Cm Cubed", "Mol per Kg", MOConcentration, None, None, None, MolarMass), "M/O Conc")
     ##Pre-set corrosion rate for outlet (lower MOConc = higher FAC rate (e-chem effect))
     #inner ox decrease = path length decreases --> diffusivity term increases --> metal oxide concentration decreases --> corr rate incr
     # Can also reset the oxide thickness such that the minimum results in acceptable MO Conc and corrrate
@@ -202,7 +195,6 @@ def CorrosionRate(Section, FeTotal, NiTotal, ConcentrationH):
     MixedECP = e.MixedPotential(Section, ExchangeCurrentH2onFe, EqmPotentialH2, ExchangeCurrentFe, EqmPotentialFe)
     CorrosionCurrent = [x*(np.exp((nc.Beta*nc.n*nc.F*(y-z))/(nc.R*q))-np.exp((-(1-nc.Beta)*nc.n*nc.F*(y-z))/(nc.R*q))) for x,y,z,q in zip(ExchangeCurrentFe,MixedECP,EqmPotentialFe,Section.Kelvin)]
     
-    #if Section==ld.Outlet: print (FeTotal, MixedECP, CorrosionCurrent)
         
     if Section == ld.SteamGenerator: #icorr = ia = -ic   equivalent molar mass for Alloy 800 (0.46 Fe, 0.33 Ni, -> 2e- processes; 0.21 Cr -> 3 e- process)   
         Constant = [(1/nc.F)*((nc.FeMolarMass*0.46/nc.n) + (nc.NiMolarMass*0.33/nc.n) + (0.21*nc.CrMolarMass/3))]*Section.NodeNumber

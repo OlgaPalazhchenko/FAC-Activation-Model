@@ -114,8 +114,8 @@ class Section(): #Defining each primary heat transport section as a class
         self.FractionFeInnerOxide = None
         self.FractionNiInnerOxide = None
         
-        self.BigParticulate = None
-        self.SmallParticulate = None
+        self.BigParticulate =[0.001]*self.NodeNumber #[mg/kg] (ppm)
+        self.SmallParticulate = [0.001]*self.NodeNumber #[mg/kg] (ppm)
         self.ElapsedTime = None
         self.SpallTime = []
         

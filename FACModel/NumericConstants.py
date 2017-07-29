@@ -128,11 +128,16 @@ PrecipitationActivationEnergyH2onFe3O4 = 291214.6173
 ActivationEnergyAlloy800 = 294051.6401
 ActivationEnergyH2onAlloy800 = 283099.8619
 
-SimulationDuration = 10 #Total runtime
+SimulationDuration = 10 #Total runtime [h]
 TimeIncrement = 3600 #s  Based on desired time step (3600 s/h for 1h time step)
+
 #Spalling constants depend heavily on particle size distribution 
-OutletOuterSpallConstant = 7000#10000
-OutletInnerSpallConstant = 3000#100
-InletOuterSpallConstant = 1.00E+18 #Different units for 
+OutletOuterSpallConstant = 7000
+OutletInnerSpallConstant = 1000
+InletOuterSpallConstant = 1.00E+18 #Different units for inlet versus outlet (different functions)
 InletInnerSpallConstant = 1.00E+5
 ErosionConstant = 2.4e-10 #[g/cm^2 s]
+
+#In-core deposition constants
+KVap = 0.1
+Enrichment = 1
