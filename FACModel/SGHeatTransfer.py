@@ -1,9 +1,9 @@
 import LepreauData as ld
 import numpy as np
-from bokeh.core.compat.mplexporter._py3k_compat import zip
 
 
 def ConductionResistance(Section, Twall, i):
+    #R_conduction
     ThermalConductivity = 11.450 + 0.0161*Twall #M.K.E thesis for Alloy-800 tubing [W/m K]   
     
     Thickness = 0.125 #cm

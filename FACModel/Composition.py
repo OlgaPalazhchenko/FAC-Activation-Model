@@ -32,7 +32,7 @@ def BulkpHCalculator(Section):#Bulk pH calculation
 def Hydrolysis(Section, FeTotal, NiTotal, ConcentrationH):
         ActivityCoefficient1 = [1.0]*Section.NodeNumber #initial estimate for activities (+/- 1 charged ions)
         ActivityCoefficient2 = [1.0]*Section.NodeNumber #(+/- 2 charged ions)        
-        #if Section==ld.Outlet: print (FeTotal)
+        
         for i in range(50):
             gamma_1itr = ActivityCoefficient1    
             gamma_2itr = ActivityCoefficient2

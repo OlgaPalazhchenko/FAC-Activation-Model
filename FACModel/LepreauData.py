@@ -4,8 +4,6 @@ import NumericConstants as nc
 
 SizingParameters = open('SizingParameters.txt','r')      
 SizingParametersReader = list(csv.reader(SizingParameters, delimiter = ',')) #Assign file data to list, Reader[row][column], delimiter = comma 
-#CoolantParameters = open('CoolantParameters.txt','r')
-#CoolantParametersReader = list(csv.reader(CoolantParameters, delimiter = ','))
 
 class Interface():
     def __init__(self):
@@ -45,7 +43,7 @@ class Interface():
         self.EqmPotentialFe3O4 = None
 
 class Section(): #Defining each primary heat transport section as a class 
-    def __init__(self,j,RowStart,RowEnd): 
+    def __init__(self, j, RowStart, RowEnd): 
         self.RowStart = RowStart
         self.RowEnd = RowEnd
         self.j =j
@@ -55,13 +53,13 @@ class Section(): #Defining each primary heat transport section as a class
         self.Bulk = Interface()
         
         #General section parameter input (interface specification not necessary)
-        self.Diameter = [float(SizingParametersReader[j][i]) for i in range(self.RowStart,self.RowEnd)] #Reader([row][column]) #[cm]
-        self.Velocity = [float(SizingParametersReader[j+1][i]) for i in range(self.RowStart,self.RowEnd)] #[cm/s]
-        self.Length = [float(SizingParametersReader[j+2][i]) for i in range(self.RowStart,self.RowEnd)] #[cm]
-        self.Distance = np.cumsum(self.Length) #[cm]
-        self.Celsius = [float(SizingParametersReader[j+3][i]) for i in range(self.RowStart,self.RowEnd)] #[oC]
-        self.Kelvin = [x + 273.15 for x in self.Celsius] # [K]
-        self.NernstConstant = [x*(2.303*nc.R/(2*nc.F)) for x in self.Kelvin] #2.303RT/nF
+        self.Diameter = None#[float(SizingParametersReader[j][i]) for i in range(self.RowStart,self.RowEnd)] #Reader([row][column]) #[cm]
+        self.Velocity = None#[float(SizingParametersReader[j+1][i]) for i in range(self.RowStart,self.RowEnd)] #[cm/s]
+        self.Length = None #[float(SizingParametersReader[j+2][i]) for i in range(self.RowStart,self.RowEnd)] #[cm]
+        self.Distance = None #np.cumsum(self.Length) #[cm]
+        self.Celsius = None#[float(SizingParametersReader[j+3][i]) for i in range(self.RowStart,self.RowEnd)] #[oC]
+        self.Kelvin = None#[x + 273.15 for x in self.Celsius] # [K]
+        self.NernstConstant = None#[x*(2.303*nc.R/(2*nc.F)) for x in self.Kelvin] #2.303RT/nF
         
         self.DensityH2O = [float(SizingParametersReader[j+4][i]) for i in range(self.RowStart,self.RowEnd)] #[g/cm^3]
         self.ViscosityH2O = [float(SizingParametersReader[j+5][i]) for i in range(self.RowStart,self.RowEnd)] #[g/cm s]
@@ -83,19 +81,7 @@ class Section(): #Defining each primary heat transport section as a class
         self.StandardEqmPotentialFe3O4oxid = [float(SizingParametersReader[j+15][i]) for i in range(self.RowStart,self.RowEnd)]
         self.StandardEqmPotentialH2 = [float(SizingParametersReader[j+16][i]) for i in range(self.RowStart,self.RowEnd)]
         self.StandardEqmPotentialNi = [float(SizingParametersReader[j+17][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.NodeNumber = int(SizingParametersReader[j+18][0])      
-        
-        #Equilibrium and Debye-Huckel constants - polynomials as a function of temperature 
-        #Coeff1*x^4 + Coeff2*x^3 + Coeff3*x^2 + Coeff4*x + Coeff5, depends on # elements in coeff list
-        self.DebyeHuckelConstant=(np.polyval(nc.DebyeHuckPolynomial,self.Celsius)) 
-        self.k_W=10**(np.polyval(nc.KwPolynomial,self.Kelvin))
-        self.k_Li=10**(np.polyval(nc.KLiPolynomial,self.Kelvin)) 
-        self.k_FeOH=10**(np.polyval(nc.KFeOHPolynomial,self.Kelvin))
-        self.k_FeOH2=10**(np.polyval(nc.KFeOH2Polynomial,self.Kelvin))
-        self.k_FeOH3=10**(np.polyval(nc.KFeOH3Polynomial,self.Kelvin))
-        self.k_NiOH=10**(np.polyval(nc.KNiOHPolynomial,self.Kelvin))
-        self.k_NiOH2=10**(np.polyval(nc.KNiOH2Polynomial,self.Kelvin))
-        self.k_NiOH3=10**(np.polyval(nc.KNiOH3Polynomial,self.Kelvin))
+        self.NodeNumber = None#int(SizingParametersReader[j+18][0])      
         
         self.km = None
         self.KpFe3O4electrochem = None
@@ -107,47 +93,189 @@ class Section(): #Defining each primary heat transport section as a class
         self.FractionFeInnerOxide = None
         self.FractionNiInnerOxide = None
         
-        self.BigParticulate =[0]*self.NodeNumber #[mg/kg] (ppm)
-        self.SmallParticulate = [0]*self.NodeNumber #[mg/kg] (ppm)
         self.ElapsedTime = None
         self.SpallTime = []
         
         #[mol/kg] initial estimate for iron saturation based on Fe3O4 solubility (Tremaine & LeBlanc)
-        self.Bulk.FeTotal = [float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.FeTotal = [float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.FeTotal = [float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]   
-        self.Bulk.FeSatFe3O4 = [float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.FeSatFe3O4 = [float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.FeSatFe3O4 = [float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.Bulk.FeTotal = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.SolutionOxide.FeTotal = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.MetalOxide.FeTotal = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]   
+        self.Bulk.FeSatFe3O4 = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.SolutionOxide.FeSatFe3O4 = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.MetalOxide.FeSatFe3O4 = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
         
         #[mol/kg] (Sandler & Kunig)
-        self.Bulk.NiTotal = [float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.NiTotal = [float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.NiTotal = [float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.Bulk.NiSatFerrite = [float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.NiSatFerrite = [float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.NiSatFerrite = [float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)] 
+        self.Bulk.NiTotal =None #[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.SolutionOxide.NiTotal = None#[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.MetalOxide.NiTotal = None#[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.Bulk.NiSatFerrite = None#[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.SolutionOxide.NiSatFerrite = None#[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.MetalOxide.NiSatFerrite = None#[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)] 
         
         #[mol/kg] (Sandler & Kunig)
-        self.Bulk.CoTotal = [float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.CoTotal = [float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] 
-        self.MetalOxide.CoTotal = [float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] 
-        self.Bulk.CoSatFerrite = [float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] 
-        self.SolutionOxide.CoSatFerrite = [float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] 
-        self.MetalOxide.CoSatFerrite = [float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)]  
+        self.Bulk.CoTotal = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.SolutionOxide.CoTotal = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] 
+        self.MetalOxide.CoTotal = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] 
+        self.Bulk.CoSatFerrite = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] 
+        self.SolutionOxide.CoSatFerrite = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] 
+        self.MetalOxide.CoSatFerrite = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)]  
         
-        self.Bulk.CrTotal = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.CrTotal = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.CrTotal = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.Bulk.CrSat = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.CrSat = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.CrSat = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)] 
+        self.Bulk.CrTotal = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.SolutionOxide.CrTotal = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.MetalOxide.CrTotal = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.Bulk.CrSat = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.SolutionOxide.CrSat = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.MetalOxide.CrSat = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)] 
         
 #Creates the 4 PHTS sections and their methods based on the Sections class template/blueprint
 Inlet= Section(21,0,7)
 Core=Section(42,0,12)
 Outlet=Section(63,0,9)
-SteamGenerator=Section(84,0,22)        
+SteamGenerator= Section(84,0,22)
+## Steam generator split into multiple sections/zones
+# Temporary 2 "zones" added 
+SG_Zone1= Section(84,0,22)
+SG_Zone2 =Section(84,0,22)
+
+#Node Number 
+Inlet.NodeNumber = 7
+Core.NodeNumber = 12
+Outlet.NodeNumber = 9
+SteamGenerator.NodeNumber = 22
+SG_Zone1.NodeNumber = 22
+SG_Zone2.NodeNumber = 22 
+
+#Diameter [cm]
+Inlet.Diameter = [44.3, 50, 106, 5.68, 5.68, 5.68, 5.68] 
+Core.Diameter = [1.3]*Core.NodeNumber 
+Outlet.Diameter = [6.4, 6.4, 6.4, 6.4, 8.9, 8.9, 8.9, 116, 40.8] 
+SteamGenerator.Diameter = [1.59]*SteamGenerator.NodeNumber 
+SG_Zone1.Diameter = [1.59]*SG_Zone1.NodeNumber
+SG_Zone2.Diameter = [1.59]*SG_Zone2.NodeNumber
+
+#Velocity [cm/s]
+Inlet.Velocity = [1530, 1200, 270, 985, 985, 985, 985]
+Core.Velocity =[883.08, 890.66, 900.3, 910.64, 920.97, 932.68, 945.08, 958.17, 973.32, 989.16, 1073.89, 1250.92]
+Outlet.Velocity =[1619, 1619, 1619, 1619, 857, 857, 857, 306, 1250]
+SteamGenerator.Velocity =[533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 498, 494, 491, 489, 487, 484, 483, 481, 480, 479, 476, 474]
+SG_Zone1.Velocity =[533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 498, 494, 491, 489, 487, 484, 483, 481, 480, 479, 476, 474]
+SG_Zone2.Velocity =[533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 498, 494, 491, 489, 487, 484, 483, 481, 480, 479, 476, 474]
+
+#Length [cm]
+Inlet.Length = [477.6, 281.8, 78.6, 350, 350, 350, 350] 
+Core.Length = [49.5]*Core.NodeNumber 
+Outlet.Length = [17, 3.5, 139.5, 432, 225.5, 460.3, 460.3, 400, 100]
+SteamGenerator.Length = [60.96, 88.9, 88.9, 88.9, 91.44, 91.44, 91.44, 91.44, 91.44, 103.05, 103.5, 91.44, 91.44, 91.44, 91.44, 91.44, 76.2, 58.42, 58.42, 58.42, 45.72, 30.48]
+SG_Zone1.Length = [60.96, 88.9, 88.9, 88.9, 91.44, 91.44, 91.44, 91.44, 91.44, 103.05, 103.5, 91.44, 91.44, 91.44, 91.44, 91.44, 76.2, 58.42, 58.42, 58.42, 45.72, 30.48]
+SG_Zone2.Length = [60.96, 88.9, 88.9, 88.9, 91.44, 91.44, 91.44, 91.44, 91.44, 103.05, 103.5, 91.44, 91.44, 91.44, 91.44, 91.44, 76.2, 58.42, 58.42, 58.42, 45.72, 30.48]
+
+#Distance [cm]
+Inlet.Distance = np.cumsum(Inlet.Length) 
+Core.Distance = np.cumsum(Core.Length) 
+Outlet.Distance = np.cumsum(Outlet.Length)
+SteamGenerator.Distance = np.cumsum(SteamGenerator.Length)
+SG_Zone1.Distance = np.cumsum(SG_Zone1.Length)
+SG_Zone2.Distance = np.cumsum(SG_Zone2.Length) 
+
+#Temperature [Celsius]
+Inlet.Celsius = [266]*Inlet.NodeNumber
+Core.Celsius = [266.55, 270.48, 275.15, 279.83, 284.51, 289.19, 293.87, 298.54, 303.22, 307.9, 311, 311]
+Outlet.Celsius = [310]*Outlet.NodeNumber
+SteamGenerator.Celsius = [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27, 279.43, 277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03]
+SG_Zone1.Celsius = [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27, 279.43, 277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03]
+SG_Zone2.Celsius = [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27, 279.43, 277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03]
+
+Sections = [Inlet, Core, Outlet, SteamGenerator, SG_Zone1, SG_Zone2]
+for i in Sections:
+    i.Kelvin = [x + 273.15 for x in i.Celsius] # [K]
+    i.NernstConstant = [x*(2.303*nc.R/(2*nc.F)) for x in i.Kelvin]
+    #Equilibrium and Debye-Huckel constants - polynomials as a function of temperature 
+    #Coeff1*x^4 + Coeff2*x^3 + Coeff3*x^2 + Coeff4*x + Coeff5, depends on # elements in coeff list
+    i.DebyeHuckelConstant=(np.polyval(nc.DebyeHuckPolynomial, i.Celsius)) 
+    i.k_W=10**(np.polyval(nc.KwPolynomial, i.Kelvin))
+    i.k_Li=10**(np.polyval(nc.KLiPolynomial, i.Kelvin)) 
+    i.k_FeOH=10**(np.polyval(nc.KFeOHPolynomial, i.Kelvin))
+    i.k_FeOH2=10**(np.polyval(nc.KFeOH2Polynomial, i.Kelvin))
+    i.k_FeOH3=10**(np.polyval(nc.KFeOH3Polynomial, i.Kelvin))
+    i.k_NiOH=10**(np.polyval(nc.KNiOHPolynomial, i.Kelvin))
+    i.k_NiOH2=10**(np.polyval(nc.KNiOH2Polynomial, i.Kelvin))
+    i.k_NiOH3=10**(np.polyval(nc.KNiOH3Polynomial, i.Kelvin))
+
+#Concentration/Saturation Input [mol/kg]
+InletInterfaces = [Inlet.Bulk, Inlet.SolutionOxide, Inlet.MetalOxide]
+for i in InletInterfaces:
+    i.FeTotal = [1.28494E-08]*Inlet.NodeNumber
+    i.FeSatFe3O4 = [1.28494E-08]*Inlet.NodeNumber
+    i.NiTotal = [2.71098E-09]*Inlet.NodeNumber
+    i.NiSatFerrite = [2.71098E-09]*Inlet.NodeNumber
+    i.CoTotal = [3.77742E-09]*Inlet.NodeNumber
+    i.CoSatFerrite = [3.77742E-09]*Inlet.NodeNumber
+    i.CrTotal = [8.81E-11]*Inlet.NodeNumber
+    i.CrSat= [8.81E-11]*Inlet.NodeNumber
+
+CoreInterfaces = [Core.Bulk, Core.SolutionOxide, Core.MetalOxide]
+for i in CoreInterfaces:
+    i.FeTotal = [1.28521E-08, 1.35852E-08, 1.449E-08, 1.54787E-08, 1.65654E-08, 1.77722E-08, 1.91309E-08, 2.06833E-08, 2.25034E-08, 2.46889E-08, 2.64104E-08, 2.64104E-08]
+    i.FeSatFe3O4 = [1.28521E-08, 1.35852E-08, 1.449E-08, 1.54787E-08, 1.65654E-08, 1.77722E-08, 1.91309E-08, 2.06833E-08, 2.25034E-08, 2.46889E-08, 2.64104E-08, 2.64104E-08]
+    i.NiTotal = [2.71098E-09, 2.66196E-09, 2.60372E-09, 2.54535E-09, 2.29445E-09, 2.2137E-09, 1.91294E-09, 1.82788E-09, 1.54081E-09, 1.54384E-09, 1.54584E-09, 1.54584E-09]
+    i.NiSatFerrite = [2.71098E-09, 2.66196E-09, 2.60372E-09, 2.54535E-09, 2.29445E-09, 2.2137E-09, 1.91294E-09, 1.82788E-09, 1.54081E-09, 1.54384E-09, 1.54584E-09, 1.54584E-09]
+    i.CoTotal = [3.77742E-09, 3.51525E-09, 3.20371E-09, 2.8915E-09, 2.60041E-09, 2.3011E-09, 2.08369E-09, 1.86963E-09, 1.67578E-09, 1.53187E-09, 1.43654E-09, 1.43654E-09]
+    i.CoSatFerrite = [3.77742E-09, 3.51525E-09, 3.20371E-09, 2.8915E-09, 2.60041E-09, 2.3011E-09, 2.08369E-09, 1.86963E-09, 1.67578E-09, 1.53187E-09, 1.43654E-09, 1.43654E-09]
+    i.CrTotal = [8.81E-11, 9.61E-11, 1.01E-10, 9.40E-11, 8.69E-11, 7.98E-11, 7.28E-11, 6.57E-11, 5.86E-11, 5.16E-11, 4.69E-11, 4.69E-11] 
+    i.CrSat = [8.81E-11, 9.61E-11, 1.01E-10, 9.40E-11, 8.69E-11, 7.98E-11, 7.28E-11, 6.57E-11, 5.86E-11, 5.16E-11, 4.69E-11, 4.69E-11]
+
+OutletInterfaces = [Outlet.Bulk, Outlet.SolutionOxide, Outlet.MetalOxide]
+for i in OutletInterfaces:
+    i.FeTotal = [2.58268E-08]*Outlet.NodeNumber
+    i.FeSatFe3O4 = [2.58268E-08]*Outlet.NodeNumber
+    i.NiTotal = [1.54584E-09]*Outlet.NodeNumber
+    i.NiSatFerrite = [1.54584E-09]*Outlet.NodeNumber
+    i.CoTotal = [1.44E-09]*Outlet.NodeNumber
+    i.CoSatFerrite = [1.44E-09]*Outlet.NodeNumber
+    i.CrTotal = [4.84E-11]*Outlet.NodeNumber
+    i.CrSat = [4.84E-11]*Outlet.NodeNumber
+
+SGInterfaces = [SteamGenerator.Bulk, SteamGenerator.SolutionOxide, SteamGenerator.MetalOxide]
+for i in SGInterfaces:
+    i.FeTotal = [2.58E-08, 2.56E-08, 2.55E-08, 2.52546E-08, 2.32347E-08, 2.16094E-08, 2.03107E-08, 1.9246E-08, 1.83579E-08, 1.75642E-08, 1.68473E-08, 1.62692E-08, 1.58017E-08, 1.53906E-08, 1.50304E-08, 1.47083E-08, 1.44316E-08, 1.42108E-08, 1.39481E-08, 1.35926E-08, 1.31784E-08, 1.27883E-08]
+    i.FeSatFe3O4 = [2.58E-08, 2.56E-08, 2.55E-08, 2.52546E-08, 2.32347E-08, 2.16094E-08, 2.03107E-08, 1.9246E-08, 1.83579E-08, 1.75642E-08, 1.68473E-08, 1.62692E-08, 1.58017E-08, 1.53906E-08, 1.50304E-08, 1.47083E-08, 1.44316E-08, 1.42108E-08, 1.39481E-08, 1.35926E-08, 1.31784E-08, 1.27883E-08]
+    i.NiTotal = [1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 1.96011E-09, 2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09, 2.60733E-09, 2.62118E-09, 2.63802E-09, 2.66147E-09, 2.68978E-09, 2.71747E-09] 
+    i.NiSatFerrite = [1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 1.96011E-09, 2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09, 2.60733E-09, 2.62118E-09, 2.63802E-09, 2.66147E-09, 2.68978E-09, 2.71747E-09]
+    i.CoTotal = [1.46729E-09, 1.46729E-09, 1.46729E-09, 1.49896E-09, 1.62443E-09, 1.75595E-09, 1.91821E-09, 2.06673E-09, 2.2024E-09, 2.35035E-09, 2.5275E-09, 2.67907E-09, 2.80762E-09, 2.92529E-09, 3.0321E-09, 3.13232E-09, 3.22305E-09, 3.2971E-09, 3.38716E-09, 3.51258E-09, 3.66401E-09, 3.81211E-09]
+    i.CoSatFerrite = [1.46729E-09, 1.46729E-09, 1.46729E-09, 1.49896E-09, 1.62443E-09, 1.75595E-09, 1.91821E-09, 2.06673E-09, 2.2024E-09, 2.35035E-09, 2.5275E-09, 2.67907E-09, 2.80762E-09, 2.92529E-09, 3.0321E-09, 3.13232E-09, 3.22305E-09, 3.2971E-09, 3.38716E-09, 3.51258E-09, 3.66401E-09, 3.81211E-09]
+    i.CrTotal = [4.84E-11, 4.84E-11, 4.84E-11, 4.99E-11, 5.61E-11, 6.20E-11, 6.73E-11, 7.22E-11, 7.67E-11, 8.10E-11, 8.52E-11, 8.88E-11, 9.18E-11, 9.46E-11, 9.71E-11, 9.94E-11, 1.01E-10, 1.03E-10, 1.00E-10, 9.62E-11, 9.15E-11, 8.70E-11]
+    i.CrSat = [4.84E-11, 4.84E-11, 4.84E-11, 4.99E-11, 5.61E-11, 6.20E-11, 6.73E-11, 7.22E-11, 7.67E-11, 8.10E-11, 8.52E-11, 8.88E-11, 9.18E-11, 9.46E-11, 9.71E-11, 9.94E-11, 1.01E-10, 1.03E-10, 1.00E-10, 9.62E-11, 9.15E-11, 8.70E-11]
+
+##Include SG zones likewise 
+
+
+#Particulate #[mg/kg] (ppm)
+Inlet.BigParticulate =[0]*Inlet.NodeNumber 
+Core.BigParticulate = [0]*Core.NodeNumber 
+Outlet.BigParticulate = [0]*Outlet.NodeNumber
+SteamGenerator.BigParticulate = [0]*SteamGenerator.NodeNumber
+SG_Zone1.BigParticulate = [0]*SG_Zone1.NodeNumber
+SG_Zone2.BigParticulate = [0]*SG_Zone2.NodeNumber
+
+Inlet.SmallParticulate =[0]*Inlet.NodeNumber 
+Core.SmallParticulate = [0]*Core.NodeNumber 
+Outlet.SmallParticulate = [0]*Outlet.NodeNumber
+SteamGenerator.SmallParticulate = [0]*SteamGenerator.NodeNumber
+SG_Zone1.SmallParticulate = [0]*SG_Zone1.NodeNumber
+SG_Zone2.SmallParticulate = [0]*SG_Zone2.NodeNumber
+
+
+    
+
+
+
+
+##
+
+
+
+
+
 
 
 def ReynoldsNumber(Section, Diameter):
