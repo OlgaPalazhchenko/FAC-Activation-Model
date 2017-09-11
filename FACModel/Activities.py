@@ -55,50 +55,58 @@ def Particulate(Section, BulkCrud):
     return x
                     
 
-def SurfaceActivity(Section, CorrosionRate, FeSatFe3O4, InnerOxThickness, BulkActivity, j):
+def SurfaceActivity(Section, CorrosionRate, FeSatFe3O4, InnerOxThickness, BulkActivity, j, Isotope):
     t = [j]*Section.NodeNumber   
-    #Array of decay constants for all isotopes 
-    Lambda = [nc.LambdaCo60, nc.LambdaCo58, nc.LambdaFe55, nc.LambdaFe59, nc.LambdaMn54, nc.LambdaCr51, nc.LambdaNi63]
-    #Takes each constant in the above array and turns that into an array based on number of nodes in Section
-    #e.g., Inlet: [[Co60, Co60,Co60,Co60,Co60,Co60,Co60], [Co58,Co58,Co58,Co58,Co58,Co58,Co58],...] - array of arrays (matrix)
-    Lambda_array = np.array([[i]*Section.NodeNumber for i in Lambda])
-    Lambda_sec = Lambda_array/3600 #[s^-1], Converts from h^-1 to s^-1
-    EtaTerm = np.array(Eta(Section, CorrosionRate, FeSatFe3O4, InnerOxThickness))
     
-    ActivityTerm = EtaTerm*BulkActivity/Lambda_sec  
-    ExponentialTerm = 1-np.exp(-np.array(Lambda_array)*t) 
-    ActivityConcentration = ActivityTerm*ExponentialTerm #[Bq/cm^2]
-    ActivityConcentration_metersquared =ActivityConcentration*1000*(100**2) #[mBq/m^2]
-     
-    #Lambda_sec = [Lambda/3600]*Section.NodeNumber #[s^-1], Converts from h^-1 to s^-1
-    #ActivityTerm = [x*y/z for x,y,z in zip(Eta(Section, CorrosionRate, FeSatFe3O4, InnerOxThickness),BulkActivity, Lambda_sec)] 
-    #ExponentialTerm = [1-np.exp(-Lambda*j)]*Section.NodeNumber 
-    #ActivityConcentration = [x*y for x,y in zip(ActivityTerm,ExponentialTerm)] #[Bq/cm^2]
-    #ActivityConcentration_metersquared = [i*(1000*(100**2)) for i in ActivityConcentration] #[mBq/m^2]
+    if Isotope == "Co60":
+        Lambda = nc.LambdaCo60
+    elif Isotope == "Co58":
+        Lambda = nc.LambdaCo58  
+    elif Isotope == "Fe55":
+        Lambda = nc.LambdaFe55
+    elif Isotope == "Fe59":
+        Lambda = nc.LambdaFe59
+    elif Isotope == "Mn54":
+        Lambda = nc.LambdaMn54
+    elif Isotope == "Cr51":
+        Lambda = nc.LambdaCr51
+    elif Isotope == "Ni63":
+        Lambda = nc.LambdaNi63
+    else:
+        print ("Wrong isotope input")
+            
+    Lambda_sec = [Lambda/3600]*Section.NodeNumber #[s^-1], Converts from h^-1 to s^-1
+    ActivityTerm = [x*y/z for x,y,z in zip(Eta(Section, CorrosionRate, FeSatFe3O4, InnerOxThickness),BulkActivity, Lambda_sec)] 
+    ExponentialTerm = [1-np.exp(-Lambda*j)]*Section.NodeNumber 
+    ActivityConcentration = [x*y for x,y in zip(ActivityTerm,ExponentialTerm)] #[Bq/cm^2]
+    ActivityConcentration_metersquared = [i*(1000*(100**2)) for i in ActivityConcentration] #[mBq/m^2]
+    
     return (ld.UnitConverter(Section, "Bq", "Ci", ActivityConcentration_metersquared, None, None, None, None)) #[mCi/m^2]
 
 
-def InCoreActiveDeposit(Section1, Section2=ld.Outlet, InnerOxThickness, OuterOxThickness, OuterFe3O4Thickness, NiThickness, CoThickness, \
-                        InnerIronOxThickness, j, Element, ParentAbundance, DecayConstant, CrossSection, MolarMass, DepositThickness):
+def InCoreActiveDeposit(Section1, Section2, InnerOxThickness, OuterOxThickness, OuterFe3O4Thickness, NiThickness, CoThickness, \
+                        InnerIronOxThickness, j, Element, ParentAbundance, DecayConstant, CrossSection, MolarMass, BigParticulate, SmallParticulate):
+    #Section1 = Core, Section2= Outlet
+    #Only outlet is used for averaging the composition of the crud (majority of spalling here due to high velocity)
     FeComposition = []
     NiComposition = []
     CoComposition = []
     CrComposition = []
-   
-    for i in range(Section2.NodeNumber): #Only outlet is used for averaging the composition of the crud (majority of spalling here due to high velocity)
+    
+    for i in range(Section2.NodeNumber): 
         if OuterOxThickness[i] >0:
             Outer = "yes"
             OxideType = OuterOxThickness[i]
         else:
-            if OuterOxThickness[i] == 0:
-                if InnerOxThickness[i] >0:
-                    Outer = "no"
-                    OxideType = InnerOxThickness[i]
+            if InnerOxThickness[i] >0:
+                Outer = "no"
+                OxideType = InnerOxThickness[i]
         
         Fe = RK4.OxideComposition(Section2, "Fe", OxideType, Outer, OuterFe3O4Thickness[i], NiThickness[i], CoThickness[i], InnerIronOxThickness[i])
         Ni = RK4.OxideComposition(Section2, "Ni", OxideType, Outer, OuterFe3O4Thickness[i], NiThickness[i], CoThickness[i], InnerIronOxThickness[i])
         Co = RK4.OxideComposition(Section2, "Co", OxideType, Outer, OuterFe3O4Thickness[i], NiThickness[i], CoThickness[i], InnerIronOxThickness[i])
         Cr = RK4.OxideComposition(Section2, "Cr", OxideType, Outer, OuterFe3O4Thickness[i], NiThickness[i], CoThickness[i], InnerIronOxThickness[i])
+    
     #Checks which oxide layer is uppermost (i.e., if outer layer removed due to spalling) and calculates elemental composition, adds that node's composition   
     #to the list below until all nodes in outlet are computed
         FeComposition.append(Fe)
@@ -107,6 +115,7 @@ def InCoreActiveDeposit(Section1, Section2=ld.Outlet, InnerOxThickness, OuterOxT
         CrComposition.append(Cr)
     #Adds together all elements in the list (e.g., [Fe, Fe, Fe+...+] (at each node and same) for Ni, Co, etc.) and divides by total number of nodes
     #Average composition of each element in the outlet feeder oxide (outer or inner at each location used, depending on growth/spalling)      
+    
     if Element == "Fe":
         ElementComposition = sum(FeComposition)/Section2.NodeNumber
     if Element == "Ni":
@@ -115,9 +124,11 @@ def InCoreActiveDeposit(Section1, Section2=ld.Outlet, InnerOxThickness, OuterOxT
         ElementComposition = sum(CoComposition)/Section2.NodeNumber
     if Element =="Cr":
         ElementComposition = sum(CrComposition)/Section2.NodeNumber
-        
-    ActiveDeposit = [(DecayConstant/3600)*(nc.Avagadro*i/MolarMass)*((nc.NeutronFlux*CrossSection*ElementComposition*ParentAbundance)/ \
-    ((DecayConstant/3600)+nc.Krelease))*1-np.exp(-j*(nc.TimeIncrement/3600)*DecayConstant+nc.Krelease*3600) for i in DepositThickness]
+    
+    CoreDepositThickness = Deposition(Section1, BigParticulate, SmallParticulate, j)
+      
+    ActiveDeposit = [(DecayConstant/3600)*(nc.Avagadro*(i/MolarMass)*nc.NeutronFlux*CrossSection*ElementComposition*ParentAbundance/ \
+    ((DecayConstant/3600)+nc.Krelease))*(1-np.exp(-j*(nc.TimeIncrement/3600)* (DecayConstant + nc.Krelease*3600))) for i in CoreDepositThickness]
     
     return ActiveDeposit
     
@@ -125,7 +136,7 @@ def InCoreActiveDeposit(Section1, Section2=ld.Outlet, InnerOxThickness, OuterOxT
 def Deposition(Section, BigParticulate, SmallParticulate, j):
     #Can also be manually set to desired steady-state value, e.g., ~1 ppb    
     TotalParticulate = [x+y for x,y in zip(BigParticulate, SmallParticulate)]
-    
+    #print (TotalParticulate)
     if Section == ld.Core:
         DepositionConstant = nc.Kdeposition_InCore
         incr = nc.TimeIncrement/3600 
@@ -144,9 +155,8 @@ def Deposition(Section, BigParticulate, SmallParticulate, j):
                     Enthalpy = 1437.3 #[kJ/kg]
         
         #Only time dependence (not positional)
-        DepositThickness = [(nc.KVap*(HeatFlux/Enthalpy)*nc.Enrichment*i/nc.Krelease)*(1-np.exp(-nc.Krelease*(j*3600*(nc.TimeIncrement/3600)))) \
-                for i in TotalParticulate] #[g/cm^2]
-        
+        DepositThickness = [(nc.KVap*(HeatFlux/Enthalpy)*nc.Enrichment*x/nc.Krelease)*(1-np.exp(-nc.Krelease*(j*3600*(nc.TimeIncrement/3600)))) \
+                for x in TotalParticulate] #[g/cm^2]    
         #Fuel bundle average residence time of ~1 year 
         if (j+1)%(7000/incr)==0:
             DepositThickness = 0
@@ -162,7 +172,7 @@ def Deposition(Section, BigParticulate, SmallParticulate, j):
     
 
 def BulkActivity(Section1, Section2, BulkConcentration_o, CorrosionRate, FeSatFe3O4, InnerOxThickness, OuterOxThickness, OuterFe3O4Thickness,\
-                 NiThickness, CoThickness, InnerIronOxThickness, j, Isotope, Element):
+                 NiThickness, CoThickness, InnerIronOxThickness, Isotope, Element, BigParticulate, SmallParticulate, j, i):
     
     #[s^-1], Converts from h^-1 to s^-1
     if Isotope == "Co60":
@@ -177,7 +187,7 @@ def BulkActivity(Section1, Section2, BulkConcentration_o, CorrosionRate, FeSatFe
         MolarMass = nc.MolarMassCo58
         ParentAbundance = nc.AbundanceNi58
         CrossSection = nc.CrossSectionNi58 
-        Element = "Co"
+        Element = "Ni"
         
     if Isotope == "Fe55":
         Lambda = nc.LambdaFe55
@@ -198,7 +208,7 @@ def BulkActivity(Section1, Section2, BulkConcentration_o, CorrosionRate, FeSatFe
         MolarMass = nc.MolarMassMn54
         ParentAbundance = nc.AbundanceFe54
         CrossSection = nc.CrossSectionFe54
-        Element = "Mn"
+        Element = "Fe"
         
     if Isotope == "Cr51":
         Lambda = nc.LambdaCr51
@@ -214,15 +224,24 @@ def BulkActivity(Section1, Section2, BulkConcentration_o, CorrosionRate, FeSatFe
         CrossSection = nc.CrossSectionNi62
         Element = "Ni"
     
-    if Section1 == ld.Core:
-        CoreDeposit = InCoreActiveDeposit(Section1, Section2, InnerOxThickness, OuterOxThickness, OuterFe3O4Thickness, \
-                                          NiThickness, CoThickness, InnerIronOxThickness, j)
+    if Section1 == ld.Core: #Section2 = Outlet
+        CoreDeposit = InCoreActiveDeposit(Section1, Section2, Section2.InnerOxThickness, Section2.OuterOxThickness, \
+                        Section2.OuterFe3O4Thickness, Section2.NiThickness, Section2.CoThickness, Section2.InnerIronOxThickness, j, Element, \
+                        ParentAbundance, Lambda, CrossSection, MolarMass, BigParticulate, SmallParticulate)
+        
+        #print (CoreDeposit)
+        Activity = (4/(Section1.Diameter[i]*Lambda/3600))*nc.Krelease*CoreDeposit[i] * \
+                    (1-np.exp(-(Lambda/3600)*Section1.Distance[i]/Section1.Velocity[i])) + \
+                    BulkConcentration_o*np.exp(-(Lambda/3600)*Section1.Distance[i]/Section1.Velocity[i]) 
                     
     else:
         EtaTerm = Eta(Section1, CorrosionRate, FeSatFe3O4, InnerOxThickness)
-        Activity = [BulkConcentration_o*np.exp((-x*Lambda/y)-(4*x*z/(q*y))) for x,y,z,q in zip(Section1.Distance, Section1.Velocity, EtaTerm, \
-                                                                                           Section1.Diameter)]
+        Activity = BulkConcentration_o*np.exp((-Section1.Distance[i]*Lambda/Section1.Velocity[i]) - \
+                                              (4*Section1.Distance[i]*EtaTerm[i]/(Section1.Diameter[i]*Section1.Velocity[i]))) 
     
+    return Activity
+
+
 #     t = [j]*Section1.NodeNumber   
 #     #Array of decay constants for all isotopes 
 #     Lambda = [nc.LambdaCo60, nc.LambdaCo58, nc.LambdaFe55, nc.LambdaFe59, nc.LambdaMn54, nc.LambdaCr51, nc.LambdaNi63]

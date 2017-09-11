@@ -15,7 +15,13 @@ def Potential(Section, StandardPotential, ProductConcentration, ProductGamma, Pr
         Product = (ProductConcentration*DensityH2O*ProductGamma)**ProductStoich 
         Reactant = (ReactantConcentration*DensityH2O*ReactantGamma)**ReactantStoich 
     
-        
+    x = [Product, Reactant]
+    for i in x:
+        if i <= 0:
+            print (i, Section.InnerOxThickness, "Inner Oxide g/cm2", Section.OuterOxThickness, "Outer Oxide g/cm2", "Error in electrochemistry calculation -> concentration < 0")
+            i = 1e-9
+    [Product, Reactant] = x
+             
     return StandardPotential- NernstConstant*np.log10(Product/Reactant)
 
 

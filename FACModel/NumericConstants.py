@@ -22,6 +22,8 @@ FractionCo_Alloy800 =0.00015
 FractionCr_Alloy800 = 0.21
 FractionCo_CS = 0.00006
 FractionCr_CS  = 0.0002
+FractionCr_Stellite = 0.27
+FractionCo_Stellite = 0.65
 
 #Density [g/cm^3]
 Fe3O4Density = 5.2 
@@ -125,8 +127,8 @@ DissolutionActivationEnergyFe3O4 = 144987.3286
 DissolutionActivationEnergyH2onFe3O4 = 297150.6019
 PrecipitationActivationEnergyFe3O4 = 191037.2419
 PrecipitationActivationEnergyH2onFe3O4 = 291214.6173
-ActivationEnergyAlloy800 = 294051.6401
-ActivationEnergyH2onAlloy800 = 283099.8619
+ActivationEnergyAlloy800 = 295024.3034
+ActivationEnergyH2onAlloy800 = 284072.5252
 
 SimulationDuration = 10 #Total runtime [h]
 TimeIncrement = 3600 #s  Based on desired time step (3600 s/h for 1h time step)
@@ -136,7 +138,7 @@ OutletOuterSpallConstant = 7000
 OutletInnerSpallConstant = 1000
 InletOuterSpallConstant = 1.00E+18 #Different units for inlet versus outlet (different functions)
 InletInnerSpallConstant = 1.00E+5
-ErosionConstant = 2.4e-10 #[g/cm^2 s]
+ErosionConstant = 2.4e-11 #[g/cm^2 s]
 
 #In-core deposition constants
 KVap = 0.1

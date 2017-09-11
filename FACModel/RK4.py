@@ -23,7 +23,7 @@ def Particulate(Section, BulkCrud_0, Diameter, DensityH2O, Velocity, Distance):
 
 def OxideComposition(Section, Element, OxideType, Outer, OuterFe3O4Thickness, NiThickness, CoThickness, InnerIronOxThickness):     
 #Note: this function does not take list input 
-    
+    #print (Outer, OxideType, CoThickness)
     if Outer == "yes": #for determining outer layer only composition
         #Outer Fe3O4 layer 
         if OxideType >0: #For the total oxide value in each node
@@ -44,7 +44,7 @@ def OxideComposition(Section, Element, OxideType, Outer, OuterFe3O4Thickness, Ni
     if Outer == "no": #inner oxide layer composition only
         if OxideType >0: #For the InnerIronOxThickness value in each node
             if Element == "Fe":
-                return 4#c.FractionMetalInnerOxide(Section, Element)             
+                return c.FractionMetalInnerOxide(Section, Element)             
             if OuterFe3O4Thickness > 0:
                 if Element == "Ni":    
                     return c.FractionMetalInnerOxide(Section, Element) #no Ni or Co incorporation via precip - only if present in inner layer through diffusion
@@ -137,13 +137,7 @@ def OxideGrowth(Section, BulkFeTotal, BulkNiTotal, BulkCoTotal, BulkFeSat, Solut
             
             MetalOxideFe = it.MetalOxideInterfaceConcentration(Section, "Fe", SolutionOxideFeTotal, InnerOxThickness, OuterOxThickness, CorrRate)
             
-            CorrRate, MOMixedECP = it.CorrosionRate(Section, MetalOxideFe, MetalOxideNi, ConcentrationH)
-        
-#         if Section==ld.SteamGenerator:
-#             #print (Section.NodeNumber, "Node Number")
-#             print (SolutionOxideFeTotal, "S/O Fe Total")
-#             print (MetalOxideFe, "M/O Fe Total")
-            
+            CorrRate, MOMixedECP = it.CorrosionRate(Section, MetalOxideFe, MetalOxideNi, ConcentrationH)            
         
         KpFe3O4electrochem, KdFe3O4electrochem, SolutionOxideFeSat, MOConcentrationH = e.ElectrochemicalAdjustment(Section, EqmPotentialFe3O4, \
                                             MixedECP, MOMixedECP, SolutionOxideFeTotal, SolutionOxideFeSat, BulkFeSat, ConcentrationH)
@@ -234,6 +228,16 @@ def OxideGrowth(Section, BulkFeTotal, BulkNiTotal, BulkCoTotal, BulkFeSat, Solut
         O.append(d)
         ##
         
+        for i in range(Section.NodeNumber):
+        ##Need the overall inner and outer oxides to be updated for M/O concentration 
+            if RK4_OuterFe3O4Thickness[i]> 0: #from previous time step
+                #With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer  
+                OuterOxThickness[i] = RK4_OuterFe3O4Thickness[i] + RK4_CoThickness[i] + RK4_NiThickness[i]
+                InnerOxThickness[i] = RK4_InnerIronOxThickness[i]
+            else: #OuterFe3O4Thickness == 0
+                InnerOxThickness[i] = RK4_InnerIronOxThickness[i] + RK4_CoThickness[i] + RK4_NiThickness[i]
+        
+        
     InnerIronOxThickness = [a+(b+2*c+2*d+e)/6 for a, b, c, d, e in zip(InnerIronOxThickness, L[0], L[1], L[2], L[3])]
     OuterFe3O4Thickness = [a+(b+2*c+2*d+e)/6 for a, b, c, d, e in zip(OuterFe3O4Thickness, M[0], M[1], M[2], M[3])]
     CoThickness = [a+(b+2*c+2*d+e)/6 for a, b, c, d, e in zip(CoThickness, N[0], N[1], N[2], N[3])]
@@ -246,8 +250,7 @@ def OxideGrowth(Section, BulkFeTotal, BulkNiTotal, BulkCoTotal, BulkFeSat, Solut
             if Layers[i][x] < 0:
                 Layers[i][x] = 0       
  
-    return InnerOxThickness, OuterOxThickness, InnerIronOxThickness, OuterFe3O4Thickness, CoThickness, NiThickness, SolutionOxideFeTotal, \
-        SolutionOxideNiTotal
+    return InnerOxThickness, OuterOxThickness, InnerIronOxThickness, OuterFe3O4Thickness, CoThickness, NiThickness
 
     
 def RK4(Section, InitialThickness, GrowthFunction, approximation):
@@ -377,7 +380,7 @@ def Spall(Section,j, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4
             
             if Section == ld.Outlet: #Outlet header spalling corrector 
                 if SpallTime[i] > 4000:
-                    SpallTime[i] = 3000 
+                    SpallTime[i] = 2000 
                 
             ElapsedTime = [0]*Section.NodeNumber #No time has elapsed yet at first time step for all nodes    
 #             

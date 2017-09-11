@@ -101,21 +101,14 @@ class Section(): #Defining each primary heat transport section as a class
         self.KpFe3O4electrochem = None
         self.KdFe3O4electrochem = None
         self.CorrRate = None
-        self.Co60Source = None
-        self.Co58Source = None
-        self.Mn54Source = None
-        self.Fe55Source = None
-        self.Fe59Source = None
-        self.Cr51Source = None
-        self.Ni63Source = None
         
         self.DepositThickness = None
         self.Particle = []
         self.FractionFeInnerOxide = None
         self.FractionNiInnerOxide = None
         
-        self.BigParticulate =[0.001]*self.NodeNumber #[mg/kg] (ppm)
-        self.SmallParticulate = [0.001]*self.NodeNumber #[mg/kg] (ppm)
+        self.BigParticulate =[0]*self.NodeNumber #[mg/kg] (ppm)
+        self.SmallParticulate = [0]*self.NodeNumber #[mg/kg] (ppm)
         self.ElapsedTime = None
         self.SpallTime = []
         
@@ -146,9 +139,9 @@ class Section(): #Defining each primary heat transport section as a class
         self.Bulk.CrTotal = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
         self.SolutionOxide.CrTotal = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
         self.MetalOxide.CrTotal = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.Bulk.CrSatFerrite = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.CrSatFerrite = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.CrSatFerrite = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)] 
+        self.Bulk.CrSat = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.SolutionOxide.CrSat = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
+        self.MetalOxide.CrSat = [float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)] 
         
 #Creates the 4 PHTS sections and their methods based on the Sections class template/blueprint
 Inlet= Section(21,0,7)
@@ -157,9 +150,15 @@ Outlet=Section(63,0,9)
 SteamGenerator=Section(84,0,22)        
 
 
+def ReynoldsNumber(Section, Diameter):
+    #Diameter is an input due to difference in desired dimension (e.g., inner, outer, hydraulic, etc.)
+    Reynolds = [x*y/(z*q) for x,y,z,q in zip(Section.Velocity, Diameter, Section.ViscosityH2O, Section.DensityH2O)]    
+    return Reynolds
+
+
 def MassTransfer(Section):
     Schmidt = [x/(y*nc.FeDiffusivity) for x,y in zip(Section.ViscosityH2O, Section.DensityH2O)]
-    Reynolds = [x*y/(z*q) for x,y,z,q in zip(Section.Velocity, Section.Diameter, Section.ViscosityH2O, Section.DensityH2O)]
+    Reynolds = ReynoldsNumber(Section, Section.Diameter)
     Sherwood = [0.0165*(x**0.86)*(y**0.33) for x,y in zip(Reynolds, Schmidt)] #Berger & Hau for straight pipe, single phase, fully developed (turbulent) flow
     return [nc.FeDiffusivity*x/y for x,y in zip(Sherwood,Section.Diameter)] 
 

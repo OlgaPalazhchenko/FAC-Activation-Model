@@ -62,13 +62,15 @@ def MetalOxideInterfaceConcentration(Section, Element, SolutionOxideInterfaceCon
     
     MOConcentration = [(x*Diffusion(Section, Element)/ y) +z for x,y,z in zip(Corrosion, DiffusivityTerm, SolutionConcentration)]
     
-    if Section==ld.SteamGenerator: #or Section==ld.Outlet:
-        #print (Section.NodeNumber)
-        print (PathLength, "Path Length") 
-        print (DiffusivityTerm, "Diffusivity Term") 
-        print (SolutionConcentration, "S/O Conc")
-        print (ld.UnitConverter(Section, "Grams per Cm Cubed", "Mol per Kg", MOConcentration, None, None, None, MolarMass), "M/O Conc")
-    ##Pre-set corrosion rate for outlet (lower MOConc = higher FAC rate (e-chem effect))
+#     if Section==ld.SteamGenerator: #or Section==ld.Outlet:
+#         #print (Section.NodeNumber)
+#         print (PathLength, "Path Length") 
+#         print (DiffusivityTerm, "Diffusivity Term") 
+#         print (SolutionConcentration, "S/O Conc")
+#         print (ld.UnitConverter(Section, "Grams per Cm Cubed", "Mol per Kg", MOConcentration, None, None, None, MolarMass), "M/O Conc")
+
+
+#     ##Pre-set corrosion rate for outlet (lower MOConc = higher FAC rate (e-chem effect))
     #inner ox decrease = path length decreases --> diffusivity term increases --> metal oxide concentration decreases --> corr rate incr
     # Can also reset the oxide thickness such that the minimum results in acceptable MO Conc and corrrate
     
