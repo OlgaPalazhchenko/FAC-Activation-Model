@@ -39,7 +39,7 @@ for Section in Sections:
 #         if Section == ld.Inlet or Section == ld.Core or Section == ld.Outlet:
 #             Section.MetalOxide.NiTotal = [0]*Section.NodeNumber
     
-    print (Section.SolutionOxide.ConcentrationH)
+    
             
     Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = \
     e.ECP(Section, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4, Section.SolutionOxide.NiTotal, Section.SolutionOxide.ConcentrationH)
