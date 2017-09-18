@@ -10,24 +10,24 @@ def Eta(Section,CorrosionRate,FeSatFe3O4,InnerOxThickness):
     DeltaMassInnerOxide = [x*y/z for x,y,z in zip([it.Diffusion(Section, "Fe")]*Section.NodeNumber, CorrosionRate, [Section.FractionFeInnerOxide]*Section.NodeNumber)]
     if Section == ld.SteamGenerator: #SG (this function not called for core)    
     
-        DeltaTemperature = [abs(x-y) for x,y in zip(Section.Kelvin[1:],Section.Kelvin)]
+        DeltaTemperature = [abs(x-y) for x,y in zip(Section.PrimaryBulkTemperature[1:],Section.PrimaryBulkTemperature)]
         DeltaTemperature.insert(0, 0.0001) #One less Eta than total number of nodes --> deltas = 21, so add small diff b/w first node and last node outlet
         
         DeltaTemperature_Length = [x/y for x,y in zip(DeltaTemperature,Section.Length)]        
         
         DeltaSolubility = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", [abs(x-y) for x,y in zip(FeSatFe3O4[1:],FeSatFe3O4)], \
-                                            None, None, None, nc.FeMolarMass)
+                                            None, None, None, nc.FeMolarMass, None)
         DeltaSolubility.insert(0,1e-12) #One less Eta than total number of nodes --> deltas = 21, so add small diff b/w first node and last node outlet
      
 
         DeltaSolubility_Temp = [x/y for x,y in zip(DeltaSolubility,DeltaTemperature)]
          
-        CRYST_o = [x/(y*z*t*u*v) for x,y,z,t,u,v in zip(ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", FeSatFe3O4, None, None, None, nc.FeMolarMass),     \
+        CRYST_o = [x/(y*z*t*u*v) for x,y,z,t,u,v in zip(ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", FeSatFe3O4, None, None, None, nc.FeMolarMass, None),     \
                                                  [0.18]*Section.NodeNumber, Section.Diameter, Section.Velocity, DeltaSolubility_Temp, DeltaTemperature_Length)]
      
     DIFF_i = [i/(2*nc.Fe3O4Density*nc.FeDiffusivity*nc.Fe3O4Porosity_inner*(1-nc.Fe3O4Porosity_inner)) for i in InnerOxThickness]
           
-    CRYST_i = [x/(y*z) for x,y,z in zip(ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", FeSatFe3O4, None, None, None, nc.FeMolarMass),     \
+    CRYST_i = [x/(y*z) for x,y,z in zip(ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", FeSatFe3O4, None, None, None, nc.FeMolarMass, None),     \
                                                  [0.35]*Section.NodeNumber, DeltaMassInnerOxide)]
     if Section == ld.Inlet or Section == ld.Outlet:
         CRYST_o = CRYST_i
@@ -81,7 +81,7 @@ def SurfaceActivity(Section, CorrosionRate, FeSatFe3O4, InnerOxThickness, BulkAc
     ActivityConcentration = [x*y for x,y in zip(ActivityTerm,ExponentialTerm)] #[Bq/cm^2]
     ActivityConcentration_metersquared = [i*(1000*(100**2)) for i in ActivityConcentration] #[mBq/m^2]
     
-    return (ld.UnitConverter(Section, "Bq", "Ci", ActivityConcentration_metersquared, None, None, None, None)) #[mCi/m^2]
+    return (ld.UnitConverter(Section, "Bq", "Ci", ActivityConcentration_metersquared, None, None, None, None, None)) #[mCi/m^2]
 
 
 def InCoreActiveDeposit(Section1, Section2, InnerOxThickness, OuterOxThickness, OuterFe3O4Thickness, NiThickness, CoThickness, \

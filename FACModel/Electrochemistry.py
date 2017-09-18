@@ -31,7 +31,7 @@ def ElectrochemicalKineticConstant(Section, KineticConstant, EquilibriumPotentia
     else:
         Beta_prime = nc.Beta
     
-    return [nc.SAFactor*x*np.exp(Beta_prime*nc.n*nc.F*(y-z)/(nc.R*q)) for x,y,z,q in zip(KineticConstant,MixedECP,EquilibriumPotential,Section.Kelvin)] 
+    return [nc.SAFactor*x*np.exp(Beta_prime*nc.n*nc.F*(y-z)/(nc.R*q)) for x,y,z,q in zip(KineticConstant,MixedECP,EquilibriumPotential,Section.PrimaryBulkTemperature)] 
 
 
 def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPotential, Kelvin, Dissolution):
@@ -55,24 +55,24 @@ def ElectrochemicalAdjustment(Section, EqmPotentialFe3O4, SOMixedPotential, MOMi
     for i in range(Section.NodeNumber):
         if FeTotal[i] >= FeSatFe3O4[i]:
             
-            x = ElectrochemicalSaturation(Section, BulkSatFe3O4[i], EqmPotentialFe3O4[i], SOMixedPotential[i], Section.Kelvin[i], "no")
+            x = ElectrochemicalSaturation(Section, BulkSatFe3O4[i], EqmPotentialFe3O4[i], SOMixedPotential[i], Section.PrimaryBulkTemperature[i], "no")
         else:
-            x =ElectrochemicalSaturation(Section, BulkSatFe3O4[i], EqmPotentialFe3O4[i], SOMixedPotential[i], Section.Kelvin[i], "yes")
+            x =ElectrochemicalSaturation(Section, BulkSatFe3O4[i], EqmPotentialFe3O4[i], SOMixedPotential[i], Section.PrimaryBulkTemperature[i], "yes")
         AdjustedSaturation.append(x)    
     
     if Section == ld.Inlet or Section == ld.Outlet or Section == ld.SteamGenerator:
-        MOConcentrationH = SOConcentrationH#[x*np.exp(-(y-z)*nc.F/(nc.R*t)) for x,y,z,t in zip(SOConcentrationH, MOMixedPotential, SOMixedPotential, Section.Kelvin)]
+        MOConcentrationH = SOConcentrationH#[x*np.exp(-(y-z)*nc.F/(nc.R*t)) for x,y,z,t in zip(SOConcentrationH, MOMixedPotential, SOMixedPotential, Section.PrimaryBulkTemperature)]
     else: MOConcentrationH = None
     
     return KpFe3O4electrochem, KdFe3O4electrochem, AdjustedSaturation, MOConcentrationH                                                                      
     
 
 def MixedPotential(Section, CathodeCurrent, CathodePotential, AnodeCurrent, AnodePotential):
-    Numerator = [x*np.exp((nc.Beta*nc.n*nc.F*y)/(nc.R*z))+q*np.exp((nc.Beta*nc.n*nc.F*r)/(nc.R*z)) for x,y,z,q,r, in zip(CathodeCurrent,CathodePotential,Section.Kelvin,AnodeCurrent,AnodePotential)]
+    Numerator = [x*np.exp((nc.Beta*nc.n*nc.F*y)/(nc.R*z))+q*np.exp((nc.Beta*nc.n*nc.F*r)/(nc.R*z)) for x,y,z,q,r, in zip(CathodeCurrent,CathodePotential,Section.PrimaryBulkTemperature,AnodeCurrent,AnodePotential)]
     
-    Denominator = [x*np.exp((-(1-nc.Beta)*nc.n*nc.F*y)/(nc.R*z))+q*np.exp((-(1-nc.Beta)*nc.n*nc.F*r)/(nc.R*z)) for x,y,z,q,r, in zip(CathodeCurrent,CathodePotential,Section.Kelvin,AnodeCurrent,AnodePotential)]
+    Denominator = [x*np.exp((-(1-nc.Beta)*nc.n*nc.F*y)/(nc.R*z))+q*np.exp((-(1-nc.Beta)*nc.n*nc.F*r)/(nc.R*z)) for x,y,z,q,r, in zip(CathodeCurrent,CathodePotential,Section.PrimaryBulkTemperature,AnodeCurrent,AnodePotential)]
     
-    return  [(nc.R*x/(nc.n*nc.F))*np.log(y/z) for x,y,z in zip(Section.Kelvin, Numerator, Denominator)]
+    return  [(nc.R*x/(nc.n*nc.F))*np.log(y/z) for x,y,z in zip(Section.PrimaryBulkTemperature, Numerator, Denominator)]
     
 #print (MixedPotential(ld.Inlet, [1e-9]*ld.Inlet.NodeNumber, [-1]*ld.Inlet.NodeNumber,[2e-9]*ld.Inlet.NodeNumber, [-0.7]*ld.Inlet.NodeNumber))
 
@@ -93,7 +93,7 @@ def ExchangeCurrentDensity(Section, ActivationE, Concentration, Potential, Densi
     if Concentration == 1:
         return ((nc.F*nc.kb*Kelvin)/nc.hp)*np.exp(-ActivationE/(nc.R*Kelvin))*np.exp((Beta_prime*nc.n*nc.F*Potential)/(nc.R*Kelvin)) 
     else:  
-        #print ([((nc.F*nc.kb*x)/nc.hp)*np.exp(-y/(nc.R*x))*((w*p/1000)**(2/3))*np.exp((Beta_prime*nc.n*nc.F*z)/(nc.R*x)) for x,y,z,w,p in zip(Section.Kelvin, ActivationEnergy, Potential, Concentration, Section.DensityH2O)])
+        #print ([((nc.F*nc.kb*x)/nc.hp)*np.exp(-y/(nc.R*x))*((w*p/1000)**(2/3))*np.exp((Beta_prime*nc.n*nc.F*z)/(nc.R*x)) for x,y,z,w,p in zip(Section.PrimaryBulkTemperature, ActivationEnergy, Potential, Concentration, Section.DensityH2O)])
         return ((nc.F*nc.kb*Kelvin)/nc.hp)*np.exp(-ActivationE/(nc.R*Kelvin))*\
             ((Concentration*DensityH2O/1000)**(2/3))*np.exp((Beta_prime*nc.n*nc.F*Potential)/(nc.R*Kelvin))    
     #Convert concentrations from mol/kg to mol/cm^2 for io eq'n: [mol/kg]/1000 -> [mol/g]*[g/cm^3] -> [mol/cm^3]^(2/3) -> mol^(2/3)/cm^2    
@@ -101,14 +101,14 @@ def ExchangeCurrentDensity(Section, ActivationE, Concentration, Potential, Densi
 
 def Energy(Section,ExchangeCurrent, Concentration, Acceptor, EquilibriumPotential):
     if Acceptor == "yes":
-        return [nc.R*x*-np.log10(y*nc.hp/(nc.F*((z*q/1000)**(2/3))*nc.kb*x*np.exp(-nc.Beta*nc.n*nc.F*w/(nc.R*x)))) for x,y,z,q,w in (Section.Kelvin,ExchangeCurrent,Concentration,Section.DensityH2O, EquilibriumPotential)]
+        return [nc.R*x*-np.log10(y*nc.hp/(nc.F*((z*q/1000)**(2/3))*nc.kb*x*np.exp(-nc.Beta*nc.n*nc.F*w/(nc.R*x)))) for x,y,z,q,w in (Section.PrimaryBulkTemperature,ExchangeCurrent,Concentration,Section.DensityH2O, EquilibriumPotential)]
     else: #(1-Beta) vs. -Beta (sign change)
-        return [nc.R*x*-np.log10(y*nc.hp/(nc.F*((z*q/1000)**(2/3))*nc.kb*x*np.exp(nc.Beta*nc.n*nc.F*w/(nc.R*x)))) for x,y,z,q,w in (Section.Kelvin,ExchangeCurrent,Concentration,Section.DensityH2O, EquilibriumPotential)]
+        return [nc.R*x*-np.log10(y*nc.hp/(nc.F*((z*q/1000)**(2/3))*nc.kb*x*np.exp(nc.Beta*nc.n*nc.F*w/(nc.R*x)))) for x,y,z,q,w in (Section.PrimaryBulkTemperature,ExchangeCurrent,Concentration,Section.DensityH2O, EquilibriumPotential)]
         
     if Concentration == 1 and Acceptor == "yes":
-        return [nc.R*x*-np.log10(y*nc.hp/(nc.F*nc.kb*x*np.exp(-nc.Beta*nc.n*nc.F*w/(nc.R*x)))) for x,y,w in (Section.Kelvin,ExchangeCurrent, EquilibriumPotential)]
+        return [nc.R*x*-np.log10(y*nc.hp/(nc.F*nc.kb*x*np.exp(-nc.Beta*nc.n*nc.F*w/(nc.R*x)))) for x,y,w in (Section.PrimaryBulkTemperature,ExchangeCurrent, EquilibriumPotential)]
     elif Concentration == 1 and Acceptor == "no":
-        return [nc.R*x*-np.log10(y*nc.hp/(nc.F*nc.kb*x*np.exp(nc.Beta*nc.n*nc.F*w/(nc.R*x)))) for x,y,w in (Section.Kelvin,ExchangeCurrent, EquilibriumPotential)]
+        return [nc.R*x*-np.log10(y*nc.hp/(nc.F*nc.kb*x*np.exp(nc.Beta*nc.n*nc.F*w/(nc.R*x)))) for x,y,w in (Section.PrimaryBulkTemperature,ExchangeCurrent, EquilibriumPotential)]
 
 
 def ECP(Section, FeTotal, FeSatFe3O4, NiTotal, ConcentrationH):
@@ -131,17 +131,17 @@ def ECP(Section, FeTotal, FeSatFe3O4, NiTotal, ConcentrationH):
         if FeTotal[i] >= FeSatFe3O4[i]:
             x = Potential(Section, Section.StandardEqmPotentialFe3O4oxid[i], 1, 1, 1, ConcentrationH[i], ActivityCoefficient1[i], 2, \
                           Section.DensityH2O[i], Section.NernstConstant[i], "aqueous")
-            y = ExchangeCurrentDensity(Section, nc.PrecipitationActivationEnergyFe3O4, 1, x, Section.DensityH2O[i], Section.Kelvin[i], "Donor")
+            y = ExchangeCurrentDensity(Section, nc.PrecipitationActivationEnergyFe3O4, 1, x, Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Donor")
             z = ExchangeCurrentDensity(Section, nc.PrecipitationActivationEnergyH2onFe3O4, ConcentrationH[i], q, Section.DensityH2O[i],\
-                                       Section.Kelvin[i], "Acceptor")
+                                       Section.PrimaryBulkTemperature[i], "Acceptor")
         
         else:
             x = Potential(Section, Section.StandardEqmPotentialFe3O4red[i], ConcentrationFeOH2[i], 1, 3, ConcentrationH[i], \
                           ActivityCoefficient1[i], 2, Section.DensityH2O[i], Section.NernstConstant[i], "aqueous")
             y = ExchangeCurrentDensity(Section, nc.DissolutionActivationEnergyFe3O4, ConcentrationFeOH2[i], x, Section.DensityH2O[i], \
-                                       Section.Kelvin[i], "Donor") 
+                                       Section.PrimaryBulkTemperature[i], "Donor") 
             z = ExchangeCurrentDensity(Section, nc.DissolutionActivationEnergyH2onFe3O4, ConcentrationH[i], q, Section.DensityH2O[i], \
-                                       Section.Kelvin[i], "Acceptor")
+                                       Section.PrimaryBulkTemperature[i], "Acceptor")
         
         EqmPotentialFe3O4.append(x)
         ExchangeCurrentFe3O4.append(y)

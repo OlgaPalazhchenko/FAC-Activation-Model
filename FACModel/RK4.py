@@ -354,7 +354,7 @@ def Spall(Section,j, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4
     ConvertedConcentrations = []
     Concentrations = [SolutionOxideFeSat, SolutionOxideFeTotal]
     for i in range(2):
-        x = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", Concentrations[i], None, None, None, nc.FeMolarMass)
+        x = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", Concentrations[i], None, None, None, nc.FeMolarMass, None)
         ConvertedConcentrations.append(x)
     
     FeSat, FeTotal = ConvertedConcentrations

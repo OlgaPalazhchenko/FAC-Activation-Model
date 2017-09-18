@@ -58,7 +58,7 @@ def MetalOxideInterfaceConcentration(Section, Element, SolutionOxideInterfaceCon
     
     DiffusivityTerm = [(x*nc.Fe3O4Porosity_inner)/y for x,y in zip(PathLength, Diffusivity)]
     
-    SolutionConcentration = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", SolutionOxideInterfaceConcentration, None, None, None, MolarMass)
+    SolutionConcentration = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", SolutionOxideInterfaceConcentration, None, None, None, MolarMass, None)
     
     MOConcentration = [(x*Diffusion(Section, Element)/ y) +z for x,y,z in zip(Corrosion, DiffusivityTerm, SolutionConcentration)]
     
@@ -78,17 +78,17 @@ def MetalOxideInterfaceConcentration(Section, Element, SolutionOxideInterfaceCon
         #MOConcentration =[1.22e-8]*Section.NodeNumber #110 um/a rate at this fixed M/O Fe concentration
     
     ##       
-    return ld.UnitConverter(Section, "Grams per Cm Cubed", "Mol per Kg", MOConcentration, None, None, None, MolarMass)
+    return ld.UnitConverter(Section, "Grams per Cm Cubed", "Mol per Kg", MOConcentration, None, None, None, MolarMass, None)
     
 
 def TransfertoBulk(Section,BulkConcentration,MolarMass,km): #[g/cm^2 s]
-    Concentration = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", BulkConcentration, None, None, None, MolarMass)
+    Concentration = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", BulkConcentration, None, None, None, MolarMass, None)
     return [x*y for x,y in zip(km,Concentration)] 
     
 
 def InterfaceOxideKinetics (Section, KineticConstant, SaturationConcentration, MolarMass):    
 #print (MetalOxideInterfaceConcentration(ld.Inlet, "Fe", [1e-8]*ld.Inlet.NodeNumber, [1e-3]*ld.Inlet.NodeNumber, [1e-3]*ld.Inlet.NodeNumber, [1e-10]*ld.Inlet.NodeNumber, [1e-9]*ld.Inlet.NodeNumber))
-    Concentration = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", SaturationConcentration, None, None, None, MolarMass) 
+    Concentration = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", SaturationConcentration, None, None, None, MolarMass, None) 
     return [x*y for x,y in zip(KineticConstant, Concentration)] 
     
 
@@ -158,7 +158,7 @@ def SolutionOxide(Section, CorrosionRate, BulkConcentration, SaturationConcentra
                     y = (Diff[i] + BTrans[i])/km[i] 
         Concentration.append(y)
         
-    Conc = ld.UnitConverter(Section, "Grams per Cm Cubed", "Mol per Kg", Concentration, None, None, None, MolarMass)
+    Conc = ld.UnitConverter(Section, "Grams per Cm Cubed", "Mol per Kg", Concentration, None, None, None, MolarMass, None)
     return Conc    
         
             
@@ -179,13 +179,13 @@ def CorrosionRate(Section, FeTotal, NiTotal, ConcentrationH):
                         Section.DensityH2O[i], Section.NernstConstant[i], "aqueous")
         
         if Section == ld.Inlet or Section == ld.Outlet:
-            w = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyH2onFe, ConcentrationH[i], x, Section.DensityH2O[i], Section.Kelvin[i], "Acceptor")
-            z = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyFe, ConcentrationFe2[i], y, Section.DensityH2O[i], Section.Kelvin[i], "Acceptor")
+            w = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyH2onFe, ConcentrationH[i], x, Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor")
+            z = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyFe, ConcentrationFe2[i], y, Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor")
             
         elif Section == ld.SteamGenerator:
             #EqmPotentialNi = e.Potential(Section, Section.StandardEqmPotentialNi, [1]*Section.NodeNumber, 1, 1, Composition.ConcentrationNi2, Composition.ActivityCoefficient2, 1, "aqueous")
-            w = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyH2onAlloy800, ConcentrationH[i], x, Section.DensityH2O[i], Section.Kelvin[i], "Acceptor")
-            z = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyAlloy800, ConcentrationFe2[i], y, Section.DensityH2O[i], Section.Kelvin[i], "Acceptor")
+            w = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyH2onAlloy800, ConcentrationH[i], x, Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor")
+            z = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyAlloy800, ConcentrationFe2[i], y, Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor")
             
         EqmPotentialH2.append(x)
         EqmPotentialFe.append(y)
@@ -195,7 +195,7 @@ def CorrosionRate(Section, FeTotal, NiTotal, ConcentrationH):
     
         
     MixedECP = e.MixedPotential(Section, ExchangeCurrentH2onFe, EqmPotentialH2, ExchangeCurrentFe, EqmPotentialFe)
-    CorrosionCurrent = [x*(np.exp((nc.Beta*nc.n*nc.F*(y-z))/(nc.R*q))-np.exp((-(1-nc.Beta)*nc.n*nc.F*(y-z))/(nc.R*q))) for x,y,z,q in zip(ExchangeCurrentFe,MixedECP,EqmPotentialFe,Section.Kelvin)]
+    CorrosionCurrent = [x*(np.exp((nc.Beta*nc.n*nc.F*(y-z))/(nc.R*q))-np.exp((-(1-nc.Beta)*nc.n*nc.F*(y-z))/(nc.R*q))) for x,y,z,q in zip(ExchangeCurrentFe,MixedECP,EqmPotentialFe,Section.PrimaryBulkTemperature)]
     
         
     if Section == ld.SteamGenerator: #icorr = ia = -ic   equivalent molar mass for Alloy 800 (0.46 Fe, 0.33 Ni, -> 2e- processes; 0.21 Cr -> 3 e- process)   

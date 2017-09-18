@@ -27,19 +27,20 @@ for Section in Sections:
         Interface.ConcentrationH2 =[nc.H2*nc.H2Density/nc.H2MolarMass]*Section.NodeNumber #makes into array with appropriate # of nodes for that PHTS section
         Interface.ConcentrationH = np.array(c.BulkpHCalculator(Section)).tolist() #from system pH calculation
 
-        if (Section == ld.Inlet and Interface == Section.SolutionOxide) or (Section == ld.SteamGenerator and Interface == Section.SolutionOxide):
-            FeTotal = np.array(Section.SolubilityFe)*0.8
+#         if (Section == ld.Inlet and Interface == Section.SolutionOxide) or (Section == ld.SteamGenerator and Interface == Section.SolutionOxide):
+#             FeTotal = np.array(Section.SolubilityFe)*0.8
+         
+#         if Section == ld.Core and Interface == Section.MetalOxide:
+#             Interface.FeTotal = [0]*Section.NodeNumber #makes into array with appropriate # of nodes for that PHTS section
         
-        if Section == ld.Core and Interface == Section.MetalOxide:
-            Interface.FeTotal = [0]*Section.NodeNumber #makes into array with appropriate # of nodes for that PHTS section
-        
-        if Section == ld.Outlet and Interface == Section.MetalOxide:
-            Interface.FeTotal = [0.00000026]*Section.NodeNumber #From Cook's thesis - experimental corrosion rate measurements and calcs
+#         if Section == ld.Outlet and Interface == Section.MetalOxide:
+#             Interface.FeTotal = [0.00000026]*Section.NodeNumber #From Cook's thesis - experimental corrosion rate measurements and calcs
     
-        if Section == ld.Inlet or Section == ld.Core or Section == ld.Outlet:
-            Section.MetalOxide.NiTotal = [0]*Section.NodeNumber
-        
-        
+#         if Section == ld.Inlet or Section == ld.Core or Section == ld.Outlet:
+#             Section.MetalOxide.NiTotal = [0]*Section.NodeNumber
+    
+    print (Section.SolutionOxide.ConcentrationH)
+            
     Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = \
     e.ECP(Section, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4, Section.SolutionOxide.NiTotal, Section.SolutionOxide.ConcentrationH)
     
@@ -54,6 +55,7 @@ for Section in Sections:
                                 Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4, \
                                 Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH)
 ##
+
 
 class RunModel():
     def __init__(self, Section1, Section2, j): #j = overall time step
@@ -361,35 +363,35 @@ SolutionOxideCrSat = [np.log10(i) for i in I.Section1.SolutionOxide.CrSat + C.Se
 Corrosion= []
 Rates = [I.Section1.CorrRate, C.Section1.CorrRate, O.Section1.CorrRate, S.Section1.CorrRate]
 for Rate, Section in zip (Rates, Sections):
-    x = ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None)
+    x = ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None)
     Corrosion.append(x)
 CorrosionRate = Corrosion[0] + Corrosion[1] + Corrosion[2] + Corrosion[3]
 
 InnerOxide = []
 InnerOxideThicknesses = [I.Section1.InnerOxThickness, C.Section1.InnerOxThickness, O.Section1.InnerOxThickness, S.Section1.InnerOxThickness]
 for Thickness, Sect in zip (InnerOxideThicknesses, Sections):
-    z = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None)
+    z = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
     InnerOxide.append(z)
 InnerOxideThickness = InnerOxide[0]+InnerOxide[1]+InnerOxide[2]+InnerOxide[3]
 
 OuterOxide = []
 OuterOxideThicknesses = [I.Section1.OuterOxThickness, C.Section1.OuterOxThickness, O.Section1.OuterOxThickness, S.Section1.OuterOxThickness]
 for Thickness, Sect in zip (OuterOxideThicknesses, Sections):
-    q = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None)
+    q = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
     OuterOxide.append(q)
 OuterOxideThickness = OuterOxide[0]+OuterOxide[1]+OuterOxide[2]+OuterOxide[3]
 
 Cobalt = []
 CoThicknesses = [I.Section1.CoThickness, C.Section1.CoThickness, O.Section1.CoThickness, S.Section1.CoThickness]
 for Thickness, Sect in zip (CoThicknesses, Sections):
-    c = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None)
+    c = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
     Cobalt.append(c)
 CobaltThickness = Cobalt[0]+Cobalt[1]+Cobalt[2]+Cobalt[3]
 
 Nickel = []
 NiThicknesses = [I.Section1.NiThickness, C.Section1.NiThickness, O.Section1.NiThickness, S.Section1.NiThickness]
 for Thickness, Sect in zip (NiThicknesses, Sections):
-    n = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None)
+    n = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
     Nickel.append(n)
 NickelThickness = Nickel[0]+Nickel[1]+Nickel[2]+Nickel[3]
 
