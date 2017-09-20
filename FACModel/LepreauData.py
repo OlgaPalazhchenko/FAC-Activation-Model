@@ -84,6 +84,23 @@ class Interface():
         self.MixedPotential = None
         self.EqmPotentialFe3O4 = None
 
+
+class Concentration():
+    def __init__(self, species):
+        self.species = species
+        
+        #self.Molality = None
+        if self.species == "iron": 
+            self.Element = "Fe"
+        elif self.species == "nickel":
+            self.Element = "Ni"
+        elif self.species == "cobalt":
+            self.Element = "Co"
+        elif self.species == "chromium":
+            self.Element = "Cr"
+        else:
+            print ("Error: incorrect species")
+
 class Section(): #Defining each primary heat transport section as a class 
     def __init__(self, j, RowStart, RowEnd): 
         self.RowStart = RowStart
@@ -93,7 +110,7 @@ class Section(): #Defining each primary heat transport section as a class
         self.MetalOxide = Interface()
         self.SolutionOxide = Interface()
         self.Bulk = Interface()
-        
+       
         #General section parameter input (interface specification not necessary)
         self.Diameter = None#[float(SizingParametersReader[j][i]) for i in range(self.RowStart,self.RowEnd)] #Reader([row][column]) #[cm]
         self.OuterDiameter = None
@@ -142,37 +159,7 @@ class Section(): #Defining each primary heat transport section as a class
         self.ElapsedTime = None
         self.SpallTime = []
         
-        #[mol/kg] initial estimate for iron saturation based on Fe3O4 solubility (Tremaine & LeBlanc)
-        self.Bulk.FeTotal = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.FeTotal = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.FeTotal = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]   
-        self.Bulk.FeSatFe3O4 = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.FeSatFe3O4 = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.FeSatFe3O4 = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)]
-        
-        #[mol/kg] (Sandler & Kunig)
-        self.Bulk.NiTotal =None #[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.NiTotal = None#[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.NiTotal = None#[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.Bulk.NiSatFerrite = None#[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.NiSatFerrite = None#[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.NiSatFerrite = None#[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)] 
-        
-        #[mol/kg] (Sandler & Kunig)
-        self.Bulk.CoTotal = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.CoTotal = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] 
-        self.MetalOxide.CoTotal = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] 
-        self.Bulk.CoSatFerrite = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] 
-        self.SolutionOxide.CoSatFerrite = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] 
-        self.MetalOxide.CoSatFerrite = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)]  
-        
-        self.Bulk.CrTotal = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.CrTotal = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.CrTotal = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.Bulk.CrSat = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.SolutionOxide.CrSat = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.MetalOxide.CrSat = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)] 
-        
+ 
 #Creates the 4 PHTS sections and their methods based on the Sections class template/blueprint
 Inlet= Section(21,0,7)
 Core=Section(42,0,12)
@@ -255,54 +242,6 @@ UnitConverter(Inlet, "Celsius", "Kelvin", None, None, None, None, None, [266.55,
 Outlet.PrimaryBulkTemperature = UnitConverter(Inlet, "Celsius", "Kelvin", None, None, None, None, None, [310]*Outlet.NodeNumber)
 
 
-# InletInterfaces = [Inlet.Bulk, Inlet.SolutionOxide, Inlet.MetalOxide]
-# for i in InletInterfaces:
-#     i.FeTotal = [1.28494E-08]*Inlet.NodeNumber
-#     i.FeSatFe3O4 = [1.28494E-08]*Inlet.NodeNumber
-#     i.NiTotal = [2.71098E-09]*Inlet.NodeNumber
-#     i.NiSatFerrite = [2.71098E-09]*Inlet.NodeNumber
-#     i.CoTotal = [3.77742E-09]*Inlet.NodeNumber
-#     i.CoSatFerrite = [3.77742E-09]*Inlet.NodeNumber
-#     i.CrTotal = [8.81E-11]*Inlet.NodeNumber
-#     i.CrSat= [8.81E-11]*Inlet.NodeNumber
-
-# CoreInterfaces = [Core.Bulk, Core.SolutionOxide, Core.MetalOxide]
-# for i in CoreInterfaces:
-#     i.FeTotal = [1.28521E-08, 1.35852E-08, 1.449E-08, 1.54787E-08, 1.65654E-08, 1.77722E-08, 1.91309E-08, 2.06833E-08, 2.25034E-08, 2.46889E-08, 2.64104E-08, 2.64104E-08]
-#     i.FeSatFe3O4 = [i*1 for i in i.FeTotal]#[1.28521E-08, 1.35852E-08, 1.449E-08, 1.54787E-08, 1.65654E-08, 1.77722E-08, 1.91309E-08, 2.06833E-08, 2.25034E-08, 2.46889E-08, 2.64104E-08, 2.64104E-08]
-#     i.NiTotal = [2.71098E-09, 2.66196E-09, 2.60372E-09, 2.54535E-09, 2.29445E-09, 2.2137E-09, 1.91294E-09, 1.82788E-09, 1.54081E-09, 1.54384E-09, 1.54584E-09, 1.54584E-09]
-#     i.NiSatFerrite = [i*1 for i in i.NiTotal]
-#     #[2.71098E-09, 2.66196E-09, 2.60372E-09, 2.54535E-09, 2.29445E-09, 2.2137E-09, 1.91294E-09, 1.82788E-09, 1.54081E-09, 1.54384E-09, 1.54584E-09, 1.54584E-09]
-#     i.CoTotal = [3.77742E-09, 3.51525E-09, 3.20371E-09, 2.8915E-09, 2.60041E-09, 2.3011E-09, 2.08369E-09, 1.86963E-09, 1.67578E-09, 1.53187E-09, 1.43654E-09, 1.43654E-09]
-#     i.CoSatFerrite = [3.77742E-09, 3.51525E-09, 3.20371E-09, 2.8915E-09, 2.60041E-09, 2.3011E-09, 2.08369E-09, 1.86963E-09, 1.67578E-09, 1.53187E-09, 1.43654E-09, 1.43654E-09]
-#     i.CrTotal = [8.81E-11, 9.61E-11, 1.01E-10, 9.40E-11, 8.69E-11, 7.98E-11, 7.28E-11, 6.57E-11, 5.86E-11, 5.16E-11, 4.69E-11, 4.69E-11] 
-#     i.CrSat = [8.81E-11, 9.61E-11, 1.01E-10, 9.40E-11, 8.69E-11, 7.98E-11, 7.28E-11, 6.57E-11, 5.86E-11, 5.16E-11, 4.69E-11, 4.69E-11]
-# 
-# OutletInterfaces = [Outlet.Bulk, Outlet.SolutionOxide, Outlet.MetalOxide]
-# for i in OutletInterfaces:
-#     i.FeTotal = [2.58268E-08]*Outlet.NodeNumber
-#     i.FeSatFe3O4 = [2.58268E-08]*Outlet.NodeNumber
-#     i.NiTotal = [1.54584E-09]*Outlet.NodeNumber
-#     i.NiSatFerrite = [1.54584E-09]*Outlet.NodeNumber
-#     i.CoTotal = [1.44E-09]*Outlet.NodeNumber
-#     i.CoSatFerrite = [1.44E-09]*Outlet.NodeNumber
-#     i.CrTotal = [4.84E-11]*Outlet.NodeNumber
-#     i.CrSat = [4.84E-11]*Outlet.NodeNumber
-# 
-# SGInterfaces = [SteamGenerator.Bulk, SteamGenerator.SolutionOxide, SteamGenerator.MetalOxide]
-# for i in SGInterfaces:
-#     i.FeTotal = [2.58E-08, 2.56E-08, 2.55E-08, 2.52546E-08, 2.32347E-08, 2.16094E-08, 2.03107E-08, 1.9246E-08, 1.83579E-08, 1.75642E-08, 1.68473E-08, 1.62692E-08, 1.58017E-08, 1.53906E-08, 1.50304E-08, 1.47083E-08, 1.44316E-08, 1.42108E-08, 1.39481E-08, 1.35926E-08, 1.31784E-08, 1.27883E-08]
-#     i.FeSatFe3O4 = [2.58E-08, 2.56E-08, 2.55E-08, 2.52546E-08, 2.32347E-08, 2.16094E-08, 2.03107E-08, 1.9246E-08, 1.83579E-08, 1.75642E-08, 1.68473E-08, 1.62692E-08, 1.58017E-08, 1.53906E-08, 1.50304E-08, 1.47083E-08, 1.44316E-08, 1.42108E-08, 1.39481E-08, 1.35926E-08, 1.31784E-08, 1.27883E-08]
-#     i.NiTotal = [1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 1.96011E-09, 2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09, 2.60733E-09, 2.62118E-09, 2.63802E-09, 2.66147E-09, 2.68978E-09, 2.71747E-09] 
-#     i.NiSatFerrite = [1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 1.96011E-09, 2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09, 2.60733E-09, 2.62118E-09, 2.63802E-09, 2.66147E-09, 2.68978E-09, 2.71747E-09]
-#     i.CoTotal = [1.46729E-09, 1.46729E-09, 1.46729E-09, 1.49896E-09, 1.62443E-09, 1.75595E-09, 1.91821E-09, 2.06673E-09, 2.2024E-09, 2.35035E-09, 2.5275E-09, 2.67907E-09, 2.80762E-09, 2.92529E-09, 3.0321E-09, 3.13232E-09, 3.22305E-09, 3.2971E-09, 3.38716E-09, 3.51258E-09, 3.66401E-09, 3.81211E-09]
-#     i.CoSatFerrite = [1.46729E-09, 1.46729E-09, 1.46729E-09, 1.49896E-09, 1.62443E-09, 1.75595E-09, 1.91821E-09, 2.06673E-09, 2.2024E-09, 2.35035E-09, 2.5275E-09, 2.67907E-09, 2.80762E-09, 2.92529E-09, 3.0321E-09, 3.13232E-09, 3.22305E-09, 3.2971E-09, 3.38716E-09, 3.51258E-09, 3.66401E-09, 3.81211E-09]
-#     i.CrTotal = [4.84E-11, 4.84E-11, 4.84E-11, 4.99E-11, 5.61E-11, 6.20E-11, 6.73E-11, 7.22E-11, 7.67E-11, 8.10E-11, 8.52E-11, 8.88E-11, 9.18E-11, 9.46E-11, 9.71E-11, 9.94E-11, 1.01E-10, 1.03E-10, 1.00E-10, 9.62E-11, 9.15E-11, 8.70E-11]
-#     i.CrSat = [4.84E-11, 4.84E-11, 4.84E-11, 4.99E-11, 5.61E-11, 6.20E-11, 6.73E-11, 7.22E-11, 7.67E-11, 8.10E-11, 8.52E-11, 8.88E-11, 9.18E-11, 9.46E-11, 9.71E-11, 9.94E-11, 1.01E-10, 1.03E-10, 1.00E-10, 9.62E-11, 9.15E-11, 8.70E-11]
-
-
-
-#Section-specific parameters
 Sections = [Inlet, Core, Outlet, SteamGenerator, SG_Zone1, SG_Zone2]
 for Section in Sections:
     
@@ -311,6 +250,7 @@ for Section in Sections:
     for Interface in Interfaces:
         ##Concentration/Saturation Input [mol/kg]
         Interface.FeTotal = [i*1 for i in Section.SolubilityFe]
+        #Interface.FeTotal = Concentration("iron")
         Interface.FeSatFe3O4 = [i*1 for i in Section.SolubilityFe]
         Interface.NiTotal = [i*1 for i in Section.SolubilityNi]
         Interface.NiSatFerrite = [i*1 for i in Section.SolubilityNi]

@@ -172,7 +172,7 @@ def Deposition(Section, BigParticulate, SmallParticulate, j):
     
 
 def BulkActivity(Section1, Section2, BulkConcentration_o, CorrosionRate, FeSatFe3O4, InnerOxThickness, OuterOxThickness, OuterFe3O4Thickness,\
-                 NiThickness, CoThickness, InnerIronOxThickness, Isotope, Element, BigParticulate, SmallParticulate, j, i):
+                 NiThickness, CoThickness, InnerIronOxThickness, Isotope, BigParticulate, SmallParticulate, j, i):
     
     #[s^-1], Converts from h^-1 to s^-1
     if Isotope == "Co60":

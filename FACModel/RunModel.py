@@ -9,46 +9,30 @@ import Iteration as it
 import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('mathtext', default='regular')
+import itertools
 
 ##Initial Concentrations 
 #All concentrations in mol/kg
 Sections = [ld.Inlet, ld.Core, ld.Outlet, ld.SteamGenerator] 
-for Section in Sections:
-    
+for Section in Sections:    
     Section.FractionFeInnerOxide = c.FractionMetalInnerOxide(Section, "Fe")
     Section.FractionNiInnerOxide = c.FractionMetalInnerOxide(Section, "Ni")
     
     [Section.Bulk.Co60, Section.Bulk.Co58, Section.Bulk.Fe55, Section.Bulk.Fe59, Section.Bulk.Mn54, Section.Bulk.Cr51, Section.Bulk.Ni63] \
-    = [[0.1]*Section.NodeNumber]*7
-    #Section.CorrRate = [10e-9]*Section.NodeNumber
+    = [[1e-10]*Section.NodeNumber]*7
     
     Interfaces = [Section.MetalOxide, Section.SolutionOxide, Section.Bulk]
     for Interface in Interfaces:
         Interface.ConcentrationH2 =[nc.H2*nc.H2Density/nc.H2MolarMass]*Section.NodeNumber #makes into array with appropriate # of nodes for that PHTS section
-        Interface.ConcentrationH = np.array(c.BulkpHCalculator(Section)).tolist() #from system pH calculation
-
-#         if (Section == ld.Inlet and Interface == Section.SolutionOxide) or (Section == ld.SteamGenerator and Interface == Section.SolutionOxide):
-#             FeTotal = np.array(Section.SolubilityFe)*0.8
-         
-#         if Section == ld.Core and Interface == Section.MetalOxide:
-#             Interface.FeTotal = [0]*Section.NodeNumber #makes into array with appropriate # of nodes for that PHTS section
-        
-#         if Section == ld.Outlet and Interface == Section.MetalOxide:
-#             Interface.FeTotal = [0.00000026]*Section.NodeNumber #From Cook's thesis - experimental corrosion rate measurements and calcs
-    
-#         if Section == ld.Inlet or Section == ld.Core or Section == ld.Outlet:
-#             Section.MetalOxide.NiTotal = [0]*Section.NodeNumber
-    
-    
+        Interface.ConcentrationH = c.BulkpHCalculator(Section) #from system pH calculation
             
     Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = \
-    e.ECP(Section, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4, Section.SolutionOxide.NiTotal, Section.SolutionOxide.ConcentrationH)
+    e.ECP(Section)
     
     if Section==ld.Core:
         Section.CorrRate = [0]*Section.NodeNumber
     else:
-        Section.CorrRate, Section.MetalOxide.MixedPotential = \
-        it.CorrosionRate(Section, Section.MetalOxide.FeTotal, Section.MetalOxide.NiTotal, Section.MetalOxide.ConcentrationH)
+        Section.CorrRate, Section.MetalOxide.MixedPotential = it.CorrosionRate(Section)
         
     Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4, Section.MetalOxide.ConcentrationH = \
     e.ElectrochemicalAdjustment(Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential, \
@@ -61,81 +45,53 @@ class RunModel():
     def __init__(self, Section1, Section2, j): #j = overall time step
         self.Section1 = Section1
         self.Section2 = Section2
-    
+        
+        BulkActivities = [self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55, \
+                          self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63]
+        
+        BulkActivities2 = [self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59, self.Section2.Bulk.Fe55, \
+                          self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51, self.Section2.Bulk.Ni63]
+        
+        SurfaceActivities = [self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55, \
+                          self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63]
+        
+        Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
+        
+        BulkConcentrations = [self.Section1.Bulk.FeTotal, self.Section1.Bulk.NiTotal, self.Section1.Bulk.CoTotal, self.Section1.Bulk.CrTotal]
+        BulkConcentrations2 = [self.Section2.Bulk.FeTotal, self.Section2.Bulk.NiTotal, self.Section2.Bulk.CoTotal, self.Section2.Bulk.CrTotal]
+        
+        SolutionOxideConcentrations = [self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.NiTotal, \
+                                       self.Section1.SolutionOxide.CoTotal, self.Section1.SolutionOxide.CrTotal]
+        Saturations = [self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.NiSatFerrite, self.Section1.SolutionOxide.CoSatFerrite]
+        
         for i in range(self.Section1.NodeNumber):
             if i >0: 
-                self.Section1.Bulk.FeTotal[i] = RK4.Spatial(self.Section1, self.Section1.SolutionOxide.FeTotal[i-1], self.Section1.Bulk.FeTotal[i-1], \
-                                                    ld.MassTransfer(self.Section1)[i-1], self.Section1.Diameter[i-1], self.Section1.Velocity[i-1],\
-                                                    self.Section1.Length[i-1])
-            
-                self.Section1.Bulk.NiTotal[i] = RK4.Spatial(self.Section1, self.Section1.SolutionOxide.NiTotal[i-1], self.Section1.Bulk.NiTotal[i-1], \
-                                                    ld.MassTransfer(self.Section1)[i-1], self.Section1.Diameter[i-1], self.Section1.Velocity[i-1],\
-                                                    self.Section1.Length[i-1])
-                 
-                self.Section1.Bulk.CoTotal[i] = RK4.Spatial(self.Section1, self.Section1.SolutionOxide.CoTotal[i-1], self.Section1.Bulk.CoTotal[i-1], \
-                                                    ld.MassTransfer(self.Section1)[i-1], self.Section1.Diameter[i-1], self.Section1.Velocity[i-1],\
-                                                    self.Section1.Length[i-1])
-                
-                
-                self.Section1.Bulk.CrTotal[i] = RK4.Spatial(self.Section1, self.Section1.SolutionOxide.CrTotal[i-1], self.Section1.Bulk.CrTotal[i-1], \
-                                                    ld.MassTransfer(self.Section1)[i-1], self.Section1.Diameter[i-1], self.Section1.Velocity[i-1],\
-                                                    self.Section1.Length[i-1])
-                
+                for r,q in zip (BulkConcentrations, SolutionOxideConcentrations):
+                    r[i] = RK4.Spatial(self.Section1, q[i-1], r[i-1], ld.MassTransfer(self.Section1)[i-1], self.Section1.Diameter[i-1], \
+                                       self.Section1.Velocity[i-1], self.Section1.Length[i-1])
+
                 #Exponential decay of bulk particulate at start of section as function of distance + removal due to deposition and erosion source
                 self.Section1.BigParticulate[i] = RK4.Particulate(self.Section1, self.Section1.BigParticulate[0], self.Section1.Diameter[i],\
                                                 self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i])
                 self.Section1.SmallParticulate[i] = RK4.Particulate(Section, self.Section1.SmallParticulate[0], self.Section1.Diameter[i],\
                                                 self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i])
                                 
-                self.Section1.Bulk.Co60[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Co60[0], self.Section1.CorrRate, \
-                    self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                    self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                    "Co60", "Co", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                
-                self.Section1.Bulk.Co58[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Co58[0], self.Section1.CorrRate, \
-                    self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                    self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                    "Co58", "Ni", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                
-                self.Section1.Bulk.Fe59[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Fe59[0], self.Section1.CorrRate, \
-                    self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                    self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                    "Fe59", "Fe", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                
-                self.Section1.Bulk.Fe55[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Fe55[0], self.Section1.CorrRate, \
-                    self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                    self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                    "Fe55", "Fe", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                
-                self.Section1.Bulk.Mn54[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Mn54[0], self.Section1.CorrRate, \
-                    self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                    self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                    "Mn54", "Fe", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                
-                self.Section1.Bulk.Cr51[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Cr51[0], self.Section1.CorrRate, \
-                    self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                    self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                    "Cr51", "Cr", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                
-                self.Section1.Bulk.Ni63[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Ni63[0], self.Section1.CorrRate, \
-                    self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                    self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                    "Ni63", "Ni", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                
-                
+                for x,y in zip (BulkActivities, Tags):
+                    x[i] = a.BulkActivity(self.Section1, self.Section2, x[0], self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, \
+                                self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.OuterFe3O4Thickness, \
+                                self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
+                                y, self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
+                    
+                ##Inlet header purification system
                 if self.Section1 == ld.Inlet:      
                     if i ==3:
-                        self.Section1.Bulk.FeTotal[i], self.Section1.Bulk.NiTotal[i], self.Section1.Bulk.CoTotal[i], self.Section1.Bulk.CrTotal[i] = \
-                         [0.59*x for x in [self.Section1.Bulk.FeTotal[i-1], self.Section1.Bulk.NiTotal[i-1], self.Section1.Bulk.CoTotal[i-1],\
-                                           self.Section1.Bulk.CrTotal[i-1]]]
+                        for x,y in zip(BulkConcentrations, BulkActivities):
+                            x[i] = 0.59*x[i-1]
+                            y[i] = 0.59*y[i-1]
                     
-                        self.Section1.Bulk.Co60[i], self.Section1.Bulk.Co58[i], self.Section1.Bulk.Fe55[i], self.Section1.Bulk.Fe59[i], \
-                        self.Section1.Bulk.Cr51[i], self.Section1.Bulk.Mn54[i], self.Section1.Bulk.Ni63[i] \
-                        = [0.59*x for x in [self.Section1.Bulk.Co60[i-1], self.Section1.Bulk.Co58[i-1], self.Section1.Bulk.Fe55[i-1], \
-                            self.Section1.Bulk.Fe59[i-1], self.Section1.Bulk.Cr51[i-1], self.Section1.Bulk.Mn54[i-1], self.Section1.Bulk.Ni63[i-1]]]
-                        
                         self.Section1.SmallParticulate[i] = 0.59*self.Section1.SmallParticulate[i-1]
                         self.Section1.BigParticulate[i] = 0 #0.45 um filter removes everything over this size
+                ##    
                     
                     if i >3: #decay for the rest of the inlet section depends on purification system 
                         self.Section1.BigParticulate[i] = RK4.Particulate(Section, self.Section1.BigParticulate[3], self.Section1.Diameter[i], \
@@ -143,56 +99,26 @@ class RunModel():
                         self.Section1.SmallParticulate[i] = RK4.Particulate(Section, self.Section1.SmallParticulate[3], self.Section1.Diameter[i], \
                                                         self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]) 
                         
+                        for x,y in zip (BulkActivities, Tags):
+                            #print (y, x[i], i, self.Section1.NodeNumber)
+                            x[i] = a.BulkActivity(self.Section1, self.Section2, x[3], self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, \
+                                    self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.OuterFe3O4Thickness, \
+                                    self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, y, \
+                                    self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
                         
-                        self.Section1.Bulk.Co60[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Co60[3], \
-                        self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                        "Co60", "Co", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                        
-                        self.Section1.Bulk.Co58[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Co58[3], \
-                        self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                        "Co58", "Ni", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                        
-                        self.Section1.Bulk.Fe59[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Fe59[3], \
-                        self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                        "Fe59", "Fe", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                        
-                        self.Section1.Bulk.Fe55[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Fe55[3], \
-                        self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                        "Fe55", "Fe", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                        
-                        self.Section1.Bulk.Mn54[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Mn54[3], \
-                        self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                        "Mn54", "Fe", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                        
-                        self.Section1.Bulk.Cr51[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Cr51[3], \
-                        self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                        "Cr51", "Cr", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
-                        
-                        self.Section1.Bulk.Ni63[i] = a.BulkActivity(self.Section1, self.Section2, self.Section1.Bulk.Ni63[3], \
-                        self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, \
-                        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                        "Ni63", "Ni", self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i) 
-                                 
+                    
         end = self.Section1.NodeNumber-1
-        self.Section2.Bulk.FeTotal[0], self.Section2.Bulk.NiTotal[0], self.Section2.Bulk.CoTotal[0], self.Section2.Bulk.CrTotal[0], \
-        self.Section2.BigParticulate[0], self.Section2.SmallParticulate[0] = \
-        self.Section1.Bulk.FeTotal[end], self.Section1.Bulk.NiTotal[end], self.Section1.Bulk.CoTotal[end], self.Section1.Bulk.CrTotal[end], \
-        self.Section1.BigParticulate[end], self.Section1.SmallParticulate[end]       
+        for x,y,z,q in zip(BulkConcentrations,BulkConcentrations2, BulkActivities, BulkActivities2):
+            y[0] = x[end]
+            q[0] = z[end]
         
-        self.Section2.Bulk.Co60[0], self.Section2.Bulk.Co58[0], self.Section2.Bulk.Fe55[0], self.Section2.Bulk.Fe59[0], self.Section2.Bulk.Cr51[0],\
-        self.Section2.Bulk.Mn54[0], self.Section2.Bulk.Ni63[0] = self.Section1.Bulk.Co60[end], self.Section1.Bulk.Co58[end], \
-        self.Section1.Bulk.Fe55[end], self.Section1.Bulk.Fe59[end], self.Section1.Bulk.Cr51[end], self.Section1.Bulk.Mn54[end], \
-        self.Section1.Bulk.Ni63[end]
+        self.Section2.BigParticulate[0], self.Section2.SmallParticulate[0] = self.Section1.BigParticulate[end], self.Section1.SmallParticulate[end]       
         
+        ##Stellite wear bulk input term for cobalt and chromium    
         if self.Section1 == ld.Core:
             self.Section2.Bulk.CoTotal[0]=self.Section1.Bulk.CoTotal[end]+nc.CobaltWear
             self.Section2.Bulk.CrTotal[0]=self.Section1.Bulk.CrTotal[end]+nc.CobaltWear*(nc.FractionCr_Stellite/nc.FractionCo_Stellite)
+        ##
         
         else:
             ##Surface activities 
@@ -224,46 +150,33 @@ class RunModel():
                         
         ##RK4 oxide thickness calculation (no spalling)
         self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.InnerIronOxThickness, self.Section1.OuterFe3O4Thickness, \
-        self.Section1.CoThickness, self.Section1.NiThickness =\
-            RK4.OxideGrowth(self.Section1, self.Section1.Bulk.FeTotal, self.Section1.Bulk.NiTotal, self.Section1.Bulk.CoTotal, \
-            self.Section1.Bulk.FeSatFe3O4, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.NiSatFerrite, \
-            self.Section1.SolutionOxide.CoSatFerrite, self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.NiTotal, \
-            self.Section1.SolutionOxide.CoTotal, self.Section1.OuterOxThickness, self.Section1.InnerOxThickness, self.Section1.InnerIronOxThickness, \
-            self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, \
-            self.Section1.KpFe3O4electrochem, self.Section1.SolutionOxide.ConcentrationH, self.Section1.CorrRate)
+        self.Section1.CoThickness, self.Section1.NiThickness = \
+            RK4.OxideGrowth(self.Section1, Saturations, BulkConcentrations, self.Section1.OuterOxThickness, self.Section1.InnerOxThickness, \
+                            self.Section1.InnerIronOxThickness, \
+            self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness)
         
-        ##Calculates S/O elemental concentrations based on updated oxide thicknesses at each time step
-        self.Section1.SolutionOxide.FeTotal = it.SolutionOxide(self.Section1, self.Section1.CorrRate, self.Section1.Bulk.FeTotal, \
-        self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.FeTotal, self.Section1.InnerIronOxThickness, \
-        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, \
-        self.Section1.KpFe3O4electrochem, "Fe")
+#         ##Calculates S/O elemental concentrations based on updated oxide thicknesses at each time step
+#         SOConc= []
+#         for x,y,z,w in zip (SolutionOxideConcentrations[0:3], BulkConcentrations[0:3], Saturations, ["Fe", "Ni", "Co"]):   
+#             q = it.SolutionOxide(self.Section1, y, z, x, self.Section1.InnerIronOxThickness, self.Section1.OuterFe3O4Thickness, 
+#                                  self.Section1.NiThickness, self.Section1.CoThickness, w)
+#             SOConc.append(q)
+#             
+#         [self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.NiTotal, self.Section1.SolutionOxide.CoTotal] =SOConc
+
+                
+#         if self.Section1 == ld.Core:    
+#             self.Section1.CorrRate, self.Section1.MetalOxide.MixedPotential = [0]*self.Section1.NodeNumber, [0]*self.Section1.NodeNumber
+#             self.Section1.MetalOxide.FeTotal = [0]*self.Section1.NodeNumber
+#         else:
+#             #Calculates CS and Alloy-800 corrosion rates based on MO concentrations - for j=0, these are initial concentration values
+#             #Not called for core- no "corrosion" here
+#             self.Section1.MetalOxide.FeTotal = it.MetalOxideInterfaceConcentration(self.Section1, "Fe", self.Section1.SolutionOxide.FeTotal, \
+#                         self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.CorrRate)
+#             
+#             self.Section1.CorrRate, self.Section1.MetalOxide.MixedPotential =it.CorrosionRate(self.Section1)
             
-        self.Section1.SolutionOxide.NiTotal = it.SolutionOxide(self.Section1, self.Section1.CorrRate, self.Section1.Bulk.NiTotal, \
-        self.Section1.SolutionOxide.NiSatFerrite, self.Section1.SolutionOxide.NiTotal, self.Section1.InnerIronOxThickness, \
-        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, \
-        self.Section1.KpFe3O4electrochem, "Ni")
-            
-        self.Section1.SolutionOxide.CoTotal = it.SolutionOxide(self.Section1, self.Section1.CorrRate, self.Section1.Bulk.CoTotal, \
-        self.Section1.SolutionOxide.CoSatFerrite, self.Section1.SolutionOxide.CoTotal, self.Section1.InnerIronOxThickness, \
-        self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.KdFe3O4electrochem, \
-        self.Section1.KpFe3O4electrochem, "Co")
-        ##
-        
-        if self.Section1 == ld.Core:    
-            self.Section1.CorrRate, self.Section1.MetalOxide.MixedPotential = [0]*self.Section1.NodeNumber, [0]*self.Section1.NodeNumber
-            self.Section1.MetalOxide.FeTotal = [0]*self.Section1.NodeNumber
-        else:
-            #Calculates CS and Alloy-800 corrosion rates based on MO concentrations - for j=0, these are initial concentration values
-            #Not called for core- no "corrosion" here
-            self.Section1.MetalOxide.FeTotal = it.MetalOxideInterfaceConcentration(self.Section1, "Fe", self.Section1.SolutionOxide.FeTotal, \
-                        self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.CorrRate)
-            
-            self.Section1.CorrRate, self.Section1.MetalOxide.MixedPotential =it.CorrosionRate(self.Section1, self.Section1.MetalOxide.FeTotal, \
-                                                                self.Section1.MetalOxide.NiTotal, self.Section1.MetalOxide.ConcentrationH)
-        
-        self.Section1.SolutionOxide.MixedPotential, self.Section1.SolutionOxide.EqmPotentialFe3O4 = \
-        e.ECP(self.Section1, self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.NiTotal, \
-              self.Section1.SolutionOxide.ConcentrationH)     
+        self.Section1.SolutionOxide.MixedPotential, self.Section1.SolutionOxide.EqmPotentialFe3O4 = e.ECP(self.Section1)     
         
         ##Electrochemical adjustement to Kp, Kd, FeSat and Concentration H+ at M/O interface --> uses M/O and S/O interface mixed potentials
         self.Section1.KpFe3O4electrochem, self.Section1.KdFe3O4electrochem, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.MetalOxide.ConcentrationH \
@@ -298,20 +211,20 @@ SANi63 = []
 
 import time
 start_time = time.time()
-for j in range(50):#nc.SimulationDuration
+for j in range(1000):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator, j)
     S = RunModel(ld.SteamGenerator, ld.Inlet, j)
     
-    TotalTime.append(j/7000)# converts to EFPY
-    SACo60.append(sum(S.Section1.MetalOxide.Co60)/S.Section1.NodeNumber)
-    SACo58.append(sum(S.Section1.MetalOxide.Co58)/S.Section1.NodeNumber)
-    SAFe59.append(sum(S.Section1.MetalOxide.Fe59)/S.Section1.NodeNumber)
-    SAFe55.append(sum(S.Section1.MetalOxide.Fe55)/S.Section1.NodeNumber)
-    SAMn54.append(sum(S.Section1.MetalOxide.Mn54)/S.Section1.NodeNumber)
-    SACr51.append(sum(S.Section1.MetalOxide.Cr51)/S.Section1.NodeNumber)
-    SANi63.append(sum(S.Section1.MetalOxide.Ni63)/S.Section1.NodeNumber)
+#     TotalTime.append(j/7000)# converts to EFPY
+#     SACo60.append(sum(S.Section1.MetalOxide.Co60)/S.Section1.NodeNumber)
+#     SACo58.append(sum(S.Section1.MetalOxide.Co58)/S.Section1.NodeNumber)
+#     SAFe59.append(sum(S.Section1.MetalOxide.Fe59)/S.Section1.NodeNumber)
+#     SAFe55.append(sum(S.Section1.MetalOxide.Fe55)/S.Section1.NodeNumber)
+#     SAMn54.append(sum(S.Section1.MetalOxide.Mn54)/S.Section1.NodeNumber)
+#     SACr51.append(sum(S.Section1.MetalOxide.Cr51)/S.Section1.NodeNumber)
+#     SANi63.append(sum(S.Section1.MetalOxide.Ni63)/S.Section1.NodeNumber)
     
 end_time = time.time()
 delta_time = end_time - start_time
@@ -455,8 +368,6 @@ ax2.legend(lines + lines2, labels + labels2, loc=0)
 #plt.axis([51, 69, 0, 30])
 plt.tight_layout()
 plt.show()
-
-print (ld.Outlet.OuterOxThickness, ld.Outlet.InnerOxThickness)
 
 fig3, ax1 = plt.subplots()
 #ax1 = fig2.add_subplot(221)

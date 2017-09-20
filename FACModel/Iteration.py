@@ -28,6 +28,7 @@ def Diffusion(Section, Element):
     elif Element == "Ni" or Element == "Fe":
         return 1-MetalRetainedInsideInnerOxide #[g metal/ g alloy lost]
 
+
 def MetalOxideInterfaceConcentration(Section, Element, SolutionOxideInterfaceConcentration, InnerOxThickness, OuterOxThickness, Corrosion):
     
     if Section == ld.SteamGenerator:
@@ -62,13 +63,6 @@ def MetalOxideInterfaceConcentration(Section, Element, SolutionOxideInterfaceCon
     
     MOConcentration = [(x*Diffusion(Section, Element)/ y) +z for x,y,z in zip(Corrosion, DiffusivityTerm, SolutionConcentration)]
     
-#     if Section==ld.SteamGenerator: #or Section==ld.Outlet:
-#         #print (Section.NodeNumber)
-#         print (PathLength, "Path Length") 
-#         print (DiffusivityTerm, "Diffusivity Term") 
-#         print (SolutionConcentration, "S/O Conc")
-#         print (ld.UnitConverter(Section, "Grams per Cm Cubed", "Mol per Kg", MOConcentration, None, None, None, MolarMass), "M/O Conc")
-
 
 #     ##Pre-set corrosion rate for outlet (lower MOConc = higher FAC rate (e-chem effect))
     #inner ox decrease = path length decreases --> diffusivity term increases --> metal oxide concentration decreases --> corr rate incr
@@ -92,23 +86,28 @@ def InterfaceOxideKinetics (Section, KineticConstant, SaturationConcentration, M
     return [x*y for x,y in zip(KineticConstant, Concentration)] 
     
 
-def SolutionOxide(Section, CorrosionRate, BulkConcentration, SaturationConcentration, SolutionOxideConcentration, InnerIronOxThickness, \
-                  OuterFe3O4Thickness, NiThickness, CoThickness, KdFe3O4electrochem, KpFe3O4electrochem, Element):
+def SolutionOxide(Section, BulkConcentration, SaturationConcentration, SolutionOxideConcentration, InnerIronOxThickness, \
+                  OuterFe3O4Thickness, NiThickness, CoThickness, Element):
     
     km = ld.MassTransfer(Section)
     if Section == ld.Core:
         Diff = [0]*Section.NodeNumber
     else:
-        Diff = [i* Diffusion(Section, Element) for i in CorrosionRate]
+        Diff = [i* Diffusion(Section, Element) for i in Section.CorrRate]
         if Section==ld.Inlet or Section==ld.Outlet:
             if Element == "Ni": 
                 Diff = [0]*Section.NodeNumber
     
     #Corrosion rate becomes negative --> Diff --> S/O Concentration 
     
-    if Element == "Fe": MolarMass = nc.FeMolarMass
-    if Element == "Ni": MolarMass = nc.NiMolarMass
-    if Element == "Co": MolarMass = nc.CoMolarMass            
+    if Element == "Fe": 
+        MolarMass = nc.FeMolarMass
+    elif Element == "Ni": 
+        MolarMass = nc.NiMolarMass
+    elif Element == "Co": 
+        MolarMass = nc.CoMolarMass
+    else:
+        print ("Error: unknown element specified")            
      
     BTrans = TransfertoBulk(Section, BulkConcentration, MolarMass, km) #Same operation applied within function to every element in list (all nodes)
     KineticConstant = []
@@ -116,9 +115,9 @@ def SolutionOxide(Section, CorrosionRate, BulkConcentration, SaturationConcentra
     
     for i in range(Section.NodeNumber): 
         if SaturationConcentration[i] > SolutionOxideConcentration[i]:
-            x = KdFe3O4electrochem[i]
+            x = Section.KdFe3O4electrochem[i]
         else:
-            x = KpFe3O4electrochem[i]
+            x = Section.KpFe3O4electrochem[i]
         KineticConstant.append(x) #Based on saturation behaviour at each node, e.g., [kd, kd, kp, kd, kp, etc.]
         #Generally, all nodes will be kd or all kp w/i a section, but this allows for inidividual calculation 
      
@@ -129,9 +128,9 @@ def SolutionOxide(Section, CorrosionRate, BulkConcentration, SaturationConcentra
     for i in range(Section.NodeNumber):  
         if Element == "Fe": #same expression for dissolution (Oxide >0) or precipitation, subbing out appropriate kinetic constant 
             if SolutionOxideConcentration[i] >= SaturationConcentration[i]:
-                y =  (Diff[i] + OxideKinetics[i] + BTrans[i])/(KpFe3O4electrochem[i] + km[i])
+                y =  (Diff[i] + OxideKinetics[i] + BTrans[i])/(Section.KpFe3O4electrochem[i] + km[i])
             else: #SolutionOxideConcentration[i] < SaturationConcentration[i]:
-                y = (Diff[i] + OxideKinetics[i] + BTrans[i])/(KdFe3O4electrochem[i] + km[i])
+                y = (Diff[i] + OxideKinetics[i] + BTrans[i])/(Section.KdFe3O4electrochem[i] + km[i])
             if Oxide[i] == 0:# Core 
                 y = (Diff[i] + BTrans[i])/km[i] #No contribution from oxide kinetics
  
@@ -139,10 +138,10 @@ def SolutionOxide(Section, CorrosionRate, BulkConcentration, SaturationConcentra
         if Element == "Co":               
             if Oxide[i] >0:# Precipitation within existing inner/outer layer or dissolution of Co from layer(s)
                 if SolutionOxideConcentration[i] >= SaturationConcentration[i]:
-                    y = (Diff[i] + OxideKinetics[i] + BTrans[i])/(KpFe3O4electrochem[i] + km[i])
+                    y = (Diff[i] + OxideKinetics[i] + BTrans[i])/(Section.KpFe3O4electrochem[i] + km[i])
                 else: #SolutionOxideConcentration[i] < SaturationConcentration[i]:
                     if CoThickness[i] > 0:
-                        y = (Diff[i] + OxideKinetics[i] + BTrans[i])/(KdFe3O4electrochem[i] + km[i])
+                        y = (Diff[i] + OxideKinetics[i] + BTrans[i])/(Section.KdFe3O4electrochem[i] + km[i])
                     else: #CoThickness == 0
                         y = (Diff[i] + BTrans[i])/km[i] #No contribution from oxide kinetics
             else: #Oxide[i] == 0 (Core) 
@@ -150,10 +149,10 @@ def SolutionOxide(Section, CorrosionRate, BulkConcentration, SaturationConcentra
             
         if Element == "Ni": #Doesn't require existing Oxide layer for Ni precip (Ni(s))
             if SolutionOxideConcentration[i] >= SaturationConcentration[i]:
-                y = (Diff[i] + OxideKinetics[i] + BTrans[i])/(KpFe3O4electrochem[i] +km[i])
+                y = (Diff[i] + OxideKinetics[i] + BTrans[i])/(Section.KpFe3O4electrochem[i] +km[i])
             else: #SolutionOxideConcentration < SaturationConcentration:
                 if NiThickness[i] >0:
-                    y = (Diff[i] + OxideKinetics[i] + BTrans[i])/(KdFe3O4electrochem[i] +km[i])
+                    y = (Diff[i] + OxideKinetics[i] + BTrans[i])/(Section.KdFe3O4electrochem[i] +km[i])
                 else:
                     y = (Diff[i] + BTrans[i])/km[i] 
         Concentration.append(y)
@@ -162,8 +161,9 @@ def SolutionOxide(Section, CorrosionRate, BulkConcentration, SaturationConcentra
     return Conc    
         
             
-def CorrosionRate(Section, FeTotal, NiTotal, ConcentrationH):
-    ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2 = c.Hydrolysis(Section, FeTotal, NiTotal, ConcentrationH)
+def CorrosionRate(Section):
+    ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2 = c.Hydrolysis(Section, Section.MetalOxide.FeTotal, \
+                                                                            Section.MetalOxide.NiTotal, Section.MetalOxide.ConcentrationH)
     ProductConcentration = Section.MetalOxide.ConcentrationH2
     
     EqmPotentialH2 = [] #x
@@ -173,25 +173,29 @@ def CorrosionRate(Section, FeTotal, NiTotal, ConcentrationH):
     
     for i in range(Section.NodeNumber):
         
-        x = e.Potential(Section, Section.StandardEqmPotentialH2[i], ProductConcentration[i], 1, 1, ConcentrationH[i], ActivityCoefficient1[i], \
-                        2, Section.DensityH2O[i], Section.NernstConstant[i], "gas")
+        x = e.Potential(Section, Section.StandardEqmPotentialH2[i], ProductConcentration[i], 1, 1, Section.MetalOxide.ConcentrationH[i], \
+                        ActivityCoefficient1[i], 2, Section.DensityH2O[i], Section.NernstConstant[i], "gas")
+        
         y = e.Potential(Section, Section.StandardEqmPotentialFe[i], 1, 1, 1, ConcentrationFe2[i], ActivityCoefficient2[i], 1, \
                         Section.DensityH2O[i], Section.NernstConstant[i], "aqueous")
         
         if Section == ld.Inlet or Section == ld.Outlet:
-            w = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyH2onFe, ConcentrationH[i], x, Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor")
-            z = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyFe, ConcentrationFe2[i], y, Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor")
+            w = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyH2onFe, Section.MetalOxide.ConcentrationH[i], x, Section.DensityH2O[i], \
+                                         Section.PrimaryBulkTemperature[i], "Acceptor")
+            z = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyFe, ConcentrationFe2[i], y, Section.DensityH2O[i], \
+                                         Section.PrimaryBulkTemperature[i], "Acceptor")
             
         elif Section == ld.SteamGenerator:
             #EqmPotentialNi = e.Potential(Section, Section.StandardEqmPotentialNi, [1]*Section.NodeNumber, 1, 1, Composition.ConcentrationNi2, Composition.ActivityCoefficient2, 1, "aqueous")
-            w = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyH2onAlloy800, ConcentrationH[i], x, Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor")
-            z = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyAlloy800, ConcentrationFe2[i], y, Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor")
+            w = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyH2onAlloy800, Section.MetalOxide.ConcentrationH[i], x, Section.DensityH2O[i], \
+                                         Section.PrimaryBulkTemperature[i], "Acceptor")
+            z = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyAlloy800, ConcentrationFe2[i], y, Section.DensityH2O[i], \
+                                         Section.PrimaryBulkTemperature[i], "Acceptor")
             
         EqmPotentialH2.append(x)
         EqmPotentialFe.append(y)
         ExchangeCurrentFe.append(z)
         ExchangeCurrentH2onFe.append(w)
-    
     
         
     MixedECP = e.MixedPotential(Section, ExchangeCurrentH2onFe, EqmPotentialH2, ExchangeCurrentFe, EqmPotentialFe)
