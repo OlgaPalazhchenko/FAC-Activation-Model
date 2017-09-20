@@ -6,7 +6,6 @@ import Composition as c
 def Potential(Section, StandardPotential, ProductConcentration, ProductGamma, ProductStoich, ReactantConcentration, ReactantGamma, \
               ReactantStoich, DensityH2O, NernstConstant, Phase):
     if Phase == "gas":
-        #Raising to a power for a list/array
         Product = (ProductConcentration*DensityH2O/nc.kH2)**ProductStoich
         Reactant = (ReactantConcentration*DensityH2O*ReactantGamma)**ReactantStoich 
     
@@ -17,9 +16,9 @@ def Potential(Section, StandardPotential, ProductConcentration, ProductGamma, Pr
     x = [Product, Reactant]
     for i in x:
         if i <= 0:
-            print (i, Section.InnerOxThickness, "Inner Oxide g/cm2", Section.OuterOxThickness, "Outer Oxide g/cm2", "Error in electrochemistry calculation -> concentration < 0")
+            print ("Error in electrochemistry calculation: concentration < 0", i, Section.InnerOxThickness, "Inner Oxide g/cm2", Section.OuterOxThickness, "Outer Oxide g/cm2")
             i = 5e-10
-    #[Product, Reactant] = x
+            print ("Concentration reset to", i)
              
     return StandardPotential- NernstConstant*np.log10(Product/Reactant)
 

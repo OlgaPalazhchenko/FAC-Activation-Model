@@ -9,7 +9,6 @@ import Iteration as it
 import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('mathtext', default='regular')
-import itertools
 
 ##Initial Concentrations 
 #All concentrations in mol/kg
@@ -76,11 +75,11 @@ class RunModel():
                 self.Section1.SmallParticulate[i] = RK4.Particulate(Section, self.Section1.SmallParticulate[0], self.Section1.Diameter[i],\
                                                 self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i])
                                 
-                for x,y in zip (BulkActivities, Tags):
-                    x[i] = a.BulkActivity(self.Section1, self.Section2, x[0], self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, \
-                                self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.OuterFe3O4Thickness, \
-                                self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-                                y, self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
+#                 for x,y in zip (BulkActivities, Tags):
+#                     x[i] = a.BulkActivity(self.Section1, self.Section2, x[0], self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, \
+#                                 self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.OuterFe3O4Thickness, \
+#                                 self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
+#                                 y, self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
                     
                 ##Inlet header purification system
                 if self.Section1 == ld.Inlet:      
@@ -99,18 +98,19 @@ class RunModel():
                         self.Section1.SmallParticulate[i] = RK4.Particulate(Section, self.Section1.SmallParticulate[3], self.Section1.Diameter[i], \
                                                         self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]) 
                         
-                        for x,y in zip (BulkActivities, Tags):
-                            #print (y, x[i], i, self.Section1.NodeNumber)
-                            x[i] = a.BulkActivity(self.Section1, self.Section2, x[3], self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, \
-                                    self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.OuterFe3O4Thickness, \
-                                    self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, y, \
-                                    self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
+#                         for x,y in zip (BulkActivities, Tags):
+#                             #print (y, x[i], i, self.Section1.NodeNumber)
+#                             x[i] = a.BulkActivity(self.Section1, self.Section2, x[3], self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, \
+#                                     self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.OuterFe3O4Thickness, \
+#                                     self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, y, \
+#                                     self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
                         
                     
         end = self.Section1.NodeNumber-1
-        for x,y,z,q in zip(BulkConcentrations,BulkConcentrations2, BulkActivities, BulkActivities2):
+        for x,y in zip(BulkConcentrations,BulkConcentrations2):
+        #for x,y,z,q in zip(BulkConcentrations,BulkConcentrations2, BulkActivities, BulkActivities2):
             y[0] = x[end]
-            q[0] = z[end]
+            #q[0] = z[end]
         
         self.Section2.BigParticulate[0], self.Section2.SmallParticulate[0] = self.Section1.BigParticulate[end], self.Section1.SmallParticulate[end]       
         
@@ -120,28 +120,28 @@ class RunModel():
             self.Section2.Bulk.CrTotal[0]=self.Section1.Bulk.CrTotal[end]+nc.CobaltWear*(nc.FractionCr_Stellite/nc.FractionCo_Stellite)
         ##
         
-        else:
-            ##Surface activities 
-            self.Section1.MetalOxide.Co60 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
-                                                          self.Section1.InnerOxThickness, self.Section1.Bulk.Co60, j, "Co60")
-            
-            self.Section1.MetalOxide.Co58 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
-                                                          self.Section1.InnerOxThickness, self.Section1.Bulk.Co58, j, "Co58")
-            
-            self.Section1.MetalOxide.Fe59 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
-                                                          self.Section1.InnerOxThickness, self.Section1.Bulk.Fe59, j, "Fe59")
-            
-            self.Section1.MetalOxide.Fe55 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
-                                                          self.Section1.InnerOxThickness, self.Section1.Bulk.Fe55, j, "Fe55")
-            
-            self.Section1.MetalOxide.Mn54 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
-                                                          self.Section1.InnerOxThickness, self.Section1.Bulk.Mn54, j, "Mn54")
-            
-            self.Section1.MetalOxide.Cr51 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
-                                                          self.Section1.InnerOxThickness, self.Section1.Bulk.Cr51, j, "Cr51")
-            
-            self.Section1.MetalOxide.Ni63 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
-                                                          self.Section1.InnerOxThickness, self.Section1.Bulk.Ni63, j, "Ni63")
+#         else:
+#             ##Surface activities 
+#             self.Section1.MetalOxide.Co60 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
+#                                                           self.Section1.InnerOxThickness, self.Section1.Bulk.Co60, j, "Co60")
+#             
+#             self.Section1.MetalOxide.Co58 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
+#                                                           self.Section1.InnerOxThickness, self.Section1.Bulk.Co58, j, "Co58")
+#             
+#             self.Section1.MetalOxide.Fe59 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
+#                                                           self.Section1.InnerOxThickness, self.Section1.Bulk.Fe59, j, "Fe59")
+#             
+#             self.Section1.MetalOxide.Fe55 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
+#                                                           self.Section1.InnerOxThickness, self.Section1.Bulk.Fe55, j, "Fe55")
+#             
+#             self.Section1.MetalOxide.Mn54 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
+#                                                           self.Section1.InnerOxThickness, self.Section1.Bulk.Mn54, j, "Mn54")
+#             
+#             self.Section1.MetalOxide.Cr51 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
+#                                                           self.Section1.InnerOxThickness, self.Section1.Bulk.Cr51, j, "Cr51")
+#             
+#             self.Section1.MetalOxide.Ni63 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
+#                                                           self.Section1.InnerOxThickness, self.Section1.Bulk.Ni63, j, "Ni63")
             ##    
             
         ##Deposit thickness around PHTS
@@ -149,50 +149,11 @@ class RunModel():
         ##
                         
         ##RK4 oxide thickness calculation (no spalling)
-        self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.InnerIronOxThickness, self.Section1.OuterFe3O4Thickness, \
-        self.Section1.CoThickness, self.Section1.NiThickness = \
-            RK4.OxideGrowth(self.Section1, Saturations, BulkConcentrations, self.Section1.OuterOxThickness, self.Section1.InnerOxThickness, \
-                            self.Section1.InnerIronOxThickness, \
-            self.Section1.OuterFe3O4Thickness, self.Section1.NiThickness, self.Section1.CoThickness)
-        
-#         ##Calculates S/O elemental concentrations based on updated oxide thicknesses at each time step
-#         SOConc= []
-#         for x,y,z,w in zip (SolutionOxideConcentrations[0:3], BulkConcentrations[0:3], Saturations, ["Fe", "Ni", "Co"]):   
-#             q = it.SolutionOxide(self.Section1, y, z, x, self.Section1.InnerIronOxThickness, self.Section1.OuterFe3O4Thickness, 
-#                                  self.Section1.NiThickness, self.Section1.CoThickness, w)
-#             SOConc.append(q)
-#             
-#         [self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.NiTotal, self.Section1.SolutionOxide.CoTotal] =SOConc
-
-                
-#         if self.Section1 == ld.Core:    
-#             self.Section1.CorrRate, self.Section1.MetalOxide.MixedPotential = [0]*self.Section1.NodeNumber, [0]*self.Section1.NodeNumber
-#             self.Section1.MetalOxide.FeTotal = [0]*self.Section1.NodeNumber
-#         else:
-#             #Calculates CS and Alloy-800 corrosion rates based on MO concentrations - for j=0, these are initial concentration values
-#             #Not called for core- no "corrosion" here
-#             self.Section1.MetalOxide.FeTotal = it.MetalOxideInterfaceConcentration(self.Section1, "Fe", self.Section1.SolutionOxide.FeTotal, \
-#                         self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.CorrRate)
-#             
-#             self.Section1.CorrRate, self.Section1.MetalOxide.MixedPotential =it.CorrosionRate(self.Section1)
-            
-        self.Section1.SolutionOxide.MixedPotential, self.Section1.SolutionOxide.EqmPotentialFe3O4 = e.ECP(self.Section1)     
-        
-        ##Electrochemical adjustement to Kp, Kd, FeSat and Concentration H+ at M/O interface --> uses M/O and S/O interface mixed potentials
-        self.Section1.KpFe3O4electrochem, self.Section1.KdFe3O4electrochem, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.MetalOxide.ConcentrationH \
-        = e.ElectrochemicalAdjustment(self.Section1, self.Section1.SolutionOxide.EqmPotentialFe3O4, self.Section1.SolutionOxide.MixedPotential, \
-            self.Section1.MetalOxide.MixedPotential, self.Section1.SolutionOxide.FeTotal, self.Section1.SolutionOxide.FeSatFe3O4, \
-            self.Section1.Bulk.FeSatFe3O4, self.Section1.SolutionOxide.ConcentrationH)
+        RK4.OxideGrowth(self.Section1, Saturations, BulkConcentrations)
         ##
                 
         ##Spalling    
-        self.Section1.InnerIronOxThickness, self.Section1.OuterFe3O4Thickness, self.Section1.CoThickness, self.Section1.NiThickness, \
-        self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.Particle, self.Section1.ElapsedTime, \
-        self.Section1.SpallTime = \
-             RK4.Spall(self.Section1, j, self.Section1.Particle, self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.FeTotal, \
-            self.Section1.KdFe3O4electrochem, self.Section1.OuterOxThickness, self.Section1.InnerOxThickness, self.Section1.OuterFe3O4Thickness, \
-            self.Section1.CoThickness, self.Section1.NiThickness, self.Section1.InnerIronOxThickness, self.Section1.ElapsedTime, \
-            self.Section1.SpallTime, self.Section1.SolutionOxide.NiTotal, self.Section1.SolutionOxide.CoTotal)
+        self.Section1.ElapsedTime, self.Section1.SpallTime = RK4.Spall(self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime)
         ##
         
 
@@ -211,7 +172,7 @@ SANi63 = []
 
 import time
 start_time = time.time()
-for j in range(1000):#nc.SimulationDuration
+for j in range(50):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator, j)
@@ -369,22 +330,22 @@ ax2.legend(lines + lines2, labels + labels2, loc=0)
 plt.tight_layout()
 plt.show()
 
-fig3, ax1 = plt.subplots()
-#ax1 = fig2.add_subplot(221)
-ax1.plot(ActivityTime, Co60SGActivity, linestyle ="-", marker='o', color='0.50', label='Co-60')
-ax1.plot(ActivityTime, Co58SGActivity, linestyle ="-", marker='o', color='b', label='Co-58')
-ax1.plot(ActivityTime, Fe59SGActivity, linestyle ="-", marker='o', color='r', label='Fe-59')
-ax1.plot(ActivityTime, Fe55SGActivity, linestyle ="-", marker='o', color='g', label='Fe-55')
-ax1.plot(ActivityTime, Mn54SGActivity, linestyle ="-", marker='o', color='m', label='Mn-54')
-ax1.plot(ActivityTime, Cr51SGActivity, linestyle ="-", marker='o', color='y', label='Cr-51')
-ax1.plot(ActivityTime, Ni63SGActivity, linestyle ="-", marker='o', color='k', label='Ni-63')
- 
-#ax1.axis([51,69, 0, 30])
-ax1.set_xlabel('EFPY')
-ax1.set_ylabel('Surface Activity (${mCi/m^2}$)')
-            
-plt.tight_layout()
-plt.show()
+# fig3, ax1 = plt.subplots()
+# #ax1 = fig2.add_subplot(221)
+# ax1.plot(ActivityTime, Co60SGActivity, linestyle ="-", marker='o', color='0.50', label='Co-60')
+# ax1.plot(ActivityTime, Co58SGActivity, linestyle ="-", marker='o', color='b', label='Co-58')
+# ax1.plot(ActivityTime, Fe59SGActivity, linestyle ="-", marker='o', color='r', label='Fe-59')
+# ax1.plot(ActivityTime, Fe55SGActivity, linestyle ="-", marker='o', color='g', label='Fe-55')
+# ax1.plot(ActivityTime, Mn54SGActivity, linestyle ="-", marker='o', color='m', label='Mn-54')
+# ax1.plot(ActivityTime, Cr51SGActivity, linestyle ="-", marker='o', color='y', label='Cr-51')
+# ax1.plot(ActivityTime, Ni63SGActivity, linestyle ="-", marker='o', color='k', label='Ni-63')
+#  
+# #ax1.axis([51,69, 0, 30])
+# ax1.set_xlabel('EFPY')
+# ax1.set_ylabel('Surface Activity (${mCi/m^2}$)')
+#             
+# plt.tight_layout()
+# plt.show()
 
 
 
