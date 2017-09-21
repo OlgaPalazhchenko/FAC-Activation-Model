@@ -1,10 +1,71 @@
 import numpy as np
 import csv 
 import NumericConstants as nc
+from sympy.concrete.summations import summation
 
 
 SizingParameters = open('SizingParameters.txt','r')      
 SizingParametersReader = list(csv.reader(SizingParameters, delimiter = ',')) #Assign file data to list, Reader[row][column], delimiter = comma 
+
+p_ref = 16.53 #reducing pressure [MPa]
+T_ref = 1386 #reducing temperature [K]
+
+n_IAPWS  = [0.14632971213167, -0.84548187169114, -0.37563603672040*10**1, 0.33855169168385*10**1, -0.95791963387872, 0.15772038513228,\
+-0.16616417199501*10**(-1), 0.81214629983568*10**(-3), 0.28319080123804*10**(-3), -0.60706301565874*10**(-3), -0.18990068218419*10**(-1),\
+-0.32529748770505*10**(-1), -0.21841717175414*10**(-1), -0.52838357969930*10**(-4), -0.47184321073267*10**(-3), -0.30001780793026*10**(-3),\
+0.47661393906987*10**(-4), -0.44141845330846*10**(-5), -0.72694996297594*10**(-15), -0.31679644845054*10**(-4), -0.28270797985312*10**(-5),\
+-0.85205128120103*10**(-9), -0.22425281908000*10**(-5), -0.65171222895601*10**(-6), -0.14341729937924*10**(-12), -0.40516996860117*10**(-6),\
+-0.12734301741641*10**(-8), -0.17424871230634*10**(-9), -0.68762131295531*10**(-18), 0.14478307828521*10**(-19), 0.26335781662795*10**(-22), \
+-0.11947622640071*10**(-22), 0.18228094581404*10**(-23), -0.93537087292458*10**(-25)]
+
+I_IAPWS = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 8, 8, 21, 23, 29, 30, 31, 32]
+J_IAPWS = [-2, -1, 0, 1, 2, 3, 4, 5, -9, -7, -1, 0, 1, 3 , -3, 0, 1, 3, 17, -4, 0, 6, -5, -2, 10, -8, -11, -6, -29, -31, -38, -39, -40, -41]
+
+R_IAPWS = 0.461526 #[kJ/kg K] 
+
+i_1 = [0, 1, 2, 3, 0, 1, 2, 3, 5, 0, 1, 2, 3, 4, 0, 1, 0, 3, 4, 3, 5]
+j_1 = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4, 4, 5, 6, 6]
+H_1 = [0.520094, 0.0850895, -1.08374, -0.289555, 0.222531, 0.999115, 1.88797, 1.26613, 0.120573, -0.281378, -0.906851, -0.772479, -0.489837, -0.25704, 0.161913, 0.257399, -0.0325372, 0.0698452, 0.00872102, -0.00435673, -5.93E-04]
+
+
+
+def Density(species, PHT, Temperature):
+    if PHT == "yes" or PHT == "Yes":
+        p = 10 #MPa
+    else:
+        p = 4.96 #MPa secondary side
+    ratio_pressures = p/p_ref #p/p*, reduced pressure [unitless]
+    ratio_temperatures = T_ref/Temperature #T/T*, reduced temperature [unitless]
+    
+    if species == "water":    
+        Gibbs_p = sum([-x*y*((7.1-ratio_pressures)**(y-1))*(ratio_temperatures-1.222)**z for x,y,z in zip(n_IAPWS,I_IAPWS,J_IAPWS)])
+        
+        return (1/(R_IAPWS*Temperature*ratio_pressures*(Gibbs_p/(p*1000))))*1000/(100**3) #[g/cm^3] 
+            
+        
+def Viscosity(species, Temperature, PHT):
+    T_ref = 647.096 #K
+    rho_ref = 0.3220 #g/cm^3 
+    mu_ref = 1 #[mk Pa s]
+    
+    T_rel = Temperature/T_ref
+    
+    if PHT == "yes":
+        rho_rel = Density("water", "yes", Temperature)/rho_ref
+    else:
+        rho_rel = Density("water", "no", Temperature)/rho_ref
+    
+    H_0 = [1.67752, 2.20462, 0.6366564, -0.241605]
+    terms = [0,1,2,3]
+    summation = sum([x/(T_rel)**y for x,y in zip(H_0, terms)])
+    
+    mu_0 = 100*np.sqrt(T_rel)/summation
+    
+    summation1 = sum([x*(((1/T_rel)-1)**y)*((rho_rel-1)**z) for x,y,z in zip(H_1, i_1, j_1)])
+    mu_1 = np.exp(rho_rel*summation1)
+    mu_2 = 1
+    #[microPa s] --> [g/cm s]
+    return ((mu_0*mu_1*mu_2)/1000000)*10 #[g/cm s]
 
 
 def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, OxideDensity, MolarMass, Temperature):
@@ -124,8 +185,8 @@ class Section(): #Defining each primary heat transport section as a class
         self.SecondaryBulkTemperature = None
         self.NernstConstant = None#[x*(2.303*nc.R/(2*nc.F)) for x in self.Kelvin] #2.303RT/nF
         
-        self.DensityH2O = [float(SizingParametersReader[j+4][i]) for i in range(self.RowStart,self.RowEnd)] #[g/cm^3]
-        self.ViscosityH2O = [float(SizingParametersReader[j+5][i]) for i in range(self.RowStart,self.RowEnd)] #[g/cm s]
+        self.DensityH2O = None#[float(SizingParametersReader[j+4][i]) for i in range(self.RowStart,self.RowEnd)] #[g/cm^3]
+        self.ViscosityH2O = None#[float(SizingParametersReader[j+5][i]) for i in range(self.RowStart,self.RowEnd)] #[g/cm s]
         self.SolubilityFe = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)] #[mol/kg] (Tremaine & LeBlanc)
         self.SolubilityCr = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)] #[mol/kg] 
         self.SolubilityCo = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] #[mol/kg] (Sandler & Kunig) 
@@ -312,6 +373,10 @@ for Section in Sections:
     ##Temperature-dependent parameters            
     Celsius = [i-273.15 for i in Section.PrimaryBulkTemperature]
     Section.NernstConstant = [x*(2.303*nc.R/(2*nc.F)) for x in Section.PrimaryBulkTemperature]
+    
+    Section.DensityH2O = [Density("water", "yes", x) for x in Section.PrimaryBulkTemperature]
+    Section.ViscosityH2O = [Viscosity("water", x, "yes") for x in Section.PrimaryBulkTemperature]
+    
     #Equilibrium and Debye-Huckel constants - polynomials as a function of temperature 
     #Coeff1*x^4 + Coeff2*x^3 + Coeff3*x^2 + Coeff4*x + Coeff5, depends on # elements in coeff list
     Section.DebyeHuckelConstant=(np.polyval(nc.DebyeHuckPolynomial, Celsius)) 
@@ -325,6 +390,7 @@ for Section in Sections:
     Section.k_NiOH3=10**(np.polyval(nc.KNiOH3Polynomial, Section.PrimaryBulkTemperature))
     ##
 
+print (Core.ViscosityH2O)
 def ReynoldsNumber(Section, Diameter):
     #Diameter is an input due to difference in desired dimension (e.g., inner, outer, hydraulic, etc.)
     Reynolds = [x*y/(z*q) for x,y,z,q in zip(Section.Velocity, Diameter, Section.ViscosityH2O, Section.DensityH2O)]    

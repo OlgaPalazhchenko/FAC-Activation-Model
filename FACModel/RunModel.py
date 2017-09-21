@@ -45,16 +45,16 @@ class RunModel():
         self.Section1 = Section1
         self.Section2 = Section2
         
-        BulkActivities = [self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55, \
-                          self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63]
+        #BulkActivities = [self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55, \
+        #                  self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63]
         
-        BulkActivities2 = [self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59, self.Section2.Bulk.Fe55, \
-                          self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51, self.Section2.Bulk.Ni63]
+        #BulkActivities2 = [self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59, self.Section2.Bulk.Fe55, \
+        #                  self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51, self.Section2.Bulk.Ni63]
         
-        SurfaceActivities = [self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55, \
-                          self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63]
+        #SurfaceActivities = [self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55, \
+        #                  self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63]
         
-        Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
+        #Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
         
         BulkConcentrations = [self.Section1.Bulk.FeTotal, self.Section1.Bulk.NiTotal, self.Section1.Bulk.CoTotal, self.Section1.Bulk.CrTotal]
         BulkConcentrations2 = [self.Section2.Bulk.FeTotal, self.Section2.Bulk.NiTotal, self.Section2.Bulk.CoTotal, self.Section2.Bulk.CrTotal]
@@ -84,9 +84,10 @@ class RunModel():
                 ##Inlet header purification system
                 if self.Section1 == ld.Inlet:      
                     if i ==3:
-                        for x,y in zip(BulkConcentrations, BulkActivities):
+                        #for x,y in zip(BulkConcentrations, BulkActivities):
+                        for x in BulkConcentrations: 
                             x[i] = 0.59*x[i-1]
-                            y[i] = 0.59*y[i-1]
+                            #y[i] = 0.59*y[i-1]
                     
                         self.Section1.SmallParticulate[i] = 0.59*self.Section1.SmallParticulate[i-1]
                         self.Section1.BigParticulate[i] = 0 #0.45 um filter removes everything over this size
@@ -172,7 +173,7 @@ SANi63 = []
 
 import time
 start_time = time.time()
-for j in range(50):#nc.SimulationDuration
+for j in range(7000):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator, j)

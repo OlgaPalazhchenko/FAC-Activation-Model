@@ -5,6 +5,14 @@ import Composition as c
 
 def Potential(Section, StandardPotential, ProductConcentration, ProductGamma, ProductStoich, ReactantConcentration, ReactantGamma, \
               ReactantStoich, DensityH2O, NernstConstant, Phase):
+    
+    x = [ProductConcentration, ReactantConcentration]
+    for i in x:
+        if i <= 0:
+            print ("Error in electrochemistry calculation: concentration < 0", i, Section.InnerOxThickness, "Inner Oxide g/cm2", Section.OuterOxThickness, "Outer Oxide g/cm2")
+            i = 5e-10
+            print ("Concentration reset to", i)
+    
     if Phase == "gas":
         Product = (ProductConcentration*DensityH2O/nc.kH2)**ProductStoich
         Reactant = (ReactantConcentration*DensityH2O*ReactantGamma)**ReactantStoich 
@@ -12,13 +20,6 @@ def Potential(Section, StandardPotential, ProductConcentration, ProductGamma, Pr
     else:
         Product = (ProductConcentration*DensityH2O*ProductGamma)**ProductStoich 
         Reactant = (ReactantConcentration*DensityH2O*ReactantGamma)**ReactantStoich 
-    
-    x = [Product, Reactant]
-    for i in x:
-        if i <= 0:
-            print ("Error in electrochemistry calculation: concentration < 0", i, Section.InnerOxThickness, "Inner Oxide g/cm2", Section.OuterOxThickness, "Outer Oxide g/cm2")
-            i = 5e-10
-            print ("Concentration reset to", i)
              
     return StandardPotential- NernstConstant*np.log10(Product/Reactant)
 
@@ -74,6 +75,7 @@ def MixedPotential(Section, CathodeCurrent, CathodePotential, AnodeCurrent, Anod
     
 #print (MixedPotential(ld.Inlet, [1e-9]*ld.Inlet.NodeNumber, [-1]*ld.Inlet.NodeNumber,[2e-9]*ld.Inlet.NodeNumber, [-0.7]*ld.Inlet.NodeNumber))
 
+
 def ExchangeCurrentDensity(Section, ActivationE, Concentration, Potential, DensityH2O, Kelvin, Species):
     #A^z+ + ze- -> D,   where A = e- acceptor and D = e- donor (Bockris & Reddy - Modern Electrochemistry)
     #If in terms of acceptor:  io = (F(C_A)kT/h)*exp(-ActivationEnergy/RT)*exp((-BnF/RT)Eeqm), C donor/acceptor is [mol/cm^2] (raise to the 2/3)
@@ -110,7 +112,18 @@ def Energy(Section,ExchangeCurrent, Concentration, Acceptor, EquilibriumPotentia
 
 
 def ECP(Section):
-   
+    for i in range(Section.NodeNumber):
+        for x,y in zip(Section.SolutionOxide.FeTotal, Section.SolutionOxide.ConcentrationH):
+            if x < 0:
+                print ("Error: Fe concentration <0 in ECP function")
+                x = 5e-10
+                print ("Corrected, concentration reset to:", x)
+            if y <0:
+                print ("Error: Ni concentration <0 in ECP function")
+                y = 5e-10
+                print ("Corrected, concentration reset to:", y)
+                print (Section.SolutionOxide.FeTotal, Section.SolutionOxide.NiTotal)
+            
     ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2 = c.Hydrolysis(Section, Section.SolutionOxide.FeTotal, \
                         Section.SolutionOxide.NiTotal, Section.SolutionOxide.ConcentrationH)
     ProductConcentration = Section.MetalOxide.ConcentrationH2

@@ -16,7 +16,8 @@ CrMolarMass = 51.996
 CoMolarMass = 58.9
 NiFe2O4MolarMass = 234.388 
 FeCr2O4MoladMass = 223.779  
-H2MolarMass = 2.016 
+H2MolarMass = 2.016
+H2OMolarMass = H2MolarMass+OMolarMass 
 
 FractionCo_Alloy800 =0.00015
 FractionCr_Alloy800 = 0.21
