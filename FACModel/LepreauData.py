@@ -1,14 +1,14 @@
 import numpy as np
 import csv 
 import NumericConstants as nc
-from sympy.concrete.summations import summation
+
+# from pint import UnitRegistry
+# ureg = UnitRegistry()
+# a = 5*ureg.kgcm**3
 
 
 SizingParameters = open('SizingParameters.txt','r')      
 SizingParametersReader = list(csv.reader(SizingParameters, delimiter = ',')) #Assign file data to list, Reader[row][column], delimiter = comma 
-
-p_ref = 16.53 #reducing pressure [MPa]
-T_ref = 1386 #reducing temperature [K]
 
 n_IAPWS  = [0.14632971213167, -0.84548187169114, -0.37563603672040*10**1, 0.33855169168385*10**1, -0.95791963387872, 0.15772038513228,\
 -0.16616417199501*10**(-1), 0.81214629983568*10**(-3), 0.28319080123804*10**(-3), -0.60706301565874*10**(-3), -0.18990068218419*10**(-1),\
@@ -28,32 +28,58 @@ j_1 = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4, 4, 5, 6, 6]
 H_1 = [0.520094, 0.0850895, -1.08374, -0.289555, 0.222531, 0.999115, 1.88797, 1.26613, 0.120573, -0.281378, -0.906851, -0.772479, -0.489837, -0.25704, 0.161913, 0.257399, -0.0325372, 0.0698452, 0.00872102, -0.00435673, -5.93E-04]
 
 
+# def ThermoDimensionlessInput(PHT, pressure, pressure_ratio, temperature_ratio, Temperature):
+#     p_ref = 16.53 #reducing pressure [MPa]
+#     T_ref = 1386 #reducing temperature [K]
+#     
+#     if PHT == "yes" or PHT == "Yes":
+#         p = 10 #MPa
+#     else:
+#         p = 4.96 #MPa secondary side
+#     
+#     if pressure == "yes":
+#         return p
+#     if pressure_ratio =="yes":
+#         return p/p_ref #p/p*, reduced pressure [unitless]
+#     elif temperature_ratio == "yes": 
+#         return T_ref/Temperature
+#     else: print ("Error: variable not specified")
+    
 
-def Density(species, PHT, Temperature):
-    if PHT == "yes" or PHT == "Yes":
-        p = 10 #MPa
-    else:
-        p = 4.96 #MPa secondary side
-    ratio_pressures = p/p_ref #p/p*, reduced pressure [unitless]
-    ratio_temperatures = T_ref/Temperature #T/T*, reduced temperature [unitless]
+class ThermoDimensionlessInput():
+    def __init__(self):
+        self.p_ref = 16.53 #[MPa] reducing pressure [MPa]
+        self.T_ref = 1386  #[K] reducing temperature [K]
+        self.rho_ref = 0.3220 #[g/cm^3]
+        self.mu_ref = 1 #[micro Pa s]
+        self.lambda_ref = 1 #[mW/mK]
+
+ReferenceValues = ThermoDimensionlessInput()
+  
+  
+def Density(species, side, Temperature):
+    if side == "phts" or side == "PHTS" or side == "PHT":
+        p = 10 #[MPa]
+    elif side == "shts" or side == "SHTS" or side == "SHT":
+        p = 4.96 #[MPa] secondary side
+    else: print ("Error: HTS side not specified")
+        
+    ratio_pressures = p/ReferenceValues.p_ref
+    ratio_temperatures = ReferenceValues.T_ref/Temperature #ratio is reverse here from all other functions 
     
     if species == "water":    
         Gibbs_p = sum([-x*y*((7.1-ratio_pressures)**(y-1))*(ratio_temperatures-1.222)**z for x,y,z in zip(n_IAPWS,I_IAPWS,J_IAPWS)])
         
         return (1/(R_IAPWS*Temperature*ratio_pressures*(Gibbs_p/(p*1000))))*1000/(100**3) #[g/cm^3] 
-            
         
-def Viscosity(species, Temperature, PHT):
+        
+def Viscosity(species, side, Temperature):
     T_ref = 647.096 #K
-    rho_ref = 0.3220 #g/cm^3 
-    mu_ref = 1 #[mk Pa s]
+    rho_ref = ReferenceValues.rho_ref
+    mu_ref = ReferenceValues.mu_ref
     
     T_rel = Temperature/T_ref
-    
-    if PHT == "yes":
-        rho_rel = Density("water", "yes", Temperature)/rho_ref
-    else:
-        rho_rel = Density("water", "no", Temperature)/rho_ref
+    rho_rel = Density("water", side, Temperature)/rho_ref
     
     H_0 = [1.67752, 2.20462, 0.6366564, -0.241605]
     terms = [0,1,2,3]
@@ -65,8 +91,58 @@ def Viscosity(species, Temperature, PHT):
     mu_1 = np.exp(rho_rel*summation1)
     mu_2 = 1
     #[microPa s] --> [g/cm s]
-    return ((mu_0*mu_1*mu_2)/1000000)*10 #[g/cm s]
+    return (mu_ref*(mu_0*mu_1*mu_2)/1000000)*10 #[g/cm s]
 
+
+def HeatCapacity(side, Temperature):
+    if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
+        p = 10 #MPa
+    else:
+        p = 4.96 #MPa secondary side
+    
+    ratio_pressures = p/ReferenceValues.p_ref #p/p*, reduced pressure [unitless]
+    ratio_temperatures = ReferenceValues.T_ref/Temperature #T/T*, reduced temperature [unitless]
+    
+    Gibbs_TT = sum([x*((7.1-ratio_pressures)**y)*z*(z-1)*((ratio_temperatures-1.222)**(z-2)) for x,y,z in zip(n_IAPWS, I_IAPWS, J_IAPWS)])
+    
+    return (-ratio_temperatures**2)*Gibbs_TT*R_IAPWS #[kJ/kg K] or *nc.H2OMolarMass for [J/mol K]
+ 
+ 
+def ThermalConductivityH2O(side, Temperature):
+    if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
+        p = 10 #MPa
+    else:
+        p = 4.96 #[MPa] secondary side
+    T_ref = 647.096 #[K]
+    p_ref = 22.064 #[MPa]
+    
+    ratio_densities = Density("water", side, Temperature)/ReferenceValues.rho_ref
+    ratio_temperatures = Temperature/T_ref
+    ratio_pressures = p/p_ref
+    
+    L_IAPWS = [2.443221E-03, 1.323095E-02, 6.770357E-03, -3.454586E-03, 4.096266E-04]
+    k_IAPWS = [0, 1, 2, 3, 4]
+    summation = sum([x/(ratio_temperatures**y) for x,y in zip(L_IAPWS, k_IAPWS)])
+    
+    lambda_0 = np.sqrt(ratio_temperatures)/summation
+    
+    i_IAPWS = [0, 1, 2, 3, 4]
+    j_IAPWS = [0, 1, 2, 3, 4, 5]
+    L1_IAPWS =  [[1.60397357, -0.646013523, 0.111443906, 0.102997357, -0.050412363, 0.006098593], \
+                          [2.33771842, -2.78843778, 1.53616167, -0.463045512, 0.083282702, -0.007192012],\
+                          [2.19650529, -4.54580785, 3.55777244, -1.40944978, 0.275418278, -0.020593882],\
+                          [-1.21051378, 1.60812989, -0.621178141, 0.071637322, 0, 0],\
+                          [-2.720337, 4.57586331, -3.18369245, 1.1168348, -0.19268305, 0.012913842]]
+    
+    summation1 = []
+    for row in L1_IAPWS:
+        y = sum([x*(ratio_densities-1)**y for x,y in zip(row, j_IAPWS)])
+        summation1.append(y)
+    
+    lambda_1 = np.exp(ratio_densities*sum([(((1/ratio_temperatures)-1)**x)*y for x,y in zip(i_IAPWS, summation1)]))
+    
+    return ((lambda_0*lambda_1*ReferenceValues.lambda_ref)/1000)/100 #[W/m K] 
+       
 
 def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, OxideDensity, MolarMass, Temperature):
     #Converts temperature from Celsius to Kelvin
@@ -367,15 +443,15 @@ for Section in Sections:
     ##
     
     ##Distance
-    Section.Distance = np.cumsum(Section.Length) 
+    Section.Distance = np.cumsum(Section.Length)
     ##
     
     ##Temperature-dependent parameters            
     Celsius = [i-273.15 for i in Section.PrimaryBulkTemperature]
     Section.NernstConstant = [x*(2.303*nc.R/(2*nc.F)) for x in Section.PrimaryBulkTemperature]
     
-    Section.DensityH2O = [Density("water", "yes", x) for x in Section.PrimaryBulkTemperature]
-    Section.ViscosityH2O = [Viscosity("water", x, "yes") for x in Section.PrimaryBulkTemperature]
+    Section.DensityH2O = [Density("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
+    Section.ViscosityH2O = [Viscosity("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
     
     #Equilibrium and Debye-Huckel constants - polynomials as a function of temperature 
     #Coeff1*x^4 + Coeff2*x^3 + Coeff3*x^2 + Coeff4*x + Coeff5, depends on # elements in coeff list
@@ -390,7 +466,6 @@ for Section in Sections:
     Section.k_NiOH3=10**(np.polyval(nc.KNiOH3Polynomial, Section.PrimaryBulkTemperature))
     ##
 
-print (Core.ViscosityH2O)
 def ReynoldsNumber(Section, Diameter):
     #Diameter is an input due to difference in desired dimension (e.g., inner, outer, hydraulic, etc.)
     Reynolds = [x*y/(z*q) for x,y,z,q in zip(Section.Velocity, Diameter, Section.ViscosityH2O, Section.DensityH2O)]    
@@ -402,4 +477,3 @@ def MassTransfer(Section):
     Reynolds = ReynoldsNumber(Section, Section.Diameter)
     Sherwood = [0.0165*(x**0.86)*(y**0.33) for x,y in zip(Reynolds, Schmidt)] #Berger & Hau for straight pipe, single phase, fully developed (turbulent) flow
     return [nc.FeDiffusivity*x/y for x,y in zip(Sherwood,Section.Diameter)] 
-
