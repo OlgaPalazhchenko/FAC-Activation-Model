@@ -24,15 +24,15 @@ def ConductionResistance(Section, Twall, i):
     return Rcyl_numerator/Rcyl_denominator #[K/W]
 
 
-def PrimaryConvectionResistance(Section, correlation, Twall, i):
+def PrimaryConvectionResistance(Section, correlation, Tfilm, i):
     #R_1,Convective = 1/(h_1,convectove *A)
     #A = inner area (based on inner diameter)
     #[W/cm K]/ [cm] = [W/K cm^2]
-    h_i = NusseltNumber(Section, correlation, Twall, i)*ThermalConductivity(Twall, "water")/HeatedEquivalentDiameter(Section)[i]
+    h_i = NusseltNumber(Section, correlation, Tfilm, i)*ThermalConductivity(Tfilm, "water")/HeatedEquivalentDiameter(Section)[i]
     return 1/(h_i*InnerArea(Section)[i]) #[K/W]
     
 
-def SecondaryConvectionResistance(Section, Twall, preheater, i):
+def SecondaryConvectionResistance(Section, Tfilm, Twall, preheater, i):
     T_sat = 260 + 273.15 #[K]
     if preheater == "yes": #from Silpsrikul thesis
         f_b = 0.1783 #fraction of cross-sectional area of shell occupied by a baffle window
@@ -43,12 +43,35 @@ def SecondaryConvectionResistance(Section, Twall, preheater, i):
         
         #First two (raised to exponent) terms are unitless 
         #[W/cm K]/[cm] = [W/cm^2 K]
-        h_o = (ThermalConductivity(Twall, "water")*0.2/Section.OuterDiameter[i])*\
-        ((Section.OuterDiameter[i]*G_e/ld.Viscosity("water", "SHT", Twall))**0.6)*\
-        (ld.HeatCapacity("PHT", Twall)*ld.Viscosity("water", "PHT", Twall)/ThermalConductivity(Twall, "water"))**0.33
-       
+        h_o = (ThermalConductivity(Tfilm, "water")*0.2/Section.OuterDiameter[i])*\
+        ((Section.OuterDiameter[i]*G_e/ld.Viscosity("water", "SHT", Tfilm))**0.6)*\
+        (ld.HeatCapacity("PHT", Twall)*ld.Viscosity("water", "PHT", Tfilm)/ThermalConductivity(Tfilm, "water"))**0.33
+    
     elif preheater == "no":
-        h_o = 2.54*(Twall-T_sat)*np.exp(4.96/1.551) #[W/cm^2 K] #boiling heat transfer 
+        x=25
+        rho_v = 1000*23.753/(100**3) #[g/cm^3]
+        p_crit = 22.0640 #[MPa]
+       
+        F = (1+(x*Prandtl(Section, T_sat, i)*((ld.Density("water", "SHT", T_sat)/rho_v)-1)))**0.35
+        
+        MassFlow = 239.53 #kg/s
+        Shell_ID = 2000 #[cm]
+        Re_D = 4*MassFlow/((ld.Viscosity("water", "SHT", T_sat)/1000)*np.pi*Shell_ID)
+       
+        h_l = 0.023*ld.ThermalConductivityH2O("SHT", T_sat)*((Re_D)**0.8)*(Prandtl(Section, T_sat, i)**0.4)\
+        /Shell_ID #[W/cm^2 K]
+        
+        Q_prime =F*h_l*(Twall-T_sat) #[W/cm^2]
+                
+        S = (1+0.055*(F**0.1)*(Re_D)**0.16)**(-1) 
+        A_p = (55*((4.70/p_crit)**0.12)*((-np.log10(4.70/p_crit))**(-0.55))*(nc.H2MolarMass)**(-0.5))/(100**2)
+        C = ((A_p*S)/(F*h_l)**2)*(Q_prime)**(4/3)
+        coeff = [1, -C, -1]
+        cubic_solution = np.roots(coeff)
+        q = cubic_solution[0]
+        
+        h_o = F*(q**(3/2))*h_l #[W/cm^2 K
+        
     else:
         print ("Error: preheater not specified")
     
@@ -59,7 +82,7 @@ def HeatedEquivalentDiameter(Section):
     #for channels heated only on one side 
     #D_H = A_Cross/P_Heated = (Pi/4)*(D_o-D_i)^2/(Pi*Di)
     return  [(x**2 -y**2)/y for x,y in zip(Section.OuterDiameter, Section.Diameter)] #[cm]
-    
+   
     
 def NusseltNumber(Section, correlation, Twall,i):
     Re_D = ld.ReynoldsNumber(Section, HeatedEquivalentDiameter(Section))
@@ -93,49 +116,62 @@ def OuterArea(Section):
 #initial guess of bulk T
 #Looks like output of one section = input of next for bulk temperatures 
 
+def TemperatureProfile(Section):
+    PrimaryBulkTemp = []
+    SecondaryBulkTemp = []
+    for i in range(Section.NodeNumber):
+        if i == 0:
+            PrimaryBulkTemp[i] = Section.PrimaryBulkTemperature[i]
+            SecondaryBulkTemp[i] = 260 + 273 #[K]
+        
+            
+
 def WallTemperature(Section, i, PrimaryBulkTemp, SecondaryBulkTemp):
     #i = each node of SG tube 
     end = Section.NodeNumber-1
-    PrimaryWallTemperature = PrimaryBulkTemp[i]-(1/3)*(PrimaryBulkTemp[i]-SecondaryBulkTemp[i]) #perhaps call from outside function
-    SecondaryWallTemperature = PrimaryWallTemperature*1
-    print (PrimaryWallTemperature-273.15)
+    PrimaryWallTemperature = PrimaryBulkTemp-(1/3)*(PrimaryBulkTemp-SecondaryBulkTemp) #perhaps call from outside function
+    SecondaryWallTemperature =PrimaryBulkTemp*1
     
     for k in range(100):        
         WT_h = PrimaryWallTemperature
         WT_c = SecondaryWallTemperature
         
-        PrimaryT_film = (PrimaryBulkTemp[i] + PrimaryWallTemperature)/2
-        SecondaryT_film = (SecondaryBulkTemp[i] + SecondaryWallTemperature)/2
-        
+        PrimaryT_film = (PrimaryBulkTemp + PrimaryWallTemperature)/2
+        SecondaryT_film = (SecondaryBulkTemp + SecondaryWallTemperature)/2
+
         if Section.Distance[i] >= Section.Distance[end]-263.5: #(2.635 meters up cold-side leg) length at which pre-heater ends (cross-flow ends) 
             preheater = "yes"
         else:
             preheater = "no"
        
-        R_i = PrimaryConvectionResistance(Section, "Dittus-Boetler", PrimaryT_film, i)
-        R_cond = ConductionResistance(Section, PrimaryWallTemperature, i)
-        R_o = SecondaryConvectionResistance(Section, SecondaryT_film, preheater, i)
         
-        U_h = 1/((R_o + R_cond)*InnerArea(Section)[i])
-        U_c = 1/((R_i + R_cond)*OuterArea(Section)[i])
+        U_h = 1/((ConductionResistance(Section, PrimaryWallTemperature, i) + \
+               SecondaryConvectionResistance(Section, SecondaryT_film, SecondaryWallTemperature, preheater, i))*\
+               InnerArea(Section)[i])
         
-        h_i = 1/(R_i*InnerArea(Section)[i])
-        h_o = 1/(R_o*OuterArea(Section)[i])
+        U_c = 1/((ConductionResistance(Section, PrimaryWallTemperature, i) +\
+               PrimaryConvectionResistance(Section, "Dittus-Boetler", PrimaryT_film, i))*OuterArea(Section)[i])
         
-
-        PrimaryWallTemperature = (PrimaryBulkTemp[i]*h_i + SecondaryBulkTemp[i]*(U_h))/(h_i + U_h)
-        SecondaryWallTemperature = (SecondaryBulkTemp[i]*h_o + PrimaryBulkTemp[i]*(U_c))/(h_o + U_c)
+    
         
-        RE = (PrimaryWallTemperature-WT_h)
-        print (PrimaryWallTemperature-273.15, k, RE)
+        #U_total = 1/(R_total*(InnerArea(Section)[i]+OuterArea(Section)[i])/2)
         
-        if abs(RE) < 0.1:
-            
-            return PrimaryWallTemperature-273.15
+        h_i = 1/(PrimaryConvectionResistance(Section, "Dittus-Boetler", PrimaryT_film, i)*InnerArea(Section)[i])
+        h_o = 1/(SecondaryConvectionResistance(Section, SecondaryT_film, SecondaryWallTemperature, preheater, i)*OuterArea(Section)[i])
+        
+        PrimaryWallTemperature = (PrimaryBulkTemp*h_i + SecondaryBulkTemp*(U_h))/(h_i + U_h)
+        SecondaryWallTemperature = ((SecondaryBulkTemp*h_o) + PrimaryBulkTemp*U_c)/(h_o + U_c) 
+        
+        RE1 = (PrimaryWallTemperature-WT_h)
+        RE2 = (SecondaryWallTemperature - WT_c)
+    
+        if abs(RE1) < 0.01 and abs(RE2) <0.01:
+            print (PrimaryWallTemperature-273.15, SecondaryWallTemperature-273.15, k, h_o)
+            return SecondaryWallTemperature-273.15, SecondaryBulkTemp-273.15
         
         
         
-WallTemperature(ld.SG_Zone1, 21, ld.SG_Zone1.PrimaryBulkTemperature, [260+273.15]*ld.SG_Zone1.NodeNumber)
+WallTemperature(ld.SG_Zone1, 1, 305+273.15, 260+273)
 
         
 

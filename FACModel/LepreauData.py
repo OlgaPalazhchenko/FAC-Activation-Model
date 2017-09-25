@@ -28,24 +28,6 @@ j_1 = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4, 4, 5, 6, 6]
 H_1 = [0.520094, 0.0850895, -1.08374, -0.289555, 0.222531, 0.999115, 1.88797, 1.26613, 0.120573, -0.281378, -0.906851, -0.772479, -0.489837, -0.25704, 0.161913, 0.257399, -0.0325372, 0.0698452, 0.00872102, -0.00435673, -5.93E-04]
 
 
-# def ThermoDimensionlessInput(PHT, pressure, pressure_ratio, temperature_ratio, Temperature):
-#     p_ref = 16.53 #reducing pressure [MPa]
-#     T_ref = 1386 #reducing temperature [K]
-#     
-#     if PHT == "yes" or PHT == "Yes":
-#         p = 10 #MPa
-#     else:
-#         p = 4.96 #MPa secondary side
-#     
-#     if pressure == "yes":
-#         return p
-#     if pressure_ratio =="yes":
-#         return p/p_ref #p/p*, reduced pressure [unitless]
-#     elif temperature_ratio == "yes": 
-#         return T_ref/Temperature
-#     else: print ("Error: variable not specified")
-    
-
 class ThermoDimensionlessInput():
     def __init__(self):
         self.p_ref = 16.53 #[MPa] reducing pressure [MPa]
@@ -61,7 +43,7 @@ def Density(species, side, Temperature):
     if side == "phts" or side == "PHTS" or side == "PHT":
         p = 10 #[MPa]
     elif side == "shts" or side == "SHTS" or side == "SHT":
-        p = 4.96 #[MPa] secondary side
+        p = 4.70 #[MPa] secondary side
     else: print ("Error: HTS side not specified")
         
     ratio_pressures = p/ReferenceValues.p_ref
@@ -112,7 +94,7 @@ def ThermalConductivityH2O(side, Temperature):
     if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
         p = 10 #MPa
     else:
-        p = 4.96 #[MPa] secondary side
+        p = 4.70 #[MPa] secondary side
     T_ref = 647.096 #[K]
     p_ref = 22.064 #[MPa]
     
