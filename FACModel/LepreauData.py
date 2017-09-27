@@ -87,7 +87,7 @@ def HeatCapacity(side, Temperature):
     
     Gibbs_TT = sum([x*((7.1-ratio_pressures)**y)*z*(z-1)*((ratio_temperatures-1.222)**(z-2)) for x,y,z in zip(n_IAPWS, I_IAPWS, J_IAPWS)])
     
-    return (-ratio_temperatures**2)*Gibbs_TT*R_IAPWS #[kJ/kg K] or *nc.H2OMolarMass for [J/mol K]
+    return (-ratio_temperatures**2)*Gibbs_TT*R_IAPWS #[kJ/kg K] ([J/g K] or *nc.H2OMolarMass for [J/mol K]
  
  
 def ThermalConductivityH2O(side, Temperature):
