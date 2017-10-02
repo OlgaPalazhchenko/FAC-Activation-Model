@@ -64,6 +64,7 @@ def Hydrolysis(Section, FeTotal, NiTotal, ConcentrationH):
                 #print (i)
                 #break
                 return ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2
+    
            
 def CobaltComposition(Section):
     if Section == ld.SteamGenerator:

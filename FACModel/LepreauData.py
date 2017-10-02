@@ -304,11 +304,14 @@ SG_Zone2.NodeNumber = 22
 Inlet.Diameter = [44.3, 50, 106, 5.68, 5.68, 5.68, 5.68] 
 Core.Diameter = [1.3]*Core.NodeNumber 
 Outlet.Diameter = [6.4, 6.4, 6.4, 6.4, 8.9, 8.9, 8.9, 116, 40.8] 
-SteamGenerator.Diameter = [1.59]*SteamGenerator.NodeNumber 
-SG_Zone1.Diameter = [1.59]*SG_Zone1.NodeNumber
-SG_Zone2.Diameter = [1.59]*SG_Zone2.NodeNumber
+SteamGenerator.Diameter = [1.36144]*SteamGenerator.NodeNumber 
+SG_Zone1.Diameter = [1.368]*SG_Zone1.NodeNumber
+SG_Zone2.Diameter = [1.368]*SG_Zone2.NodeNumber
 
-
+b="no"
+c="yes"
+a=  [[2]*5,[b]*5+[c]*3]
+print (a)
 #Velocity [cm/s]
 Inlet.Velocity = [1530, 1200, 270, 985, 985, 985, 985]
 Core.Velocity =[883.08, 890.66, 900.3, 910.64, 920.97, 932.68, 945.08, 958.17, 973.32, 989.16, 1073.89, 1250.92]
@@ -407,7 +410,7 @@ for Section in Sections:
         Section.OuterFe3O4Thickness = [1.3E-4]*Section.NodeNumber
         Section.NiThickness = [1.3E-4]*Section.NodeNumber
         
-        Section.TubeThickness = 0.125
+        Section.TubeThickness = 0.113
         Section.OuterDiameter = [x+2*Section.TubeThickness for x in Section.Diameter]
         
         
