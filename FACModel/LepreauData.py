@@ -6,6 +6,12 @@ import NumericConstants as nc
 # ureg = UnitRegistry()
 # a = 5*ureg.kgcm**3
 
+class SGParameters():
+    def __init__(self):
+        self.magnitude = None
+        self.label = None
+        self.unit = None
+        self.steam_quality = None
 
 SizingParameters = open('SizingParameters.txt','r')      
 SizingParametersReader = list(csv.reader(SizingParameters, delimiter = ',')) #Assign file data to list, Reader[row][column], delimiter = comma 
@@ -235,7 +241,7 @@ class Section(): #Defining each primary heat transport section as a class
         self.OuterDiameter = None
         self.TubeThickness = None
         self.Velocity = None#[float(SizingParametersReader[j+1][i]) for i in range(self.RowStart,self.RowEnd)] #[cm/s]
-        self.Length = None #[float(SizingParametersReader[j+2][i]) for i in range(self.RowStart,self.RowEnd)] #[cm]
+        self.Length = SGParameters() #[float(SizingParametersReader[j+2][i]) for i in range(self.RowStart,self.RowEnd)] #[cm]
         self.Distance = None #np.cumsum(self.Length) #[cm]
         self.PrimaryBulkTemperature = None#[x + 273.15 for x in self.Celsius] # [K]
         self.PrimaryWallTemperature = None
@@ -308,10 +314,7 @@ SteamGenerator.Diameter = [1.36144]*SteamGenerator.NodeNumber
 SG_Zone1.Diameter = [1.368]*SG_Zone1.NodeNumber
 SG_Zone2.Diameter = [1.368]*SG_Zone2.NodeNumber
 
-b="no"
-c="yes"
-a=  [[2]*5,[b]*5+[c]*3]
-print (a)
+
 #Velocity [cm/s]
 Inlet.Velocity = [1530, 1200, 270, 985, 985, 985, 985]
 Core.Velocity =[883.08, 890.66, 900.3, 910.64, 920.97, 932.68, 945.08, 958.17, 973.32, 989.16, 1073.89, 1250.92]
@@ -322,13 +325,15 @@ SG_Zone2.Velocity =[533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 49
 
 
 #Length [cm]
-Inlet.Length = [477.6, 281.8, 78.6, 350, 350, 350, 350] 
-Core.Length = [49.5]*Core.NodeNumber 
-Outlet.Length = [17, 3.5, 139.5, 432, 225.5, 460.3, 460.3, 400, 100]
-SteamGenerator.Length = [60.96, 88.9, 88.9, 88.9, 91.44, 91.44, 91.44, 91.44, 91.44, 103.05, 103.5, 91.44, 91.44, 91.44, 91.44, 91.44, 76.2, 58.42, 58.42, 58.42, 45.72, 30.48]
-SG_Zone1.Length = [60.96, 88.9, 88.9, 88.9, 91.44, 91.44, 91.44, 91.44, 91.44, 103.05, 103.5, 91.44, 91.44, 91.44, 91.44, 91.44, 76.2, 58.42, 58.42, 58.42, 45.72, 30.48]
-SG_Zone2.Length = [60.96, 88.9, 88.9, 88.9, 91.44, 91.44, 91.44, 91.44, 91.44, 103.05, 103.5, 91.44, 91.44, 91.44, 91.44, 91.44, 76.2, 58.42, 58.42, 58.42, 45.72, 30.48]
+Inlet.Length.magnitude = [477.6, 281.8, 78.6, 350, 350, 350, 350] 
+Core.Length.magnitude = [49.5]*Core.NodeNumber 
+Outlet.Length.magnitude = [17, 3.5, 139.5, 432, 225.5, 460.3, 460.3, 400, 100]
+SteamGenerator.Length.magnitude = [71.2, 75, 75, 75, 101.633, 101.633, 101.633, 112.95, 112.95, 59.25, 59.25, 59.25, 59.25, 112.95, 112.95, 101.633, 101.633, 101.633, 75, 75, 75, 71.2]
+SG_Zone1.Length.magnitude = [60.96, 88.9, 88.9, 88.9, 91.44, 91.44, 91.44, 91.44, 91.44, 103.05, 103.5, 91.44, 91.44, 91.44, 91.44, 91.44, 76.2, 58.42, 58.42, 58.42, 45.72, 30.48]
+SG_Zone2.Length.magnitude = [60.96, 88.9, 88.9, 88.9, 91.44, 91.44, 91.44, 91.44, 91.44, 103.05, 103.5, 91.44, 91.44, 91.44, 91.44, 91.44, 76.2, 58.42, 58.42, 58.42, 45.72, 30.48]
 
+SG_Zone1.Length.label = ["PHT boiling"]*2 + [None]*7 + ["u-bend"]*4 +[None]*5 + ["preheater"]*4
+SG_Zone1.Length.steam_quality = 
 
 #Solubility (mol/kg)
 Inlet.SolubilityFe = [1.28494E-08]*Inlet.NodeNumber
@@ -347,15 +352,17 @@ Outlet.SolubilityCo = [1.44E-09]*Outlet.NodeNumber
 Outlet.SolubilityCr = [4.84E-11]*Outlet.NodeNumber
 
 #Replicate solubilities and temperatures here for now 
-SGInterfaces = [SteamGenerator, SG_Zone1, SG_Zone2]
-for SGInterface in SGInterfaces:
-    SGInterface.SolubilityFe = [2.58E-08, 2.56E-08, 2.55E-08, 2.52546E-08, 2.32347E-08, 2.16094E-08, 2.03107E-08, 1.9246E-08, 1.83579E-08, 1.75642E-08, 1.68473E-08, 1.62692E-08, 1.58017E-08, 1.53906E-08, 1.50304E-08, 1.47083E-08, 1.44316E-08, 1.42108E-08, 1.39481E-08, 1.35926E-08, 1.31784E-08, 1.27883E-08]
-    SGInterface.SolubilityNi = [1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 1.96011E-09, 2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09, 2.60733E-09, 2.62118E-09, 2.63802E-09, 2.66147E-09, 2.68978E-09, 2.71747E-09]
-    SGInterface.SolubilityCo = [1.46729E-09, 1.46729E-09, 1.46729E-09, 1.49896E-09, 1.62443E-09, 1.75595E-09, 1.91821E-09, 2.06673E-09, 2.2024E-09, 2.35035E-09, 2.5275E-09, 2.67907E-09, 2.80762E-09, 2.92529E-09, 3.0321E-09, 3.13232E-09, 3.22305E-09, 3.2971E-09, 3.38716E-09, 3.51258E-09, 3.66401E-09, 3.81211E-09]
-    SGInterface.SolubilityCr = [4.84E-11, 4.84E-11, 4.84E-11, 4.99E-11, 5.61E-11, 6.20E-11, 6.73E-11, 7.22E-11, 7.67E-11, 8.10E-11, 8.52E-11, 8.88E-11, 9.18E-11, 9.46E-11, 9.71E-11, 9.94E-11, 1.01E-10, 1.03E-10, 1.00E-10, 9.62E-11, 9.15E-11, 8.70E-11]
-    SGInterface.PrimaryBulkTemperature = \
-    UnitConverter(SGInterface, "Celsius", "Kelvin", None, None, None, None, None, \
+SGZones = [SteamGenerator, SG_Zone1, SG_Zone2]
+for SGZone in SGZones:
+    SGZone.SolubilityFe = [2.58E-08, 2.56E-08, 2.55E-08, 2.52546E-08, 2.32347E-08, 2.16094E-08, 2.03107E-08, 1.9246E-08, 1.83579E-08, 1.75642E-08, 1.68473E-08, 1.62692E-08, 1.58017E-08, 1.53906E-08, 1.50304E-08, 1.47083E-08, 1.44316E-08, 1.42108E-08, 1.39481E-08, 1.35926E-08, 1.31784E-08, 1.27883E-08]
+    SGZone.SolubilityNi = [1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 1.96011E-09, 2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09, 2.60733E-09, 2.62118E-09, 2.63802E-09, 2.66147E-09, 2.68978E-09, 2.71747E-09]
+    SGZone.SolubilityCo = [1.46729E-09, 1.46729E-09, 1.46729E-09, 1.49896E-09, 1.62443E-09, 1.75595E-09, 1.91821E-09, 2.06673E-09, 2.2024E-09, 2.35035E-09, 2.5275E-09, 2.67907E-09, 2.80762E-09, 2.92529E-09, 3.0321E-09, 3.13232E-09, 3.22305E-09, 3.2971E-09, 3.38716E-09, 3.51258E-09, 3.66401E-09, 3.81211E-09]
+    SGZone.SolubilityCr = [4.84E-11, 4.84E-11, 4.84E-11, 4.99E-11, 5.61E-11, 6.20E-11, 6.73E-11, 7.22E-11, 7.67E-11, 8.10E-11, 8.52E-11, 8.88E-11, 9.18E-11, 9.46E-11, 9.71E-11, 9.94E-11, 1.01E-10, 1.03E-10, 1.00E-10, 9.62E-11, 9.15E-11, 8.70E-11]
+    SGZone.PrimaryBulkTemperature = \
+    UnitConverter(SGZone, "Celsius", "Kelvin", None, None, None, None, None, \
                   [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27, 279.43, 277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03])
+    
+    
     
 #Temperature [Celsius]
 Inlet.PrimaryBulkTemperature = UnitConverter(Inlet, "Celsius", "Kelvin", None, None, None, None, None, [266]*Inlet.NodeNumber)
@@ -428,7 +435,7 @@ for Section in Sections:
     ##
     
     ##Distance
-    Section.Distance = np.cumsum(Section.Length)
+    Section.Distance = np.cumsum(Section.Length.magnitude)
     ##
     
     ##Temperature-dependent parameters            

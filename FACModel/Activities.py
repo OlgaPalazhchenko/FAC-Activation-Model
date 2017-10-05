@@ -13,7 +13,7 @@ def Eta(Section,CorrosionRate,FeSatFe3O4,InnerOxThickness):
         DeltaTemperature = [abs(x-y) for x,y in zip(Section.PrimaryBulkTemperature[1:],Section.PrimaryBulkTemperature)]
         DeltaTemperature.insert(0, 0.0001) #One less Eta than total number of nodes --> deltas = 21, so add small diff b/w first node and last node outlet
         
-        DeltaTemperature_Length = [x/y for x,y in zip(DeltaTemperature,Section.Length)]        
+        DeltaTemperature_Length = [x/y for x,y in zip(DeltaTemperature,Section.Length.magnitude)]        
         
         DeltaSolubility = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", [abs(x-y) for x,y in zip(FeSatFe3O4[1:],FeSatFe3O4)], \
                                             None, None, None, nc.FeMolarMass, None)

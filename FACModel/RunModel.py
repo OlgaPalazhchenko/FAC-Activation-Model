@@ -67,7 +67,7 @@ class RunModel():
             if i >0: 
                 for r,q in zip (BulkConcentrations, SolutionOxideConcentrations):
                     r[i] = RK4.Spatial(self.Section1, q[i-1], r[i-1], ld.MassTransfer(self.Section1)[i-1], self.Section1.Diameter[i-1], \
-                                       self.Section1.Velocity[i-1], self.Section1.Length[i-1])
+                                       self.Section1.Velocity[i-1], self.Section1.Length.magnitude[i-1])
 
                 #Exponential decay of bulk particulate at start of section as function of distance + removal due to deposition and erosion source
                 self.Section1.BigParticulate[i] = RK4.Particulate(self.Section1, self.Section1.BigParticulate[0], self.Section1.Diameter[i],\
@@ -206,7 +206,7 @@ Mn54SGActivity = SAMn54[0::3]
 Cr51SGActivity = SACr51[0::3]
 Ni63SGActivity = SANi63[0::3]
 
-LoopDistance = I.Section1.Length + C.Section1.Length + O.Section1.Length + S.Section1.Length
+LoopDistance = I.Section1.Length.magnitude + C.Section1.Length.magnitude + O.Section1.Length.magnitude + S.Section1.Length.magnitude
 TotalLoopDistance = [i/100 for i in np.cumsum(LoopDistance)] #Distance down length of PHTS [m]
 
 BulkFeSat = [np.log10(i) for i in I.Section1.Bulk.FeSatFe3O4 + C.Section1.Bulk.FeSatFe3O4 + O.Section1.Bulk.FeSatFe3O4 + S.Section1.Bulk.FeSatFe3O4]
