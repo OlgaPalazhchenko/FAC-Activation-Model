@@ -328,12 +328,12 @@ SG_Zone2.Velocity =[533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 49
 Inlet.Length.magnitude = [477.6, 281.8, 78.6, 350, 350, 350, 350] 
 Core.Length.magnitude = [49.5]*Core.NodeNumber 
 Outlet.Length.magnitude = [17, 3.5, 139.5, 432, 225.5, 460.3, 460.3, 400, 100]
-SteamGenerator.Length.magnitude = [71.2, 75, 75, 75, 101.633, 101.633, 101.633, 112.95, 112.95, 59.25, 59.25, 59.25, 59.25, 112.95, 112.95, 101.633, 101.633, 101.633, 75, 75, 75, 71.2]
-SG_Zone1.Length.magnitude = [60.96, 88.9, 88.9, 88.9, 91.44, 91.44, 91.44, 91.44, 91.44, 103.05, 103.5, 91.44, 91.44, 91.44, 91.44, 91.44, 76.2, 58.42, 58.42, 58.42, 45.72, 30.48]
+SteamGenerator.Length.magnitude = [60.96, 88.9, 88.9, 88.9, 91.44, 91.44, 91.44, 91.44, 91.44, 103.05, 103.5, 91.44, 91.44, 91.44, 91.44, 91.44, 76.2, 58.42, 58.42, 58.42, 45.72, 30.48]
+SG_Zone1.Length.magnitude = [71.2, 75, 75, 75, 101.633, 101.633, 101.633, 112.95, 112.95, 59.25, 59.25, 59.25, 59.25, 112.95, 112.95, 101.633, 101.633, 101.633, 75, 75, 75, 71.2]
 SG_Zone2.Length.magnitude = [60.96, 88.9, 88.9, 88.9, 91.44, 91.44, 91.44, 91.44, 91.44, 103.05, 103.5, 91.44, 91.44, 91.44, 91.44, 91.44, 76.2, 58.42, 58.42, 58.42, 45.72, 30.48]
 
-SG_Zone1.Length.label = ["PHT boiling"]*2 + [None]*7 + ["u-bend"]*4 +[None]*5 + ["preheater"]*4
-SG_Zone1.Length.steam_quality = 
+SG_Zone1.Length.label = ["PHT boiling"]*2 + [None]*7 + ["u-bend"]*4 +[None]*5 + ["preheater start"] +  ["preheater"]*3
+
 
 #Solubility (mol/kg)
 Inlet.SolubilityFe = [1.28494E-08]*Inlet.NodeNumber
@@ -457,6 +457,9 @@ for Section in Sections:
     Section.k_NiOH2=10**(np.polyval(nc.KNiOH2Polynomial, Section.PrimaryBulkTemperature))
     Section.k_NiOH3=10**(np.polyval(nc.KNiOH3Polynomial, Section.PrimaryBulkTemperature))
     ##
+
+SG_Zone1.Length.steam_quality = [(2e-7)*(i**2)+(1e-4)*i + 0.0157 for i in SG_Zone1.Distance]
+
 
 def ReynoldsNumber(Section, Diameter):
     #Diameter is an input due to difference in desired dimension (e.g., inner, outer, hydraulic, etc.)
