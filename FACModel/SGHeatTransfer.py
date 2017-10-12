@@ -174,7 +174,6 @@ def OuterArea(Section):
 
 def WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in):
     #i = each node of SG tube 
-    
     T_PrimaryWall = T_PrimaryBulkIn-(1/3)*(T_PrimaryBulkIn-T_SecondaryBulkIn) #perhaps call from outside function
     T_SecondaryWall =T_PrimaryBulkIn
     
@@ -283,5 +282,4 @@ def TemperatureProfile(Section):
     print ([j-273.15 for j in SecondaryWall])
 
 TemperatureProfile(ld.SG_Zone1)
-
 

@@ -11,9 +11,6 @@ from matplotlib import rc
 rc('mathtext', default='regular')
 
 
-#
-
-
 ##Initial Concentrations 
 #All concentrations in mol/kg
 Sections = [ld.Inlet, ld.Core, ld.Outlet, ld.SteamGenerator] 
@@ -177,7 +174,7 @@ SANi63 = []
 
 import time
 start_time = time.time()
-for j in range(50):#nc.SimulationDuration
+for j in range(7000):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator, j)

@@ -61,10 +61,16 @@ def IronSolubility(Section):
     P_H2 = [x*y/(nc.kH2*np.exp(-500*((1/z)-(1/298.15)))) for x,y,z in zip([nc.H2*nc.H2Density/nc.H2MolarMass]*Section.NodeNumber,Section.DensityH2O, \
                                                                    Section.PrimaryBulkTemperature)]
     
-
-    print (P_H2)
+    ActivityFe2 = [x*(y**2)*z**(1/3) for x,y,z in zip(Section.k_Fe2, ConcentrationH, P_H2)]
+    ActivityFeOH = [x*y/z for x,y,z in zip(Section.k_FeOH, ActivityFe2, ConcentrationH)]
+    ActivityFeOH2 = [x*y/(z**2) for x,y,z in zip(Section.k_FeOH2, ActivityFe2, ConcentrationH)]
+    ActivityFeOH3 = [x*y/(z**3) for x,y,z in zip(Section.k_FeOH3, ActivityFe2, ConcentrationH)]
+    ActivityFeOH3_Fe3 = [x/(y**(1/6)) for x,y in zip(Section.k_FeOH3_Fe3, P_H2)]
+    ActivityFeOH4_Fe3 = [x/(y*(z**(1/6))) for x,y,z in zip(Section.k_FeOH4_Fe3, ConcentrationH, P_H2)]
     
-IronSolubility(ld.Inlet)
+    FeTotalActivity = [x+y+z+q+w+t for x,y,z,q,t,w in zip (ActivityFe2, ActivityFeOH, ActivityFeOH2, ActivityFeOH3, ActivityFeOH3_Fe3, ActivityFeOH4_Fe3)]
+    return FeTotalActivity
+IronSolubility(ld.SteamGenerator)
 
 
 def Hydrolysis(Section, FeTotal, NiTotal, ConcentrationH):
@@ -174,6 +180,7 @@ def FractionMetalInnerOxide(Section,Element):
             return FractionCrChromite * FractionChromite(Section)
         elif Element == "Co":
             return FractionCoChromite * FractionChromite(Section)
+
 
 def FractionMetalInOxide(Section, Element, Oxide):
     if Oxide == "Magnetite":

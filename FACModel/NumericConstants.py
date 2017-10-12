@@ -102,7 +102,7 @@ FracFe_Fe3O4 = 0.723
 FracCr_Fe3O4 = 0.00019 #0.0033
 FracCo_Fe3O4 = 0.000049
 
-ConcentrationLiTotal=6.3095734E-4 #0.00022585 #[mol/L]
+ConcentrationLiTotal= 0.00022585 #6.3095734E-4[mol/L]
 
 #Temperature constants for equilibrium/hydrolysis constants
 DebyeHuckPolynomial=[3.29E-10, -1.709E-07, 0.00003315, -0.0009028, 0.5027]
