@@ -439,23 +439,10 @@ for Section in Sections:
     ##
     
     ##Temperature-dependent parameters            
-    Celsius = [i-273.15 for i in Section.PrimaryBulkTemperature]
     Section.NernstConstant = [x*(2.303*nc.R/(2*nc.F)) for x in Section.PrimaryBulkTemperature]
     
     Section.DensityH2O = [Density("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
     Section.ViscosityH2O = [Viscosity("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
-    
-    #Equilibrium and Debye-Huckel constants - polynomials as a function of temperature 
-    #Coeff1*x^4 + Coeff2*x^3 + Coeff3*x^2 + Coeff4*x + Coeff5, depends on # elements in coeff list
-    Section.DebyeHuckelConstant=(np.polyval(nc.DebyeHuckPolynomial, Celsius)) 
-    Section.k_W=10**(np.polyval(nc.KwPolynomial, Section.PrimaryBulkTemperature))
-    Section.k_Li=10**(np.polyval(nc.KLiPolynomial, Section.PrimaryBulkTemperature)) 
-    Section.k_FeOH=10**(np.polyval(nc.KFeOHPolynomial, Section.PrimaryBulkTemperature))
-    Section.k_FeOH2=10**(np.polyval(nc.KFeOH2Polynomial, Section.PrimaryBulkTemperature))
-    Section.k_FeOH3=10**(np.polyval(nc.KFeOH3Polynomial, Section.PrimaryBulkTemperature))
-    Section.k_NiOH=10**(np.polyval(nc.KNiOHPolynomial, Section.PrimaryBulkTemperature))
-    Section.k_NiOH2=10**(np.polyval(nc.KNiOH2Polynomial, Section.PrimaryBulkTemperature))
-    Section.k_NiOH3=10**(np.polyval(nc.KNiOH3Polynomial, Section.PrimaryBulkTemperature))
     ##
 
 SG_Zone1.Length.steam_quality = [(2e-7)*(i**2)+(1e-4)*i + 0.0157 for i in SG_Zone1.Distance]

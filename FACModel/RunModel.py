@@ -10,6 +10,10 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('mathtext', default='regular')
 
+
+#
+
+
 ##Initial Concentrations 
 #All concentrations in mol/kg
 Sections = [ld.Inlet, ld.Core, ld.Outlet, ld.SteamGenerator] 
@@ -24,7 +28,7 @@ for Section in Sections:
     for Interface in Interfaces:
         Interface.ConcentrationH2 =[nc.H2*nc.H2Density/nc.H2MolarMass]*Section.NodeNumber #makes into array with appropriate # of nodes for that PHTS section
         Interface.ConcentrationH = c.BulkpHCalculator(Section) #from system pH calculation
-            
+    
     Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = \
     e.ECP(Section)
     
@@ -173,7 +177,7 @@ SANi63 = []
 
 import time
 start_time = time.time()
-for j in range(70):#nc.SimulationDuration
+for j in range(50):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator, j)

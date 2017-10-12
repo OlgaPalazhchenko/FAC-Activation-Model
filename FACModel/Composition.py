@@ -2,32 +2,69 @@ import NumericConstants as nc
 import LepreauData as ld
 import numpy as np
 
-def BulkpHCalculator(Section):#Bulk pH calculation 
-    ConcentrationH = 0.0000001  #initial guess [mol/kg]
+def T_DependentParameters(Section):
+    Celsius = [i-273.15 for i in Section.PrimaryBulkTemperature]
+    #Equilibrium and Debye-Huckel constants - polynomials as a function of temperature 
+    #Coeff1*x^4 + Coeff2*x^3 + Coeff3*x^2 + Coeff4*x + Coeff5, depends on # elements in coeff list
+    Section.DebyeHuckelConstant=(np.polyval(nc.DebyeHuckPolynomial, Celsius)) 
+    Section.k_W=10**(np.polyval(nc.KwPolynomial, Section.PrimaryBulkTemperature))
+    Section.k_Li=10**(np.polyval(nc.KLiPolynomial, Section.PrimaryBulkTemperature)) 
+    Section.k_FeOH=10**(np.polyval(nc.KFeOHPolynomial, Section.PrimaryBulkTemperature))
+    Section.k_FeOH2=10**(np.polyval(nc.KFeOH2Polynomial, Section.PrimaryBulkTemperature))
+    Section.k_FeOH3=10**(np.polyval(nc.KFeOH3Polynomial, Section.PrimaryBulkTemperature))
+    Section.k_NiOH=10**(np.polyval(nc.KNiOHPolynomial, Section.PrimaryBulkTemperature))
+    Section.k_NiOH2=10**(np.polyval(nc.KNiOH2Polynomial, Section.PrimaryBulkTemperature))
+    Section.k_NiOH3=10**(np.polyval(nc.KNiOH3Polynomial, Section.PrimaryBulkTemperature))
+
+
+def BulkpHCalculator(Section):#Bulk pH calculation
+    T_DependentParameters(Section)
+    H = []
+    ConcentrationH = 0.0000000001  #initial guess [mol/kg]
     gamma_1 = 1 #initial guess 
-    ConcentrationOH =  Section.k_W / ((gamma_1**2) * (ConcentrationH))
-    #At high temp, LiOH doesn't dissociate 100% - eq'm established: LiOH(aq) <-> Li+(aq) + OH-(aq)
-    #KLi = ([Li+]gamma_1 *[OH-]gamma_1)/[LiOH]; ConcentrationLiTotal = ConcentrationLi  + LiConcentrationOH (sub in eq'm expression for LiConcentrationOH
-    ConcentrationLi = Section.k_Li * nc.ConcentrationLiTotal / (Section.k_Li + ((gamma_1**2) * ConcentrationOH))
-    #k_W = ConcentrationH*gamma_1*ConcentrationOH*gamma_1;   ConcentrationOH = k_W/ConcentrationH*gamma_1**2
-    #H+ + Li+ = OH-;                    ConcentrationH = ConcentrationLi + k_W/ConcentrationH*gamma_1**2
-    for i in range(50): #no more than 10 iterations should really be necessary for convergence at the provided error  
-        FH = ConcentrationH**2 + (ConcentrationH * ConcentrationLi) - (Section.k_W / (gamma_1**2)) #function of H
-        DFH = 2 * ConcentrationH + ConcentrationLi       #derivative of function
-        NewConcentrationH = ConcentrationH - (FH / DFH)
-        RE = abs((NewConcentrationH - ConcentrationH) / NewConcentrationH)
-        ConcentrationH = NewConcentrationH
-        #print RE #optional value check of ConcentrationH at each iteration 
-        ConcentrationOH = Section.k_W / ((gamma_1**2) / ConcentrationH)
-        ConcentrationLi = (Section.k_Li * nc.ConcentrationLiTotal) / (Section.k_Li + ((gamma_1**2) * ConcentrationOH))
-        IonicStrength = ((1**2) * ConcentrationH + (1**2) * ConcentrationLi + (1**2) * ConcentrationOH) / 2
-        #Davies equation loggamma_1 = -DebyeHuckConst*(z**2)*[(sqrt(I)/(1+sqrt(I)))-beta*I]
-        gamma_1 = 10**(Section.DebyeHuckelConstant * (1**2) * (((IonicStrength ** 0.5) / (1 + (IonicStrength**0.5))) - 0.2 * IonicStrength))
-        #All entries in ConcentrationH list must meet error convergence requirement (no matter if SG 22 element list or Inlet 7 element list)
-        if RE.all() < 0.00000001: break 
-        #print (i) #prints number of iterations before error minimized to desired level and exits loop
-        #print (-np.log10(ConcentrationH))
-    return ConcentrationH
+    for i in range(Section.NodeNumber):
+        ConcentrationOH =  Section.k_W[i] / ((gamma_1**2) * (ConcentrationH))
+        
+        #At high temp, LiOH doesn't dissociate 100% - eq'm established: LiOH(aq) <-> Li+(aq) + OH-(aq)
+        #KLi = ([Li+]gamma_1 *[OH-]gamma_1)/[LiOH]; ConcentrationLiTotal = ConcentrationLi  + LiConcentrationOH (sub in eq'm expression for LiConcentrationOH
+        ConcentrationLi = Section.k_Li[i] * nc.ConcentrationLiTotal / (Section.k_Li[i] + ((gamma_1**2) * ConcentrationOH))
+        #k_W = ConcentrationH*gamma_1*ConcentrationOH*gamma_1;   ConcentrationOH = k_W/ConcentrationH*gamma_1**2
+        #H+ + Li+ = OH-;                    ConcentrationH = ConcentrationLi + k_W/ConcentrationH*gamma_1**2
+        for k in range(50): #no more than 10 iterations should really be necessary for convergence at the provided error  
+            FH = ConcentrationH**2 + (ConcentrationH * ConcentrationLi) - (Section.k_W[i] / (gamma_1**2)) #function of H
+            DFH = 2 * ConcentrationH + ConcentrationLi       #derivative of function
+        
+            NewConcentrationH = ConcentrationH - (FH / DFH)
+        
+            RE = abs((NewConcentrationH - ConcentrationH) / NewConcentrationH)
+        
+            ConcentrationH = NewConcentrationH
+         
+            ConcentrationOH = Section.k_W[i] / ((gamma_1**2) / ConcentrationH)
+            ConcentrationLi = (Section.k_Li[i] * nc.ConcentrationLiTotal) / (Section.k_Li[i] + ((gamma_1**2) * ConcentrationOH))
+            IonicStrength = ((1**2) * ConcentrationH + (1**2) * ConcentrationLi + (1**2) * ConcentrationOH) / 2
+            #Davies equation loggamma_1 = -DebyeHuckConst*(z**2)*[(sqrt(I)/(1+sqrt(I)))-beta*I]
+            gamma_1 = 10**(Section.DebyeHuckelConstant[i] * (1**2) * (((IonicStrength ** 0.5) / (1 + (IonicStrength**0.5))) - 0.2 * IonicStrength))
+            #All entries in ConcentrationH list must meet error convergence requirement (no matter if SG 22 element list or Inlet 7 element list)
+            if RE < 0.0000001: 
+                break 
+        H.append(ConcentrationH)  
+    return H
+
+
+def IronSolubility(Section):
+    ConcentrationH = BulkpHCalculator(Section)
+    Section.k_Fe2 = 10**(np.polyval(nc.KFe2SchikorrPolynomial, Section.PrimaryBulkTemperature))
+    Section.k_FeOH3_Fe3 = 10**(np.polyval(nc.KFeOH3SchikorrPolynomial, Section.PrimaryBulkTemperature))
+    Section.k_FeOH4_Fe3 = 10**(np.polyval(nc.KFeOH4SchikorrPolynomial, Section.PrimaryBulkTemperature))
+    
+    P_H2 = [x*y/(nc.kH2*np.exp(-500*((1/z)-(1/298.15)))) for x,y,z in zip([nc.H2*nc.H2Density/nc.H2MolarMass]*Section.NodeNumber,Section.DensityH2O, \
+                                                                   Section.PrimaryBulkTemperature)]
+    
+
+    print (P_H2)
+    
+IronSolubility(ld.Inlet)
 
 
 def Hydrolysis(Section, FeTotal, NiTotal, ConcentrationH):

@@ -102,17 +102,21 @@ FracFe_Fe3O4 = 0.723
 FracCr_Fe3O4 = 0.00019 #0.0033
 FracCo_Fe3O4 = 0.000049
 
-ConcentrationLiTotal=0.00022585 #[mol/L]
+ConcentrationLiTotal=6.3095734E-4 #0.00022585 #[mol/L]
 
 #Temperature constants for equilibrium/hydrolysis constants
 DebyeHuckPolynomial=[3.29E-10, -1.709E-07, 0.00003315, -0.0009028, 0.5027]
 KwPolynomial= [-7.226E-10, 1.32661E-06, -0.000959311, 0.32765297,-55.86334915]
 KLiPolynomial= [0.00000675, -0.0048, -0.7532]
 
+KFe2SchikorrPolynomial = [6.66667E-11, -2.128E-07, 2.52E-04, -0.142254891, 35.94096367]
 KFeOHPolynomial= [-4E-10, 8.1013E-07, -0.00062963, 0.230763,-41.5545]
 KFeOH2Polynomial= [-4E-10,  8.63467E-07, -0.00073731,  0.311499,-67.8248]
 KFeOH3Polynomial= [-4.667E-10, 1.0496E-06, -0.000935775,  0.413186,-97.4709]
-  
+#Fe3+
+KFeOH3SchikorrPolynomial = [-1.35525E-20, 5.33333E-08, -0.00010368, 0.074951307, -27.34968224]  
+KFeOH4SchikorrPolynomial = [2.46667E-09, -4.72693E-06, 0.003334163, -1.007239881, 89.37956761]
+
 KNiOHPolynomial= [3.10167E-09, -5.8294E-06, 0.004039757, -1.201661204, 119.296086]
 KNiOH2Polynomial = [-3.04309E-10, 6.66757E-07, -0.000580137, 0.255160282, -60.03240922]          
 KNiOH3Polynomial= [8.49674E-10, -1.5126E-06, 0.000945292, -0.211217025, -16.71117746]               

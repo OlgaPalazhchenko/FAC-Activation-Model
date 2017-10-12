@@ -283,3 +283,5 @@ def TemperatureProfile(Section):
     print ([j-273.15 for j in SecondaryWall])
 
 TemperatureProfile(ld.SG_Zone1)
+
+
