@@ -69,6 +69,7 @@ def IronSolubility(Section):
     ActivityFeOH4_Fe3 = [x/(y*(z**(1/6))) for x,y,z in zip(Section.k_FeOH4_Fe3, ConcentrationH, P_H2)]
     
     FeTotalActivity = [x+y+z+q+w+t for x,y,z,q,t,w in zip (ActivityFe2, ActivityFeOH, ActivityFeOH2, ActivityFeOH3, ActivityFeOH3_Fe3, ActivityFeOH4_Fe3)]
+    print ("rofl")
     return FeTotalActivity
 IronSolubility(ld.SteamGenerator)
 
