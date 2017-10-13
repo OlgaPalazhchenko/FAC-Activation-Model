@@ -21,8 +21,8 @@ def Potential(Section, StandardPotential, ProductConcentration, ProductGamma, Pr
         Product = (ProductConcentration*DensityH2O*ProductGamma)**ProductStoich 
         Reactant = (ReactantConcentration*DensityH2O*ReactantGamma)**ReactantStoich 
              
-    return StandardPotential- NernstConstant*np.log10(Product/Reactant)
-
+    E = StandardPotential- NernstConstant*np.log10(Product/Reactant)
+    return E
 
 def ElectrochemicalKineticConstant(Section, KineticConstant, EquilibriumPotential, Dissolution, MixedECP):
     if Dissolution == "yes":
@@ -38,11 +38,9 @@ def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPot
         Beta_prime = (-1)*nc.Beta
     else:
         Beta_prime = nc.Beta
-    #if Section == ld.Outlet:
-        #print (BulkSatFe3O4, np.exp(Beta_prime*nc.n*nc.F*(MixedPotential-EqmPotentialFe3O4)/(nc.R*Kelvin)))
-        
-    return BulkSatFe3O4*np.exp(Beta_prime*nc.n*nc.F*(MixedPotential-EqmPotentialFe3O4)/(nc.R*Kelvin)) 
     
+    AdjustedSaturation = BulkSatFe3O4*np.exp(Beta_prime*nc.n*nc.F*(MixedPotential-EqmPotentialFe3O4)/(nc.R*Kelvin)) 
+    return AdjustedSaturation
 
 def ElectrochemicalAdjustment(Section, EqmPotentialFe3O4, SOMixedPotential, MOMixedPotential, FeTotal, FeSatFe3O4, BulkSatFe3O4, SOConcentrationH):
     
@@ -73,8 +71,6 @@ def MixedPotential(Section, CathodeCurrent, CathodePotential, AnodeCurrent, Anod
     
     return  [(nc.R*x/(nc.n*nc.F))*np.log(y/z) for x,y,z in zip(Section.PrimaryBulkTemperature, Numerator, Denominator)]
     
-#print (MixedPotential(ld.Inlet, [1e-9]*ld.Inlet.NodeNumber, [-1]*ld.Inlet.NodeNumber,[2e-9]*ld.Inlet.NodeNumber, [-0.7]*ld.Inlet.NodeNumber))
-
 
 def ExchangeCurrentDensity(Section, ActivationE, Concentration, Potential, DensityH2O, Kelvin, Species):
     #A^z+ + ze- -> D,   where A = e- acceptor and D = e- donor (Bockris & Reddy - Modern Electrochemistry)
@@ -91,11 +87,13 @@ def ExchangeCurrentDensity(Section, ActivationE, Concentration, Potential, Densi
     else:
         Beta_prime = nc.Beta
     if Concentration == 1:
-        return ((nc.F*nc.kb*Kelvin)/nc.hp)*np.exp(-ActivationE/(nc.R*Kelvin))*np.exp((Beta_prime*nc.n*nc.F*Potential)/(nc.R*Kelvin)) 
+        io= ((nc.F*nc.kb*Kelvin)/nc.hp)*np.exp(-ActivationE/(nc.R*Kelvin))*np.exp((Beta_prime*nc.n*nc.F*Potential)/(nc.R*Kelvin)) 
     else:  
         #print ([((nc.F*nc.kb*x)/nc.hp)*np.exp(-y/(nc.R*x))*((w*p/1000)**(2/3))*np.exp((Beta_prime*nc.n*nc.F*z)/(nc.R*x)) for x,y,z,w,p in zip(Section.PrimaryBulkTemperature, ActivationEnergy, Potential, Concentration, Section.DensityH2O)])
-        return ((nc.F*nc.kb*Kelvin)/nc.hp)*np.exp(-ActivationE/(nc.R*Kelvin))*\
+        io= ((nc.F*nc.kb*Kelvin)/nc.hp)*np.exp(-ActivationE/(nc.R*Kelvin))*\
             ((Concentration*DensityH2O/1000)**(2/3))*np.exp((Beta_prime*nc.n*nc.F*Potential)/(nc.R*Kelvin))    
+    
+    return io
     #Convert concentrations from mol/kg to mol/cm^2 for io eq'n: [mol/kg]/1000 -> [mol/g]*[g/cm^3] -> [mol/cm^3]^(2/3) -> mol^(2/3)/cm^2    
 
 

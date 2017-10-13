@@ -11,8 +11,7 @@ from matplotlib import rc
 rc('mathtext', default='regular')
 
 
-##Initial Concentrations 
-#All concentrations in mol/kg
+##Initial Concentrations
 Sections = [ld.Inlet, ld.Core, ld.Outlet, ld.SteamGenerator] 
 for Section in Sections:    
     Section.FractionFeInnerOxide = c.FractionMetalInnerOxide(Section, "Fe")
@@ -25,9 +24,34 @@ for Section in Sections:
     for Interface in Interfaces:
         Interface.ConcentrationH2 =[nc.H2*nc.H2Density/nc.H2MolarMass]*Section.NodeNumber #makes into array with appropriate # of nodes for that PHTS section
         Interface.ConcentrationH = c.BulkpHCalculator(Section) #from system pH calculation
-    
-    Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = \
-    e.ECP(Section)
+        
+        ##Concentration/Saturation Input [mol/kg]
+        Interface.FeTotal = c.IronSolubility(Section, Interface.ConcentrationH)
+        Interface.FeSatFe3O4 = c.IronSolubility(Section, Interface.ConcentrationH)
+        Interface.NiTotal = [i*1 for i in Section.SolubilityNi]
+        Interface.NiSatFerrite = [i*1 for i in Section.SolubilityNi]
+        Interface.NiSatMetallicNi = [i*1 for i in Section.SolubilityNi]
+        
+        Interface.CoTotal = [i*1 for i in Section.SolubilityCo]
+        Interface.CoSatFerrite = [i*1 for i in Section.SolubilityCo]
+        Interface.CrTotal = [i*1 for i in Section.SolubilityCr]
+        Interface.CrSat = [i*1 for i in Section.SolubilityCr]
+        
+        if Section == ld.Inlet or Section == ld.SteamGenerator or Section == ld.SG_Zone1 or Section == ld.SG_Zone2:
+            if Interface == Section.SolutionOxide:
+                Interface.FeTotal = [i*0.8 for i in c.IronSolubility(Section, Interface.ConcentrationH)]
+        
+        if Section == ld.Core and Interface == Section.MetalOxide:
+            Interface.FeTotal = [0]*Section.NodeNumber
+        
+        if Section == ld.Outlet and Interface == Section.MetalOxide:
+            Interface.FeTotal = [0.00000026]*Section.NodeNumber #From Cook's thesis - experimental corrosion rate measurements and calcs 
+        
+        if Section != ld.SteamGenerator or Section != ld.SG_Zone1 or Section != ld.SG_Zone2:
+            Interface.NiTotal = [0]*Section.NodeNumber
+
+
+    Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = e.ECP(Section)
     
     if Section==ld.Core:
         Section.CorrRate = [0]*Section.NodeNumber
@@ -39,7 +63,6 @@ for Section in Sections:
                                 Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4, \
                                 Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH)
 ##
-
 
 class RunModel():
     def __init__(self, Section1, Section2, j): #j = overall time step
@@ -174,7 +197,7 @@ SANi63 = []
 
 import time
 start_time = time.time()
-for j in range(7000):#nc.SimulationDuration
+for j in range(550):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator, j)

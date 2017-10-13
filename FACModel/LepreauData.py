@@ -176,27 +176,27 @@ class Interface():
     def __init__(self):
         self.ConcentrationH2 = None
         self.ConcentrationH = None
-        self.ConcentrationOH = None
+        #self.ConcentrationOH = None
         self.FeSatFe3O4 = None
         self.FeTotal = None
         self.ConcentrationFe2 = None
-        self.ConcentrationFeOH = None
+        #self.ConcentrationFeOH = None
         self.ConcentrationFeOH2 = None
-        self.ConcentrationFeOH3 = None
+        #self.ConcentrationFeOH3 = None
         
         self.NiSatFerrite = None
         self.NiSatMetallicNi = None
         self.NiTotal = None
-        self.ConcentrationNi2 = None
-        self.ConcentrationNiOH = None
-        self.ConcentrationNiOH2 = None
-        self.ConcentrationNiOH3 = None
+        #self.ConcentrationNi2 = None
+        #self.ConcentrationNiOH = None
+        #self.ConcentrationNiOH2 = None
+        #self.ConcentrationNiOH3 = None
         self.CrSat = None
         self.CoSatFerrite = None
         self.CrTotal = None
         self.CoTotal = None
-        self.ActivityCoefficient1 =None
-        self.ActivityCoefficient2 =None
+        #self.ActivityCoefficient1 =None
+        #self.ActivityCoefficient2 =None
         
         self.Co60 = None
         self.Co58 = None
@@ -244,8 +244,8 @@ class Section(): #Defining each primary heat transport section as a class
         self.Length = SGParameters() #[float(SizingParametersReader[j+2][i]) for i in range(self.RowStart,self.RowEnd)] #[cm]
         self.Distance = None #np.cumsum(self.Length) #[cm]
         self.PrimaryBulkTemperature = None#[x + 273.15 for x in self.Celsius] # [K]
-        self.PrimaryWallTemperature = None
-        self.SecondaryWallTemperature = None
+        #self.PrimaryWallTemperature = None
+        #self.SecondaryWallTemperature = None
         self.SecondaryBulkTemperature = None
         self.NernstConstant = None#[x*(2.303*nc.R/(2*nc.F)) for x in self.Kelvin] #2.303RT/nF
         
@@ -361,9 +361,7 @@ for SGZone in SGZones:
     SGZone.PrimaryBulkTemperature = \
     UnitConverter(SGZone, "Celsius", "Kelvin", None, None, None, None, None, \
                   [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27, 279.43, 277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03])
-    
-    
-    
+     
 #Temperature [Celsius]
 Inlet.PrimaryBulkTemperature = UnitConverter(Inlet, "Celsius", "Kelvin", None, None, None, None, None, [266]*Inlet.NodeNumber)
 Core.PrimaryBulkTemperature = \
@@ -373,40 +371,7 @@ Outlet.PrimaryBulkTemperature = UnitConverter(Inlet, "Celsius", "Kelvin", None, 
 
 Sections = [Inlet, Core, Outlet, SteamGenerator, SG_Zone1, SG_Zone2]
 for Section in Sections:
-    
-    Interfaces = [Section.MetalOxide, Section.SolutionOxide, Section.Bulk]
-    
-    for Interface in Interfaces:
-        ##Concentration/Saturation Input [mol/kg]
-        Interface.FeTotal = [i*1 for i in Section.SolubilityFe]
-        #Interface.FeTotal = Concentration("iron")
-        Interface.FeSatFe3O4 = [i*1 for i in Section.SolubilityFe]
-        Interface.NiTotal = [i*1 for i in Section.SolubilityNi]
-        Interface.NiSatFerrite = [i*1 for i in Section.SolubilityNi]
-        Interface.NiSatMetallicNi = [i*1 for i in Section.SolubilityNi]
-        
-        Interface.CoTotal = [i*1 for i in Section.SolubilityCo]
-        Interface.CoSatFerrite = [i*1 for i in Section.SolubilityCo]
-        Interface.CrTotal = [i*1 for i in Section.SolubilityCr]
-        Interface.CrSat = [i*1 for i in Section.SolubilityCr]
-        
-        if Section == Inlet or Section == SteamGenerator or Section == SG_Zone1 or Section == SG_Zone2:
-            if Interface == Section.SolutionOxide:
-                Interface.FeTotal = [i*0.8 for i in Section.SolubilityFe]
-        
-        if Section == Core and Interface == Section.MetalOxide:
-            Interface.FeTotal = [0]*Section.NodeNumber
-        
-        if Section == Outlet and Interface == Section.MetalOxide:
-            Interface.FeTotal = [0.00000026]*Section.NodeNumber #From Cook's thesis - experimental corrosion rate measurements and calcs 
-        
-        if Section == SteamGenerator or Section == SG_Zone1 or Section == SG_Zone2:
-            if Interface == Section.MetalOxide:
-                Interface.NiTotal = [0]*Section.NodeNumber
-        else:
-            Interface.NiTotal = [i*1 for i in Section.SolubilityNi]
-        ## 
-           
+ 
     ##Particulate #[mg/kg] (ppm)
     Section.SmallParticulate = [0]*Section.NodeNumber
     Section.BigParticulate = [0]*Section.NodeNumber
@@ -444,8 +409,6 @@ for Section in Sections:
     Section.DensityH2O = [Density("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
     Section.ViscosityH2O = [Viscosity("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
     ##
-
-SG_Zone1.Length.steam_quality = [(2e-7)*(i**2)+(1e-4)*i + 0.0157 for i in SG_Zone1.Distance]
 
 
 def ReynoldsNumber(Section, Diameter):

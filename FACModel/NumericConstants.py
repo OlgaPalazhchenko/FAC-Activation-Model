@@ -87,8 +87,8 @@ Avagadro = 6.022E+23                 #[atoms/mol]
 CoreSurfaceArea = 2430                 #[cm^2]
 
 #Kinetic precipitation/dissolution constants [cm/s]
-KpFe3O4  = 0.01#0.004
-KdFe3O4  = 0.01#0.008
+KpFe3O4  = 0.012#0.004
+KdFe3O4  = 0.004#0.008
 #KpFe_Ferrite = 0.014 #same as magnetite precipitation
 #KdFe_Ferrite  = 0.044 'same as magnetite dissolution
     
@@ -102,7 +102,7 @@ FracFe_Fe3O4 = 0.723
 FracCr_Fe3O4 = 0.00019 #0.0033
 FracCo_Fe3O4 = 0.000049
 
-ConcentrationLiTotal= 0.00022585 #6.3095734E-4[mol/L]
+ConcentrationLiTotal= 6.3095734E-4#0.00022585[mol/L]
 
 #Temperature constants for equilibrium/hydrolysis constants
 DebyeHuckPolynomial=[3.29E-10, -1.709E-07, 0.00003315, -0.0009028, 0.5027]
@@ -126,8 +126,8 @@ SAFactor = 1.73 #surface area factor
 CobaltWear = 0.0000000015 #mol/kg (spike input term)
 
 #Activation Energies [J/mol]
-ActivationEnergyFe = 264578.5708
-ActivationEnergyH2onFe = 263220.6351
+ActivationEnergyFe = 263343.0922#264578.5708
+ActivationEnergyH2onFe = 260196.6699
 DissolutionActivationEnergyFe3O4 = 144987.3286
 DissolutionActivationEnergyH2onFe3O4 = 297150.6019
 PrecipitationActivationEnergyFe3O4 = 191037.2419
