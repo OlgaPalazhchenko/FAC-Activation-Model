@@ -126,14 +126,20 @@ SAFactor = 1.73 #surface area factor
 CobaltWear = 0.0000000015 #mol/kg (spike input term)
 
 #Activation Energies [J/mol]
-ActivationEnergyFe = 263343.0922#264578.5708
-ActivationEnergyH2onFe = 260196.6699
-DissolutionActivationEnergyFe3O4 = 144987.3286
-DissolutionActivationEnergyH2onFe3O4 = 297150.6019
-PrecipitationActivationEnergyFe3O4 = 191037.2419
-PrecipitationActivationEnergyH2onFe3O4 = 291214.6173
+ActivationEnergyFe =  263041.7869#264578.5708
+ActivationEnergyH2onFe = 266353.6763
+
+
+PrecipitationActivationEnergyFe3O4 = 190478.0249#191037.2419
+PrecipitationActivationEnergyH2onFe3O4 = 294944.8787#291214.6173
+
+DissolutionActivationEnergyFe3O4 = 149508.0053#144987.3286
+DissolutionActivationEnergyH2onFe3O4 = 308311.3807#297150.6019
+
+
 ActivationEnergyAlloy800 = 295024.3034
 ActivationEnergyH2onAlloy800 = 284072.5252
+
 
 SimulationDuration = 10 #Total runtime [h]
 TimeIncrement = 3600 #s  Based on desired time step (3600 s/h for 1h time step)

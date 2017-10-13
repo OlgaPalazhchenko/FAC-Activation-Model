@@ -90,8 +90,7 @@ class RunModel():
         for i in range(self.Section1.NodeNumber):
             if i >0: 
                 for r,q in zip (BulkConcentrations, SolutionOxideConcentrations):
-                    r[i] = RK4.Spatial(self.Section1, q[i-1], r[i-1], ld.MassTransfer(self.Section1)[i-1], self.Section1.Diameter[i-1], \
-                                       self.Section1.Velocity[i-1], self.Section1.Length.magnitude[i-1])
+                    r[i] = RK4.Spatial(q[i-1], r[i-1], ld.MassTransfer(self.Section1)[i-1], self.Section1.Diameter[i-1], self.Section1.Velocity[i-1], self.Section1.Length.magnitude[i-1])
 
                 #Exponential decay of bulk particulate at start of section as function of distance + removal due to deposition and erosion source
                 self.Section1.BigParticulate[i] = RK4.Particulate(self.Section1, self.Section1.BigParticulate[0], self.Section1.Diameter[i],\
@@ -197,7 +196,7 @@ SANi63 = []
 
 import time
 start_time = time.time()
-for j in range(550):#nc.SimulationDuration
+for j in range(7000):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator, j)
@@ -301,7 +300,7 @@ NickelThickness = Nickel[0]+Nickel[1]+Nickel[2]+Nickel[3]
 fig1 = plt.figure()
 ax1 = fig1.add_subplot(221)
 ax1.plot(TotalLoopDistance, SolutionOxideFeTotal, marker='o', color='r', label = 'S/O Interface')
-ax1.plot(TotalLoopDistance, SolutionOxideFeSat, marker='o', color='w', label = 'Magnetite Solubility')
+ax1.plot(TotalLoopDistance, SolutionOxideFeSat, marker='o', color='0', label = 'Magnetite Solubility')
 ax1.plot(TotalLoopDistance, BulkFeTotal, marker='o', color='0.50', label = 'Bulk Coolant')
 ax1.set_xlabel('Distance (m)')
 ax1.set_ylabel('$Log_{10}$[Fe Concentration (mol/kg)]')
@@ -309,7 +308,7 @@ ax1.set_ylabel('$Log_{10}$[Fe Concentration (mol/kg)]')
 
 ax2 = fig1.add_subplot(222)
 ax2.plot(TotalLoopDistance, SolutionOxideNiTotal, marker='o', color='b', label = 'S/O Interface')
-ax2.plot(TotalLoopDistance, SolutionOxideNiSat, marker='o', color='w', label = 'Ni-Ferrite Solubility')
+ax2.plot(TotalLoopDistance, SolutionOxideNiSat, marker='o', color='0', label = 'Ni-Ferrite Solubility')
 ax2.plot(TotalLoopDistance, BulkNiTotal, marker='o', color='0.50', label = 'Bulk Coolant') 
 ax2.set_xlabel('Distance (m)')
 ax2.set_ylabel('$Log_{10}$[Ni Concentration (mol/kg)]')
@@ -317,7 +316,7 @@ ax2.set_ylabel('$Log_{10}$[Ni Concentration (mol/kg)]')
 
 ax3 = fig1.add_subplot(223)
 ax3.plot(TotalLoopDistance, SolutionOxideCoTotal, marker='^', color='m', label = 'S/O Interface')
-ax3.plot(TotalLoopDistance, SolutionOxideCoSat, marker='^', color='w', label = 'Co-Ferrite Solubility')
+ax3.plot(TotalLoopDistance, SolutionOxideCoSat, marker='^', color='0', label = 'Co-Ferrite Solubility')
 ax3.plot(TotalLoopDistance, BulkCoTotal, marker='^', color='0.50', label = 'Bulk Coolant') 
 ax3.set_xlabel('Distance (m)')
 ax3.set_ylabel('$Log_{10}$[Co Concentration (mol/kg)]')

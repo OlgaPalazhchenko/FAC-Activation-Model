@@ -64,14 +64,14 @@ def OxideComposition(Section, Element, OxideType, Outer, OuterFe3O4Thickness, Ni
                 return 0
 
 
-def Spatial(Section, Solution, Bulk, km, Diameter, Velocity, Length):
+def Spatial(Solution, Bulk, km, Diameter, Velocity, Length):
     #Cylindrical pipe: Surface Area / Volume = Pi*Diameter*Length/(Pi*(Diameter^2)/4) = 4/Diameter
     #Allows conversion between amount/area (assuming uniform distribution across the area) to amount/volume
     Solution_Bulk = Solution - Bulk
     Delta = (km*4/(Velocity*Diameter))*Solution_Bulk#[(4*x/(y*z))*q for x,y,z,q in zip(km, Section.Diameter, Section.Velocity, Solution_Bulk)]
     #[cm]*[1/cm]*[mol/kg] + [mol/kg] = [mol/kg]
-    return Bulk+Delta*Length#[x + y*Length for x,y in zip(Bulk, Delta)] 
-
+    BulkConccentration= Bulk+Delta*Length#[x + y*Length for x,y in zip(Bulk, Delta)] 
+    return BulkConccentration 
  
 def OxideGrowth(Section, Saturations, BulkConcentrations):    
     
