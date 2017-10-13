@@ -45,7 +45,7 @@ for Section in Sections:
             Interface.FeTotal = [0]*Section.NodeNumber
         
         if Section == ld.Outlet and Interface == Section.MetalOxide:
-            Interface.FeTotal = [0.00000026]*Section.NodeNumber #From Cook's thesis - experimental corrosion rate measurements and calcs 
+            Interface.FeTotal = [0.00000029]*Section.NodeNumber #From Cook's thesis - experimental corrosion rate measurements and calcs 
         
         if Section != ld.SteamGenerator or Section != ld.SG_Zone1 or Section != ld.SG_Zone2:
             Interface.NiTotal = [0]*Section.NodeNumber
