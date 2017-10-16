@@ -27,17 +27,17 @@ for Section in Sections:
         
         ##Concentration/Saturation Input [mol/kg]
         Interface.FeTotal = c.IronSolubility(Section, Interface.ConcentrationH)
-        Interface.FeSatFe3O4 = c.IronSolubility(Section, Interface.ConcentrationH)
+        Interface.FeSatFe3O4 = [1*i for i in c.IronSolubility(Section, Interface.ConcentrationH)]
         Interface.NiTotal = [i*1 for i in Section.SolubilityNi]
         Interface.NiSatFerrite = [i*1 for i in Section.SolubilityNi]
         Interface.NiSatMetallicNi = [i*1 for i in Section.SolubilityNi]
-        
+    
         Interface.CoTotal = [i*1 for i in Section.SolubilityCo]
         Interface.CoSatFerrite = [i*1 for i in Section.SolubilityCo]
         Interface.CrTotal = [i*1 for i in Section.SolubilityCr]
         Interface.CrSat = [i*1 for i in Section.SolubilityCr]
         
-        if Section == ld.Inlet or Section == ld.SteamGenerator or Section == ld.SG_Zone1 or Section == ld.SG_Zone2:
+        if Section != ld.Outlet:
             if Interface == Section.SolutionOxide:
                 Interface.FeTotal = [i*0.8 for i in c.IronSolubility(Section, Interface.ConcentrationH)]
         
@@ -45,12 +45,11 @@ for Section in Sections:
             Interface.FeTotal = [0]*Section.NodeNumber
         
         if Section == ld.Outlet and Interface == Section.MetalOxide:
-            Interface.FeTotal = [0.00000029]*Section.NodeNumber #From Cook's thesis - experimental corrosion rate measurements and calcs 
+            Interface.FeTotal = [0.00000026]*Section.NodeNumber #From Cook's thesis - experimental corrosion rate measurements and calcs 
         
         if Section != ld.SteamGenerator or Section != ld.SG_Zone1 or Section != ld.SG_Zone2:
             Interface.NiTotal = [0]*Section.NodeNumber
-
-
+        
     Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = e.ECP(Section)
     
     if Section==ld.Core:
@@ -63,12 +62,13 @@ for Section in Sections:
                                 Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4, \
                                 Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH)
 ##
+    
 
 class RunModel():
     def __init__(self, Section1, Section2, j): #j = overall time step
         self.Section1 = Section1
         self.Section2 = Section2
-        
+            
         #BulkActivities = [self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55, \
         #                  self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63]
         
@@ -196,11 +196,35 @@ SANi63 = []
 
 import time
 start_time = time.time()
-for j in range(7000):#nc.SimulationDuration
+for j in range(7500):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator, j)
     S = RunModel(ld.SteamGenerator, ld.Inlet, j)
+    if j %1000==0:
+        totalthicknessSG=[x+y for x,y in zip(S.Section1.OuterOxThickness, S.Section1.InnerOxThickness)]
+        convertedtotalthicknessSG = ld.UnitConverter(S.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, totalthicknessSG, None, None, None)
+ 
+        Corrosion= []
+        Rates = [I.Section1.CorrRate, C.Section1.CorrRate, O.Section1.CorrRate, S.Section1.CorrRate]
+        for Rate, Section in zip (Rates, Sections):
+            x = ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None)
+            Corrosion.append(x)
+        CorrosionRate = Corrosion[0] + Corrosion[1] + Corrosion[2] + Corrosion[3]
+ 
+        print (sum(convertedtotalthicknessSG[11:22])/(22-11), "average cold leg [um] oxide thickness", j)
+        print (sum(ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, O.Section1.CorrRate, None, None, None, None))\
+               /(O.Section1.NodeNumber), "average outlet corrosion rate [um/a]")
+        print (CorrosionRate)
+        print ()
+        #print (ld.Outlet.SolutionOxide.FeTotal, "FeTotal")
+#         print (ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, ld.Outlet.CorrRate, None, None, None, None), "corr rate")
+#         print ([x/y for x,y in zip(ld.Outlet.SolutionOxide.FeSatFe3O4, ld.Outlet.SolutionOxide.FeTotal)],'fesat/fetot')
+#         print (ld.Outlet.SolutionOxide.EqmPotentialFe3O4, "ECP")
+#         print ([x-y for x,y in zip(ld.Outlet.SolutionOxide.MixedPotential, ld.Outlet.SolutionOxide.EqmPotentialFe3O4)], "delta E")
+#         #print (nc.DissolutionActivationEnergyFe3O4, "Previous AE Fe3O4 Dissolution")
+#         print()
+        #nc.ActivationEnergyFe = nc.ActivationEnergyFe - 500
     
 #     TotalTime.append(j/7000)# converts to EFPY
 #     SACo60.append(sum(S.Section1.MetalOxide.Co60)/S.Section1.NodeNumber)
@@ -219,6 +243,9 @@ temp = delta_time - 3600*hours
 minutes = delta_time//60
 seconds = delta_time - 60*minutes
 print('%d:%d:%d' %(hours,minutes,seconds))
+
+
+
 
 ActivityTime = TotalTime[0::3]
 Co60SGActivity = SACo60[0::3]
@@ -257,13 +284,6 @@ BulkCrTotal = [np.log10(i) for i in I.Section1.Bulk.CrTotal + C.Section1.Bulk.Cr
 SolutionOxideCrSat = [np.log10(i) for i in I.Section1.SolutionOxide.CrSat + C.Section1.SolutionOxide.CrSat + O.Section1.SolutionOxide.CrSat + \
                       S.Section1.SolutionOxide.CrSat]
 
-
-Corrosion= []
-Rates = [I.Section1.CorrRate, C.Section1.CorrRate, O.Section1.CorrRate, S.Section1.CorrRate]
-for Rate, Section in zip (Rates, Sections):
-    x = ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None)
-    Corrosion.append(x)
-CorrosionRate = Corrosion[0] + Corrosion[1] + Corrosion[2] + Corrosion[3]
 
 InnerOxide = []
 InnerOxideThicknesses = [I.Section1.InnerOxThickness, C.Section1.InnerOxThickness, O.Section1.InnerOxThickness, S.Section1.InnerOxThickness]
@@ -332,9 +352,6 @@ ax4.set_ylabel('$Log_{10}$[Cr Concentration (mol/kg)]')
 plt.tight_layout()
 plt.show()
 
-print (CorrosionRate)
-
- 
 fig2, ax1 = plt.subplots()
 #ax1 = fig2.add_subplot(221)
 ax1.plot(TotalLoopDistance, InnerOxideThickness, linestyle =None, marker='o', color='0.50', label='Inner Oxide')

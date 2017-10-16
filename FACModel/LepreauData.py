@@ -346,7 +346,7 @@ Core.SolubilityNi = [2.71098E-09, 2.66196E-09, 2.60372E-09, 2.54535E-09, 2.29445
 Core.SolubilityCo = [3.77742E-09, 3.51525E-09, 3.20371E-09, 2.8915E-09, 2.60041E-09, 2.3011E-09, 2.08369E-09, 1.86963E-09, 1.67578E-09, 1.53187E-09, 1.43654E-09, 1.43654E-09]
 Core.SolubilityCr = [8.81E-11, 9.61E-11, 1.01E-10, 9.40E-11, 8.69E-11, 7.98E-11, 7.28E-11, 6.57E-11, 5.86E-11, 5.16E-11, 4.69E-11, 4.69E-11]
 
-Outlet.SolubilityFe = [2.58268E-08]*Outlet.NodeNumber
+#Outlet.SolubilityFe = [2.58268E-08]*Outlet.NodeNumber
 Outlet.SolubilityNi = [1.54584E-09]*Outlet.NodeNumber
 Outlet.SolubilityCo = [1.44E-09]*Outlet.NodeNumber
 Outlet.SolubilityCr = [4.84E-11]*Outlet.NodeNumber

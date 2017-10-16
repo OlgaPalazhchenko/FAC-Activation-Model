@@ -101,6 +101,11 @@ def OxideGrowth(Section, Saturations, BulkConcentrations):
             SOConc.append(q)
         Section.SolutionOxide.FeTotal, Section.SolutionOxide.NiTotal, Section.SolutionOxide.CoTotal =SOConc
         ##
+#         if Section == ld.Outlet:
+#             AverageConcentration= sum(Section.SolutionOxide.FeTotal)/Section.NodeNumber
+#             for i in range(Section.NodeNumber):
+#                 if Section.SolutionOxide.FeTotal[7] > 1.25*AverageConcentration:
+#                     Section.SolutionOxide.FeTotal[7] = 1.1*AverageConcentration
          
         Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = e.ECP(Section)
         
@@ -109,8 +114,9 @@ def OxideGrowth(Section, Saturations, BulkConcentrations):
             Section.MetalOxide.FeTotalFe = [0]*Section.NodeNumber
             Section.MetalOxide.MixedPotential = [0]*Section.NodeNumber
         else:
+            
+            Section.MetalOxide.FeTotal = it.MetalOxideInterfaceConcentration(Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, Section.CorrRate)
             Section.CorrRate, Section.MetalOxide.MixedPotential = it.CorrosionRate(Section)
-            Section.MetalOxide.FeTotal = it.MetalOxideInterfaceConcentration(Section, "Fe", Section.SolutionOxide.FeTotal, Section.InnerOxThickness, Section.OuterOxThickness, Section.CorrRate)
             
         if Section == ld.SteamGenerator:
             Section.MetalOxide.NiTotal = it.MetalOxideInterfaceConcentration(Section, "Ni", Section.SolutionOxide.NiTotal, Section.InnerOxThickness, Section.OuterOxThickness, Section.CorrRate)

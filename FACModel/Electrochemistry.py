@@ -6,12 +6,10 @@ import Composition as c
 def Potential(Section, StandardPotential, ProductConcentration, ProductGamma, ProductStoich, ReactantConcentration, ReactantGamma, \
               ReactantStoich, DensityH2O, NernstConstant, Phase):
     
-    x = [ProductConcentration, ReactantConcentration]
-    for i in x:
-        if i <= 0:
-            print ("Error in electrochemistry calculation: concentration < 0", i, Section.InnerOxThickness, "Inner Oxide g/cm2", Section.OuterOxThickness, "Outer Oxide g/cm2")
-            i = 5e-10
-            print ("Concentration reset to", i)
+    if ProductConcentration <0:
+        print ("Error in electrochemistry calculation: concentration < 0", ProductConcentration, Section.InnerOxThickness, "Inner Oxide g/cm2", Section.OuterOxThickness, "Outer Oxide g/cm2")
+        ProductConcentration = 5e-10
+        print ("Concentration reset to", ProductConcentration)
     
     if Phase == "gas":
         Product = (ProductConcentration*DensityH2O/nc.kH2)**ProductStoich
@@ -40,6 +38,7 @@ def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPot
         Beta_prime = nc.Beta
     
     AdjustedSaturation = BulkSatFe3O4*np.exp(Beta_prime*nc.n*nc.F*(MixedPotential-EqmPotentialFe3O4)/(nc.R*Kelvin)) 
+
     return AdjustedSaturation
 
 def ElectrochemicalAdjustment(Section, EqmPotentialFe3O4, SOMixedPotential, MOMixedPotential, FeTotal, FeSatFe3O4, BulkSatFe3O4, SOConcentrationH):
@@ -47,7 +46,6 @@ def ElectrochemicalAdjustment(Section, EqmPotentialFe3O4, SOMixedPotential, MOMi
     KpFe3O4electrochem = ElectrochemicalKineticConstant(Section, [nc.KpFe3O4]*Section.NodeNumber, EqmPotentialFe3O4, "no", SOMixedPotential)
     KdFe3O4electrochem = ElectrochemicalKineticConstant(Section, [nc.KdFe3O4]*Section.NodeNumber, EqmPotentialFe3O4, "yes", SOMixedPotential)
     
-    #if Section == ld.Outlet: print (EqmPotentialFe3O4, SOMixedPotential) 
     AdjustedSaturation = []
     for i in range(Section.NodeNumber):
         if FeTotal[i] >= FeSatFe3O4[i]:
@@ -56,6 +54,7 @@ def ElectrochemicalAdjustment(Section, EqmPotentialFe3O4, SOMixedPotential, MOMi
         else:
             x =ElectrochemicalSaturation(Section, BulkSatFe3O4[i], EqmPotentialFe3O4[i], SOMixedPotential[i], Section.PrimaryBulkTemperature[i], "yes")
         AdjustedSaturation.append(x)    
+
     
     if Section == ld.Inlet or Section == ld.Outlet or Section == ld.SteamGenerator:
         MOConcentrationH = SOConcentrationH#[x*np.exp(-(y-z)*nc.F/(nc.R*t)) for x,y,z,t in zip(SOConcentrationH, MOMixedPotential, SOMixedPotential, Section.PrimaryBulkTemperature)]
@@ -111,20 +110,14 @@ def Energy(Section,ExchangeCurrent, Concentration, Acceptor, EquilibriumPotentia
 
 def ECP(Section):
     for i in range(Section.NodeNumber):
-        for x,y in zip(Section.SolutionOxide.FeTotal, Section.SolutionOxide.ConcentrationH):
-            if x < 0:
-                print ("Error: Fe concentration <0 in ECP function")
-                x = 5e-10
-                print ("Corrected, concentration reset to:", x)
-            if y <0:
-                print ("Error: Ni concentration <0 in ECP function")
-                y = 5e-10
-                print ("Corrected, concentration reset to:", y)
-                print (Section.SolutionOxide.FeTotal, Section.SolutionOxide.NiTotal)
-            
+        if Section.SolutionOxide.FeTotal[i] < 0:
+            print ("Error: Fe concentration <0 in ECP function")
+            Section.SolutionOxide.FeTotal[i]= 5e-10
+            print ("Corrected, concentration reset to:", Section.SolutionOxide.FeTotal[i])
+             
     ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2 = c.Hydrolysis(Section, Section.SolutionOxide.FeTotal, \
                         Section.SolutionOxide.NiTotal, Section.SolutionOxide.ConcentrationH)
-    ProductConcentration = Section.MetalOxide.ConcentrationH2
+    #ProductConcentration = Section.MetalOxide.ConcentrationH2
     
     ProductConcentration = Section.SolutionOxide.ConcentrationH2
 
@@ -147,7 +140,7 @@ def ECP(Section):
             z = ExchangeCurrentDensity(Section, nc.PrecipitationActivationEnergyH2onFe3O4, Section.SolutionOxide.ConcentrationH[i], q, \
                                        Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor")
         
-        else:
+        if Section.SolutionOxide.FeSatFe3O4[i] > Section.SolutionOxide.FeTotal[i]:
             x = Potential(Section, Section.StandardEqmPotentialFe3O4red[i], ConcentrationFeOH2[i], 1, 3, Section.SolutionOxide.ConcentrationH[i], \
                           ActivityCoefficient1[i], 2, Section.DensityH2O[i], Section.NernstConstant[i], "aqueous")
             y = ExchangeCurrentDensity(Section, nc.DissolutionActivationEnergyFe3O4, ConcentrationFeOH2[i], x, Section.DensityH2O[i], \
@@ -159,7 +152,9 @@ def ECP(Section):
         ExchangeCurrentFe3O4.append(y)
         ExchangeCurrentH2onFe3O4.append(z) 
         EqmPotentialH2.append(q)
-        
-    return MixedPotential(Section, ExchangeCurrentFe3O4, EqmPotentialFe3O4, ExchangeCurrentH2onFe3O4, EqmPotentialH2), EqmPotentialFe3O4
-        
+         
+    MixedECP = MixedPotential(Section, ExchangeCurrentFe3O4, EqmPotentialFe3O4, ExchangeCurrentH2onFe3O4, EqmPotentialH2)    
+    
+    return MixedECP, EqmPotentialFe3O4
+
 

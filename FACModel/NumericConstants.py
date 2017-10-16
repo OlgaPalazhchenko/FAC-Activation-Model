@@ -88,7 +88,7 @@ CoreSurfaceArea = 2430                 #[cm^2]
 
 #Kinetic precipitation/dissolution constants [cm/s]
 KpFe3O4  = 0.01#0.004
-KdFe3O4  = 0.01#0.008
+KdFe3O4  = 0.01
 #KpFe_Ferrite = 0.014 #same as magnetite precipitation
 #KdFe_Ferrite  = 0.044 'same as magnetite dissolution
     
@@ -126,14 +126,17 @@ SAFactor = 1.73 #surface area factor
 CobaltWear = 0.0000000015 #mol/kg (spike input term)
 
 #Activation Energies [J/mol]
-ActivationEnergyFe = 264578.5708
-ActivationEnergyH2onFe = 263220.6351
-DissolutionActivationEnergyFe3O4 = 144987.3286
-DissolutionActivationEnergyH2onFe3O4 = 297150.6019
-PrecipitationActivationEnergyFe3O4 = 191037.2419
-PrecipitationActivationEnergyH2onFe3O4 = 291214.6173
-ActivationEnergyAlloy800 = 295024.3034
-ActivationEnergyH2onAlloy800 = 284072.5252
+ActivationEnergyFe = 264525.6598
+ActivationEnergyH2onFe = 261952.0037
+
+DissolutionActivationEnergyFe3O4 = 131838.7907
+DissolutionActivationEnergyH2onFe3O4 =285989.8292
+
+PrecipitationActivationEnergyFe3O4 = 179876.4692
+PrecipitationActivationEnergyH2onFe3O4 = 279573.2157
+
+ActivationEnergyAlloy800 = 295595.2051
+ActivationEnergyH2onAlloy800 = 284643.4269
 
 SimulationDuration = 10 #Total runtime [h]
 TimeIncrement = 3600 #s  Based on desired time step (3600 s/h for 1h time step)

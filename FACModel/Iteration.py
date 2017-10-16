@@ -49,22 +49,16 @@ def MetalOxideInterfaceConcentration(Section, Element, SolutionOxideInterfaceCon
     PathLength = [(x*nc.Fe3O4Tortuosity/(OxideDensity*(1-nc.Fe3O4Porosity_inner))) + (y*nc.Fe3O4Tortuosity/(OxideDensity*(1-nc.Fe3O4Porosity_outer))) \
                   for x,y in zip(InnerOxThickness, OuterOxThickness)] 
     
-    
-#     for i in range(Section.NodeNumber):
-#         if Section==ld.Outlet and InnerOxThickness[i] <= 0:
-#             InnerOxThickness[i] = 0.00025 #Resets to original thickness (resetting corrosion rate here to ~75 um/a
-    
-    #inner ox decrease = path length decreases --> diffusivity increases --> metal oxide concentration decreases --> corr rate incr
-    #minimum oxide thickness = 1e-8 g/cm^2 --> corr rate = 2.41e-9 g/cm^2 s
-    
-    DiffusivityTerm = [(x*nc.Fe3O4Porosity_inner)/y for x,y in zip(PathLength, Diffusivity)]
+    DiffusivityTerm = [x*nc.Fe3O4Porosity_inner/y for x,y in zip(Diffusivity, PathLength)]
     
     SolutionConcentration = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", SolutionOxideInterfaceConcentration, None, None, None, MolarMass, None)
     
-    MOConcentration = [(x*Diffusion(Section, Element)/ y) +z for x,y,z in zip(Corrosion, DiffusivityTerm, SolutionConcentration)]
+    #MOConcentration = [x*Diffusion(Section, Element)*y/(z*nc.Fe3O4Porosity_inner) + q for x,y,z,q in zip(Corrosion, PathLength, Diffusivity, SolutionConcentration)]
     
+    MOConcentration =[(x*Diffusion(Section, Element)/ y) +z for x,y,z in zip(Corrosion, DiffusivityTerm, SolutionConcentration)]
 
-#     ##Pre-set corrosion rate for outlet (lower MOConc = higher FAC rate (e-chem effect))
+    
+    ##Pre-set corrosion rate for outlet (lower MOConc = higher FAC rate (e-chem effect))
     #inner ox decrease = path length decreases --> diffusivity term increases --> metal oxide concentration decreases --> corr rate incr
     # Can also reset the oxide thickness such that the minimum results in acceptable MO Conc and corrrate
     

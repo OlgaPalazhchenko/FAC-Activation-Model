@@ -2,6 +2,8 @@ import LepreauData as ld
 import numpy as np
 import NumericConstants as nc
 
+T_sat = 260.1 + 273.15
+T_PreheaterIn = 186.5 + 273.15
 
 h_i = ld.SGParameters()
 h_o = ld.SGParameters()
@@ -82,7 +84,7 @@ def PrimaryConvectionResistance(Section, correlation, Tfilm, i):
 
 def SecondaryConvectionResistance(Section, Tfilm, Twall, x_in, i):
     #split into boiling and non-boiling (preheater) sections 
-    T_sat = 260.1 + 273.15 #[K]
+
     EquivalentDiameter.magnitude = 4*((TubePitch.magnitude**2)-(np.pi*(Section.OuterDiameter[i]**2))/4)/(np.pi*Section.OuterDiameter[i])
     
     
@@ -238,9 +240,10 @@ def TemperatureProfile(Section):
         
         if Section.Length.label[i] != "preheater" or Section.Length.label != "preheater start":
             T_PrimaryBulkOut = T_PrimaryBulkIn-(U*(T_PrimaryBulkIn-T_SecondaryBulkIn)*OuterArea(Section)[i])/(Cp_h*MassFlow_h.magnitude/3542)
-                
-            T_SecondaryBulkOut = 533.25
-            #for one tube x 3542 = for all tubes
+            #Ti = Ti+1 = Tsat    
+            T_SecondaryBulkOut = T_sat
+            
+            #for one tube --> multiply by 3542 = for all tubes
             #Q = MassFlow_h.magnitude*Cp_h*(T_PrimaryBulkIn-T_PrimaryBulkOut)
                 
             #for one tube (U based on one tube) (heat transfer area x number tubes) --> would cancel out in U calc (1/h*NA) NA
@@ -248,21 +251,35 @@ def TemperatureProfile(Section):
             #Q = MassFlow_h.magnitude*ld.HeatCapacity("PHT", T_PrimaryBulkIn)
             
             x_out = x_in + Q/(MassFlow_c.magnitude*EnthalpySaturatedSteam.magnitude)
-            
+           
         if Section.Length.label[i] == "preheater" or Section.Length.label[i] == "preheater start":
             if Section.Length.label[i] == "preheater start":
-                T_SecondaryBulkIn = 260.1+273.15
-                TotalLength= sum(Section.Length.magnitude[i:Section.NodeNumber]) 
-                TotalArea = np.pi*Section.Diameter[i]*TotalLength
+                #Tcold,out = Ti = Tsat = 260.1 oC (533.25 K)
+                T_SecondaryBulkIn = T_sat
                 
-                dQ_c = MassFlow_c.magnitude*Cp_c*(T_SecondaryBulkIn-(186.5+273.15))
-                T_PrimaryBulkOut =T_PrimaryBulkIn -dQ_c/(Cp_h*MassFlow_h.magnitude) 
-                print (T_PrimaryBulkIn-273.15, T_PrimaryBulkOut-273.15,i)
+                TotalArea= sum(OuterArea(Section)[i:Section.NodeNumber]) 
+                
+                
+                #Tcold,i+1 - Tcold,i
+                dQ_c = MassFlow_c.magnitude*Cp_c*(T_SecondaryBulkIn-T_PreheaterIn)
+                #Thot,i+1 = Thot,i 
+                
+                
+                #Thot,i, Tcold,i
+                wh1, wc1, U1 = WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in)
+                #Thot,i+1, Tcold,i+1
+                wh2, wc2, U2 = WallTemperature(Section, i, T_PrimaryBulkOut, T_PreheaterIn, x_in)
+                Uavg = (U1+U2)/2
+                #https://checalc.com/solved/LMTD_Chart.html
+                dQ = U*TotalArea*(34.67)*3542*0.8587
+                
+                T_PrimaryBulkOut = T_PrimaryBulkIn - dQ/(Cp_h*MassFlow_h.magnitude) 
+                print (dQ_c, dQ, T_PrimaryBulkIn-273.15, T_PrimaryBulkOut-273.15,i)
                             
 #             inverseC_c = 1/(Cp_c*MassFlow_c.magnitude)
 #             inverseC_h = 1/(Cp_h*MassFlow_h.magnitude*3452)
  
-            T_PrimaryBulkOut = T_PrimaryBulkIn-(U*OuterArea(Section)[i]*3542/(Cp_h*MassFlow_h.magnitude))*(T_PrimaryBulkIn-T_SecondaryBulkIn)
+            T_PrimaryBulkOut = T_PrimaryBulkIn-(U*OuterArea(Section)[i]*3542/(Cp_h*MassFlow_h.magnitude))*(34.67)*0.8587
               
             T_SecondaryBulkOut = T_SecondaryBulkIn-(U*OuterArea(Section)[i]*3542/(Cp_c*MassFlow_c.magnitude))*(T_PrimaryBulkIn-T_SecondaryBulkIn)
           
