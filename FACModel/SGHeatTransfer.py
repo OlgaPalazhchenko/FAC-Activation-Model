@@ -255,7 +255,7 @@ def TemperatureProfile(Section):
             if Section.Length.label[i] == "preheater start":
     
                 #Tcold,out = Ti = Tsat = 260.1 oC (533.25 K)
-                T_SecondaryBulkIn = T_sat 
+                T_SecondaryBulkIn = 264+273.15
                 #TotalArea= sum(OuterArea(Section)[i:Section.NodeNumber]) 
     
                 #Tcold,i+1 - Tcold,i

@@ -226,76 +226,90 @@ def TemperatureProfile(Section):
     SecondaryBulk = []
     SecondaryWall = []
     
-    for i in range(19):
-        
+    for i in range(0,19):
         if i == 0:
+            #Temperatures entering SG --> not first node temps.
             T_PrimaryBulkIn = 583.15 #[K]
             T_SecondaryBulkIn = 533.25
             x_in = 0
         
-        if Section.Length.label[i] == "preheater start":
-            #Tcold,out = Ti = Tsat = 260.1 oC (533.25 K)
-            T_SecondaryBulkIn = T_sat 
-            #TotalArea= sum(OuterArea(Section)[i:Section.NodeNumber]) 
-    
-            #Tcold,i+1 - Tcold,i
-            dQ_c = MassFlow_c.magnitude*Cp_c*(T_SecondaryBulkIn-T_PreheaterIn)
-            #Thot,i+1 = Thot,i 
-            T_PrimaryBulkOutEnd = T_PrimaryBulkIn - dQ_c/(Cp_h*MassFlow_h.magnitude) #estimate based on heat balance only  
-                
-            #T_LMTD = ((T_PrimaryBulkIn-T_SecondaryBulkIn)- (T_PrimaryBulkOut-T_PreheaterIn))/(np.log(T_PrimaryBulkIn-T_SecondaryBulkIn)-np.log(T_PrimaryBulkOut-T_PreheaterIn))
-            #F = 0.8725 #https://checalc.com/solved/LMTD_Chart.html (cross-flow LMTD correction factor)
-            print (T_PrimaryBulkOutEnd-273.15)
+        if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater":    
         
-        T_wh, T_wc, U = WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in)
-        
-        Cp_h=ld.HeatCapacity("PHT", T_PrimaryBulkIn)
-        Cp_c = ld.HeatCapacity("SHT", T_SecondaryBulkIn)
+            Cp_h=ld.HeatCapacity("PHT", T_PrimaryBulkIn)
+            Cp_c = ld.HeatCapacity("SHT", T_SecondaryBulkIn)
+            T_wh, T_wc, U = WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in)
             
-        T_PrimaryBulkOut = T_PrimaryBulkIn-(U*(T_PrimaryBulkIn-T_SecondaryBulkIn)*OuterArea(Section)[i])/(Cp_h*MassFlow_h.magnitude/3542)
-        #Ti = Ti+1 = Tsat    
-        T_SecondaryBulkOut = T_sat
+            T_PrimaryBulkOut = T_PrimaryBulkIn-(U*(T_PrimaryBulkIn-T_SecondaryBulkIn)*OuterArea(Section)[i])/(Cp_h*MassFlow_h.magnitude/3542)
+            #Ti = Ti+1 = Tsat    
+            T_SecondaryBulkOut = T_sat
             
-        #for one tube --> multiply by 3542 = for all tubes
-        #Q = MassFlow_h.magnitude*Cp_h*(T_PrimaryBulkIn-T_PrimaryBulkOut)
+            #for one tube --> multiply by 3542 = for all tubes
+            #Q = MassFlow_h.magnitude*Cp_h*(T_PrimaryBulkIn-T_PrimaryBulkOut)
 
-        #for one tube (U based on one tube) (heat transfer area x number tubes) --> would cancel out in U calc (1/h*NA) NA
-        Q = U*(T_PrimaryBulkIn-T_SecondaryBulkIn)*OuterArea(Section)[i]*3542    
-        #Q = MassFlow_h.magnitude*ld.HeatCapacity("PHT", T_PrimaryBulkIn)
+            #for one tube (U based on one tube) (heat transfer area x number tubes) --> would cancel out in U calc (1/h*NA) NA
+            Q = U*(T_PrimaryBulkIn-T_SecondaryBulkIn)*OuterArea(Section)[i]*3542    
+            #Q = MassFlow_h.magnitude*ld.HeatCapacity("PHT", T_PrimaryBulkIn)
            
-        x_out = x_in + Q/(MassFlow_c.magnitude*EnthalpySaturatedSteam.magnitude)
+            x_out = x_in + Q/(MassFlow_c.magnitude*EnthalpySaturatedSteam.magnitude)
             
-        x_in = x_out
-        T_PrimaryBulkIn = T_PrimaryBulkOut
-        T_SecondaryBulkIn = T_SecondaryBulkOut
-        
-        PrimaryBulk.append(T_PrimaryBulkIn)   
-        SecondaryBulk.append(T_SecondaryBulkIn)
-        PrimaryWall.append(T_wh)
-        SecondaryWall.append(T_wc)   
-        
-        
-        
-        
+            x_in = x_out
+            T_PrimaryBulkIn = T_PrimaryBulkOut
+            T_SecondaryBulkIn = T_SecondaryBulkOut
+            
+            PrimaryBulk.append(T_PrimaryBulkIn)   
+            SecondaryBulk.append(T_SecondaryBulkIn)
+            PrimaryWall.append(T_wh)
+            SecondaryWall.append(T_wc)
+            
+        else:
+            if Section.Length.label[i] == "preheater start":
+                T_wh, T_wc, U = WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in)
+                #Tcold,out = Ti = Tsat = 260.1 oC (533.25 K)
+                T_SecondaryBulkIn = 264+273 
+                #TotalArea= sum(OuterArea(Section)[i:Section.NodeNumber]) 
+    
+                #Tcold,i+1 - Tcold,i
+                dQ_c = MassFlow_c.magnitude*Cp_c*(T_SecondaryBulkIn-T_PreheaterIn)
+                #Thot,i+1 = Thot,i 
+                T_PrimaryBulkOutEnd = T_PrimaryBulkIn - dQ_c/(Cp_h*MassFlow_h.magnitude) #estimate based on heat balance only  
+                
+                #T_LMTD = ((T_PrimaryBulkIn-T_SecondaryBulkIn)- (T_PrimaryBulkOut-T_PreheaterIn))/(np.log(T_PrimaryBulkIn-T_SecondaryBulkIn)-np.log(T_PrimaryBulkOut-T_PreheaterIn))
+                #F = 0.8725 #https://checalc.com/solved/LMTD_Chart.html (cross-flow LMTD correction factor)
+                print (T_PrimaryBulkOutEnd-273.15)
+             
     print ([j-273.15 for j in PrimaryBulk])
     print ([j-273.15 for j in PrimaryWall])
     print ()
     print ([j-273.15 for j in SecondaryBulk])
     print ([j-273.15 for j in SecondaryWall])
+    #18 element arrays
         
-    for j in range(3):
-        for i in range(19, Section.NodeNumber):                 
+    for j in range(1):
+#         PrimaryBulk2=[]
+#         SecondaryBulk2=[]
+        for i in range(18, Section.NodeNumber):                 
+            Cp_h=ld.HeatCapacity("PHT", T_PrimaryBulkIn)
+            Cp_c = ld.HeatCapacity("SHT", T_SecondaryBulkIn)
+            if i == 18: 
+                T_PrimaryBulkIn =PrimaryBulk[17]
+                 
             T_PrimaryBulkOut = T_PrimaryBulkIn-(U*OuterArea(Section)[i]*3542/(Cp_h*MassFlow_h.magnitude))*(T_PrimaryBulkIn-T_SecondaryBulkIn)
             T_SecondaryBulkOut = T_SecondaryBulkIn-(U*OuterArea(Section)[i]*3542/(Cp_c*MassFlow_c.magnitude))*(T_PrimaryBulkIn-T_SecondaryBulkIn)
-                
+            
+            print (T_PrimaryBulkOut-273.15,T_SecondaryBulkOut-273.15,i,j)   
             T_PrimaryBulkIn = T_PrimaryBulkOut
             T_SecondaryBulkIn = T_SecondaryBulkOut
-                
+            
+#             PrimaryBulk2.append(T_PrimaryBulkOut)
+#             SecondaryBulk2.append(T_SecondaryBulkOut)
+            
+            
             if i == Section.NodeNumber-1: #21
                 dQ_h = MassFlow_h.magnitude*Cp_h*(PrimaryBulk[17]-T_PrimaryBulkOut)
                 T_SecondaryBulkOutEnd = T_PreheaterIn + dQ_h/(Cp_c*MassFlow_c.magnitude)
-                #print (T_SecondaryBulkOutEnd-273.15)
+                print (T_SecondaryBulkOutEnd-273.15,i)
             
+                T_SecondaryBulkIn = T_SecondaryBulkOutEnd
         
             #T_wh, T_wc, U = WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in)
             #Tcold, i+1 starts at 186.5 (preheater entrance temperature end) and work backwards to 
