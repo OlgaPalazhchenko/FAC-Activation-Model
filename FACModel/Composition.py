@@ -52,7 +52,9 @@ def BulkpHCalculator(Section):#Bulk pH calculation
     return H
 
 
-def IronSolubility(Section, ConcentrationH):
+def IronSolubility(Section):
+    #As temperature changes, constants (k_Li, k_w, etc. change), pH changes as well, both effecting solubility --> Bulk FeSatFe3O4
+    Section.SolutionOxide.ConcentrationH = BulkpHCalculator(Section)
     Section.k_Fe2 = 10**(np.polyval(nc.KFe2SchikorrPolynomial, Section.PrimaryBulkTemperature))
     Section.k_FeOH3_Fe3 = 10**(np.polyval(nc.KFeOH3SchikorrPolynomial, Section.PrimaryBulkTemperature))
     Section.k_FeOH4_Fe3 = 10**(np.polyval(nc.KFeOH4SchikorrPolynomial, Section.PrimaryBulkTemperature))
@@ -60,12 +62,12 @@ def IronSolubility(Section, ConcentrationH):
     P_H2 = [x*y/(nc.kH2*np.exp(-500*((1/z)-(1/298.15)))) for x,y,z in zip([nc.H2*nc.H2Density/nc.H2MolarMass]*Section.NodeNumber,Section.DensityH2O, \
                                                                    Section.PrimaryBulkTemperature)]
     
-    ActivityFe2 = [x*(y**2)*z**(1/3) for x,y,z in zip(Section.k_Fe2, ConcentrationH, P_H2)]
-    ActivityFeOH = [x*y/z for x,y,z in zip(Section.k_FeOH, ActivityFe2, ConcentrationH)]
-    ActivityFeOH2 = [x*y/(z**2) for x,y,z in zip(Section.k_FeOH2, ActivityFe2, ConcentrationH)]
-    ActivityFeOH3 = [x*y/(z**3) for x,y,z in zip(Section.k_FeOH3, ActivityFe2, ConcentrationH)]
+    ActivityFe2 = [x*(y**2)*z**(1/3) for x,y,z in zip(Section.k_Fe2, Section.SolutionOxide.ConcentrationH , P_H2)]
+    ActivityFeOH = [x*y/z for x,y,z in zip(Section.k_FeOH, ActivityFe2, Section.SolutionOxide.ConcentrationH )]
+    ActivityFeOH2 = [x*y/(z**2) for x,y,z in zip(Section.k_FeOH2, ActivityFe2, Section.SolutionOxide.ConcentrationH )]
+    ActivityFeOH3 = [x*y/(z**3) for x,y,z in zip(Section.k_FeOH3, ActivityFe2, Section.SolutionOxide.ConcentrationH )]
     ActivityFeOH3_Fe3 = [x/(y**(1/6)) for x,y in zip(Section.k_FeOH3_Fe3, P_H2)]
-    ActivityFeOH4_Fe3 = [x/(y*(z**(1/6))) for x,y,z in zip(Section.k_FeOH4_Fe3, ConcentrationH, P_H2)]
+    ActivityFeOH4_Fe3 = [x/(y*(z**(1/6))) for x,y,z in zip(Section.k_FeOH4_Fe3, Section.SolutionOxide.ConcentrationH , P_H2)]
     
     FeTotalActivity = [x+y+z+q+w+t for x,y,z,q,t,w in zip (ActivityFe2, ActivityFeOH, ActivityFeOH2, ActivityFeOH3, ActivityFeOH3_Fe3, ActivityFeOH4_Fe3)]
     return FeTotalActivity
@@ -78,7 +80,7 @@ def Hydrolysis(Section, FeTotal, NiTotal, ConcentrationH):
         for i in range(50):
             gamma_1itr = ActivityCoefficient1    
             gamma_2itr = ActivityCoefficient2
-                
+           
             #ConcentrationFeTotal, ConcentrationNiTotal, and ConcentrationH are not re-evaluated here, thus  not used for them
             ConcentrationOH = [x/(y*(z**2)) for x,y,z in zip(Section.k_W, ConcentrationH, ActivityCoefficient1)]
             ConcentrationLi =[nc.ConcentrationLiTotal*x/(x+(y*(z**2))) for x,y,z in zip(Section.k_Li, ConcentrationOH, ActivityCoefficient1)]
@@ -108,7 +110,7 @@ def Hydrolysis(Section, FeTotal, NiTotal, ConcentrationH):
     
            
 def CobaltComposition(Section):
-    if Section == ld.SteamGenerator:
+    if Section == ld.SteamGenerator or Section==ld.SG_Zone1:
         CompositionCr_Alloy = nc.FractionCr_Alloy800
         MolesCobalt =(nc.FractionCo_Alloy800 / (5 / 3)) / nc.CoMolarMass #5/3 term comes from lattice energy preference for Co chromite retention
             #x + y = 0.0015;  x/y = 2/3 --> y =(3/2)x
@@ -121,7 +123,7 @@ def CobaltComposition(Section):
     return 2/(MolesChromium/MolesCobalt)    
     
 def FractionChromite(Section):
-    if Section == ld.SteamGenerator:
+    if Section == ld.SteamGenerator or Section==ld.SG_Zone1:
         AlloyDensity = nc.Alloy800Density
         CompositionCr_Alloy = nc.FractionCr_Alloy800
         #MolesCobalt = (nc.FractionCo_Alloy800 / (5 / 3)) / nc.CoMolarMass #5/3 term comes from lattice energy preference for Co chromite retention
@@ -137,7 +139,7 @@ def FractionChromite(Section):
             #2. all Cr is retained inside the inner oxide layer as FeCr2O4 (for both CS and Alloy-800)
             #3. 1 g basis of metal lost
   
-    if Section == ld.Inlet or Section == ld.Outlet or Section == ld.SteamGenerator:
+    if Section != ld.Core:
         VolumeAlloyCorroded = 1 / AlloyDensity
         MolesChromium = CompositionCr_Alloy / nc.CrMolarMass
         MolesChromite = MolesChromium / 2 #1:2 stoichiometry in FeCr2O4 b/w compound and Cr
@@ -149,7 +151,7 @@ def FractionChromite(Section):
 def FractionMetalInnerOxide(Section,Element):
     #"Second Oxide" refers to the secondary species comprising the inner layer in addition to the FeCr2O4 iron chromite
     #E.g., for carbon steel this is magnetite, and for alloy-800 it is a non-stoichiometric nickel ferrite
-    if Section == ld.SteamGenerator: #Second oxide = Ni0.6Fe2.4O4
+    if Section == ld.SteamGenerator or Section==ld.SG_Zone1: #Second oxide = Ni0.6Fe2.4O4
         FractionFeSecondOxide = 2.4* nc.FeMolarMass / (2.4 * nc.FeMolarMass + 0.6 * nc.NiMolarMass + 4 * nc.OMolarMass)
         FractionNiSecondOxide = 0.6 * nc.NiMolarMass / (2.4 * nc.FeMolarMass + 0.6 * nc.NiMolarMass + 4 * nc.OMolarMass)
         FractionCrSecondOxide = 0
@@ -160,7 +162,7 @@ def FractionMetalInnerOxide(Section,Element):
         FractionCoSecondOxide = 0
         FractionNiSecondOxide = 0
     
-    if Section == ld.Inlet or Section == ld.Outlet or Section == ld.SteamGenerator:
+    if Section != ld.Core:
     
         FractionSecondOxide = 1 - FractionChromite(Section)
     

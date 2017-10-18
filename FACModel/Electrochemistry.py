@@ -56,7 +56,7 @@ def ElectrochemicalAdjustment(Section, EqmPotentialFe3O4, SOMixedPotential, MOMi
         AdjustedSaturation.append(x)    
 
     
-    if Section == ld.Inlet or Section == ld.Outlet or Section == ld.SteamGenerator:
+    if Section != ld.Core:
         MOConcentrationH = SOConcentrationH#[x*np.exp(-(y-z)*nc.F/(nc.R*t)) for x,y,z,t in zip(SOConcentrationH, MOMixedPotential, SOMixedPotential, Section.PrimaryBulkTemperature)]
     else: MOConcentrationH = None
     

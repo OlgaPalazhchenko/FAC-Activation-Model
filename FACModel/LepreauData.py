@@ -328,11 +328,9 @@ SG_Zone2.Velocity =[533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 49
 Inlet.Length.magnitude = [477.6, 281.8, 78.6, 350, 350, 350, 350] 
 Core.Length.magnitude = [49.5]*Core.NodeNumber 
 Outlet.Length.magnitude = [17, 3.5, 139.5, 432, 225.5, 460.3, 460.3, 400, 100]
-SteamGenerator.Length.magnitude = [60.96, 88.9, 88.9, 88.9, 91.44, 91.44, 91.44, 91.44, 91.44, 103.05, 103.5, 91.44, 91.44, 91.44, 91.44, 91.44, 76.2, 58.42, 58.42, 58.42, 45.72, 30.48]
+SteamGenerator.Length.magnitude = [71.2, 75, 75, 75, 101.633, 101.633, 101.633, 112.95, 112.95, 39.25, 39.25, 39.25, 39.25, 112.95, 112.95, 101.633, 101.633, 101.633, 75, 75, 75, 40.4]
 SG_Zone1.Length.magnitude = [71.2, 75, 75, 75, 101.633, 101.633, 101.633, 112.95, 112.95, 39.25, 39.25, 39.25, 39.25, 112.95, 112.95, 101.633, 101.633, 101.633, 75, 75, 75, 40.4]
 SG_Zone2.Length.magnitude = [71.2, 75, 75, 75, 101.633, 101.633, 101.633, 112.95, 112.95, 239.25, 239.25, 239.25, 239.25, 112.95, 112.95, 101.633, 101.633, 101.633, 75, 75, 75, 40.4]
-
-SG_Zone1.Length.label = ["PHT boiling"]*2 + [None]*7 + ["u-bend"]*4 +[None]*5 + ["preheater start"] +  ["preheater"]*3
 
 
 #Solubility (mol/kg)
@@ -361,7 +359,8 @@ for SGZone in SGZones:
     SGZone.PrimaryBulkTemperature = \
     UnitConverter(SGZone, "Celsius", "Kelvin", None, None, None, None, None, \
                   [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27, 279.43, 277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03])
-     
+    SGZone.Length.label = ["PHT boiling"]*2 + [None]*7 + ["u-bend"]*4 +[None]*5 + ["preheater start"] +  ["preheater"]*3 
+
 #Temperature [Celsius]
 Inlet.PrimaryBulkTemperature = UnitConverter(Inlet, "Celsius", "Kelvin", None, None, None, None, None, [266]*Inlet.NodeNumber)
 Core.PrimaryBulkTemperature = \

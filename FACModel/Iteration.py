@@ -6,7 +6,7 @@ import Electrochemistry as e
 
 def Diffusion(Section, Element):
     #Inner oxide density is determined as a weighted average of the densities of the 2 comprising oxides 
-    if Section == ld.SteamGenerator:
+    if Section == ld.SteamGenerator or Section==ld.SG_Zone1:
         AlloyDensity = nc.Alloy800Density
         OxideDensity = c.FractionChromite(Section)*nc.FeCr2O4Density + (1-c.FractionChromite(Section))*nc.NiFe2O4Density
         FractionCo = nc.FractionCo_Alloy800
@@ -15,7 +15,7 @@ def Diffusion(Section, Element):
         OxideDensity = c.FractionChromite(Section)*nc.FeCr2O4Density + (1-c.FractionChromite(Section))*nc.Fe3O4Density
         FractionCo = nc.FractionCo_CS
         
-    if Section == ld.Inlet or Section == ld.Outlet or Section == ld.SteamGenerator:
+    if Section != ld.Core :
         if Element == "Fe":
             MetalRetainedInsideInnerOxide = c.FractionMetalInnerOxide(Section, "Fe")*(OxideDensity / AlloyDensity) * (1 -nc.Fe3O4Porosity_inner) #[gFe/g CSlost] 
         elif Element == "Ni":
@@ -31,7 +31,7 @@ def Diffusion(Section, Element):
 
 def MetalOxideInterfaceConcentration(Section, Element, SolutionOxideInterfaceConcentration, InnerOxThickness, OuterOxThickness, Corrosion):
     
-    if Section == ld.SteamGenerator:
+    if Section == ld.SteamGenerator or Section==ld.SG_Zone1:
         OxideDensity =nc.NiFe2O4Density
     else:
         OxideDensity = nc.Fe3O4Density
@@ -185,7 +185,7 @@ def CorrosionRate(Section):
             z = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyFe, ConcentrationFe2[i], y, Section.DensityH2O[i], \
                                          Section.PrimaryBulkTemperature[i], "Acceptor")
             
-        elif Section == ld.SteamGenerator:
+        elif Section == ld.SteamGenerator or Section==ld.SG_Zone1:
             #EqmPotentialNi = e.Potential(Section, Section.StandardEqmPotentialNi, [1]*Section.NodeNumber, 1, 1, Composition.ConcentrationNi2, Composition.ActivityCoefficient2, 1, "aqueous")
             w = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyH2onAlloy800, Section.MetalOxide.ConcentrationH[i], x, Section.DensityH2O[i], \
                                          Section.PrimaryBulkTemperature[i], "Acceptor")
@@ -203,7 +203,7 @@ def CorrosionRate(Section):
     CorrosionCurrent = [x*(np.exp((nc.Beta*nc.n*nc.F*(y-z))/(nc.R*q))-np.exp((-(1-nc.Beta)*nc.n*nc.F*(y-z))/(nc.R*q))) for x,y,z,q in zip(ExchangeCurrentFe,MixedECP,EqmPotentialFe,Section.PrimaryBulkTemperature)]
     
         
-    if Section == ld.SteamGenerator: #icorr = ia = -ic   equivalent molar mass for Alloy 800 (0.46 Fe, 0.33 Ni, -> 2e- processes; 0.21 Cr -> 3 e- process)   
+    if Section == ld.SteamGenerator or ld.SG_Zone1: #icorr = ia = -ic   equivalent molar mass for Alloy 800 (0.46 Fe, 0.33 Ni, -> 2e- processes; 0.21 Cr -> 3 e- process)   
         Constant = [(1/nc.F)*((nc.FeMolarMass*0.46/nc.n) + (nc.NiMolarMass*0.33/nc.n) + (0.21*nc.CrMolarMass/3))]*Section.NodeNumber
         
     else:

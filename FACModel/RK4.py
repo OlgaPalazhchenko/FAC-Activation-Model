@@ -118,7 +118,7 @@ def OxideGrowth(Section, Saturations, BulkConcentrations):
             Section.MetalOxide.FeTotal = it.MetalOxideInterfaceConcentration(Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, Section.CorrRate)
             Section.CorrRate, Section.MetalOxide.MixedPotential = it.CorrosionRate(Section)
             
-        if Section == ld.SteamGenerator:
+        if Section == ld.SteamGenerator or Section==ld.SG_Zone1:
             Section.MetalOxide.NiTotal = it.MetalOxideInterfaceConcentration(Section, "Ni", Section.SolutionOxide.NiTotal, Section.InnerOxThickness, Section.OuterOxThickness, Section.CorrRate)
         else:
             Section.MetalOxide.NiTotal = [0]*Section.NodeNumber
@@ -335,7 +335,7 @@ def Spall(Section,j, ElapsedTime, SpallTime):
     ##Current time step's RK4 input from OxideGrowth function for each of InnerOx, InnerIronOx, OuterFe3O4, Co, and Ni at each node of current section 
     
     #Silences spalling for desired sections
-    if Section == ld.SteamGenerator or Section == ld.Core or Section==ld.Inlet:
+    if Section != ld.Outlet:
         Section.Particle = [0]*Section.NodeNumber 
     
     ConvertedConcentrations = []
@@ -398,7 +398,7 @@ def Spall(Section,j, ElapsedTime, SpallTime):
     
     
     for i in range(Section.NodeNumber):    
-        if Section==ld.Outlet or Section==ld.Inlet or Section==ld.SteamGenerator:
+        if Section!=ld.Core:
             if Section.InnerIronOxThickness[i] <= 8e-6:
                 Section.InnerIronOxThickness[i] = 0.00025 #Resets to original thickness (resetting corrosion rate here to ~75 um/a
                 #if Section==ld.SteamGenerator:
