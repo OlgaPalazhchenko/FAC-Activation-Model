@@ -27,12 +27,19 @@ n_IAPWS  = [0.14632971213167, -0.84548187169114, -0.37563603672040*10**1, 0.3385
 I_IAPWS = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 8, 8, 21, 23, 29, 30, 31, 32]
 J_IAPWS = [-2, -1, 0, 1, 2, 3, 4, 5, -9, -7, -1, 0, 1, 3 , -3, 0, 1, 3, 17, -4, 0, 6, -5, -2, 10, -8, -11, -6, -29, -31, -38, -39, -40, -41]
 
+n_backwards_IAPWS = [-0.23872489924521*10**3, 0.40421188637945*10**3, 0.11349746881718*10**3, -0.58457616048039*10**1, -0.15285482413140*10**(-3), -0.10866707695377*10**(-5), -0.13391744872602*10**2,\
+                     0.43211039183559*10**2, -0.54010067170506*10**2, 0.30535892203916*10**2, -0.65964749423638*10**1, 0.93965400878363*10**(-2), 0.11573647505340*10**(-6), -0.25858641282073*10**(-4),\
+                     -0.40644363084799*10**(-8), 0.66456186191635*10**(-7), 0.80670734103027*10**(-10), -0.93477771213947*10**(-12), 0.58265442020601*10**(-14), -0.15020185953503*10**(-16)]
+
+I_backwards_IAPWS = [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 5, 6]
+
+J_backwards_IAPWS = [0, 1, 2, 6, 22, 32, 0, 1, 2, 3, 4, 10, 32, 10, 32, 10, 32, 32, 32, 32] 
+
 R_IAPWS = 0.461526 #[kJ/kg K] 
 
 i_1 = [0, 1, 2, 3, 0, 1, 2, 3, 5, 0, 1, 2, 3, 4, 0, 1, 0, 3, 4, 3, 5]
 j_1 = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4, 4, 5, 6, 6]
 H_1 = [0.520094, 0.0850895, -1.08374, -0.289555, 0.222531, 0.999115, 1.88797, 1.26613, 0.120573, -0.281378, -0.906851, -0.772479, -0.489837, -0.25704, 0.161913, 0.257399, -0.0325372, 0.0698452, 0.00872102, -0.00435673, -5.93E-04]
-
 
 class ThermoDimensionlessInput():
     def __init__(self):
@@ -41,10 +48,41 @@ class ThermoDimensionlessInput():
         self.rho_ref = 0.3220 #[g/cm^3]
         self.mu_ref = 1 #[micro Pa s]
         self.lambda_ref = 1 #[mW/mK]
+        self.enthalpy = 2500 #[J/g]
 
 ReferenceValues = ThermoDimensionlessInput()
   
-  
+def Enthalpy(side, Temperature):
+    if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
+        p = 10 #MPa
+    else:
+        p = 4.70 #MPa secondary side
+    
+    ratio_pressures = p/ReferenceValues.p_ref #p/p*, reduced pressure [unitless]
+    ratio_temperatures = ReferenceValues.T_ref/Temperature #T/T*, reduced temperature [unitless]
+
+    Gibbs_T = sum([x*((7.1-ratio_pressures)**y)*z*((ratio_temperatures-1.222)**(z-1)) for x,y,z in zip(n_IAPWS, I_IAPWS, J_IAPWS)])
+    return ratio_temperatures*Gibbs_T*R_IAPWS*Temperature #[J/g mol]*[K] = [J/g]
+
+
+def TemperaturefromEnthalpy(side, Enthalpy):
+    if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
+        p = 10 #MPa
+    else:
+        p = 4.70 #MPa secondary side
+    p_ref = 1 #MPa
+    T_ref = 1#K
+    
+    ratio_pressures = p/p_ref #p/p*, reduced pressure [unitless]
+    ratio_enthalpies = Enthalpy/ReferenceValues.enthalpy
+    
+    ratio_temmperatures = sum([x*((ratio_pressures)**y)*(ratio_enthalpies+1)**z for x,y,z in zip(n_backwards_IAPWS, I_backwards_IAPWS, J_backwards_IAPWS)])
+    
+    return ratio_temmperatures*T_ref
+
+print (TemperaturefromEnthalpy("PHT", 1134.4)-273.15)
+
+    
 def Density(species, side, Temperature):
     if side == "phts" or side == "PHTS" or side == "PHT":
         p = 10 #[MPa]
@@ -86,7 +124,7 @@ def HeatCapacity(side, Temperature):
     if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
         p = 10 #MPa
     else:
-        p = 4.96 #MPa secondary side
+        p = 4.70 #MPa secondary side
     
     ratio_pressures = p/ReferenceValues.p_ref #p/p*, reduced pressure [unitless]
     ratio_temperatures = ReferenceValues.T_ref/Temperature #T/T*, reduced temperature [unitless]
