@@ -13,6 +13,9 @@ class SGParameters():
         self.unit = None
         self.steam_quality = None
 
+PrimarySidePressure = 10 #MPa
+SecondarySidePressure= 4.70 #MPa
+
 SizingParameters = open('SizingParameters.txt','r')      
 SizingParametersReader = list(csv.reader(SizingParameters, delimiter = ',')) #Assign file data to list, Reader[row][column], delimiter = comma 
 
@@ -54,9 +57,9 @@ ReferenceValues = ThermoDimensionlessInput()
   
 def Enthalpy(side, Temperature):
     if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
-        p = 10 #MPa
+        p = PrimarySidePressure #MPa
     else:
-        p = 4.70 #MPa secondary side
+        p = SecondarySidePressure #MPa secondary side
     
     ratio_pressures = p/ReferenceValues.p_ref #p/p*, reduced pressure [unitless]
     ratio_temperatures = ReferenceValues.T_ref/Temperature #T/T*, reduced temperature [unitless]
@@ -67,9 +70,9 @@ def Enthalpy(side, Temperature):
 
 def TemperaturefromEnthalpy(side, Enthalpy):
     if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
-        p = 10 #MPa
+        p = PrimarySidePressure
     else:
-        p = 4.70 #MPa secondary side
+        p = SecondarySidePressure #MPa secondary side
     p_ref = 1 #MPa
     T_ref = 1#K
     
@@ -80,14 +83,12 @@ def TemperaturefromEnthalpy(side, Enthalpy):
     
     return ratio_temmperatures*T_ref
 
-print (TemperaturefromEnthalpy("PHT", 1134.4)-273.15)
-
     
 def Density(species, side, Temperature):
     if side == "phts" or side == "PHTS" or side == "PHT":
-        p = 10 #[MPa]
+        p = PrimarySidePressure
     elif side == "shts" or side == "SHTS" or side == "SHT":
-        p = 4.70 #[MPa] secondary side
+        p = SecondarySidePressure 
     else: print ("Error: HTS side not specified")
         
     ratio_pressures = p/ReferenceValues.p_ref
@@ -122,9 +123,9 @@ def Viscosity(species, side, Temperature):
 
 def HeatCapacity(side, Temperature):
     if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
-        p = 10 #MPa
+        p = PrimarySidePressure
     else:
-        p = 4.70 #MPa secondary side
+        p = SecondarySidePressure
     
     ratio_pressures = p/ReferenceValues.p_ref #p/p*, reduced pressure [unitless]
     ratio_temperatures = ReferenceValues.T_ref/Temperature #T/T*, reduced temperature [unitless]
@@ -136,9 +137,9 @@ def HeatCapacity(side, Temperature):
  
 def ThermalConductivityH2O(side, Temperature):
     if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
-        p = 10 #MPa
+        p = PrimarySidePressure
     else:
-        p = 4.70 #[MPa] secondary side
+        p = SecondarySidePressure
     T_ref = 647.096 #[K]
     p_ref = 22.064 #[MPa]
     
@@ -214,7 +215,6 @@ class Interface():
     def __init__(self):
         self.ConcentrationH2 = None
         self.ConcentrationH = None
-        #self.ConcentrationOH = None
         self.FeSatFe3O4 = None
         self.FeTotal = None
         self.ConcentrationFe2 = None
@@ -233,8 +233,7 @@ class Interface():
         self.CoSatFerrite = None
         self.CrTotal = None
         self.CoTotal = None
-        #self.ActivityCoefficient1 =None
-        #self.ActivityCoefficient2 =None
+    
         
         self.Co60 = None
         self.Co58 = None
@@ -269,46 +268,46 @@ class Section(): #Defining each primary heat transport section as a class
         self.RowStart = RowStart
         self.RowEnd = RowEnd
         self.j =j
+        self.NodeNumber = RowEnd
         
         self.MetalOxide = Interface()
         self.SolutionOxide = Interface()
         self.Bulk = Interface()
        
         #General section parameter input (interface specification not necessary)
-        self.Diameter = None#[float(SizingParametersReader[j][i]) for i in range(self.RowStart,self.RowEnd)] #Reader([row][column]) #[cm]
+        self.Diameter = None
         self.OuterDiameter = None
         self.TubeThickness = None
-        self.Velocity = None#[float(SizingParametersReader[j+1][i]) for i in range(self.RowStart,self.RowEnd)] #[cm/s]
-        self.Length = SGParameters() #[float(SizingParametersReader[j+2][i]) for i in range(self.RowStart,self.RowEnd)] #[cm]
-        self.Distance = None #np.cumsum(self.Length) #[cm]
-        self.PrimaryBulkTemperature = None#[x + 273.15 for x in self.Celsius] # [K]
+        self.Velocity = None
+        self.Length = SGParameters() 
+        self.Distance = None 
+        self.PrimaryBulkTemperature = None
         #self.PrimaryWallTemperature = None
         #self.SecondaryWallTemperature = None
         self.SecondaryBulkTemperature = None
-        self.NernstConstant = None#[x*(2.303*nc.R/(2*nc.F)) for x in self.Kelvin] #2.303RT/nF
+        self.NernstConstant = None
         
-        self.DensityH2O = None#[float(SizingParametersReader[j+4][i]) for i in range(self.RowStart,self.RowEnd)] #[g/cm^3]
-        self.ViscosityH2O = None#[float(SizingParametersReader[j+5][i]) for i in range(self.RowStart,self.RowEnd)] #[g/cm s]
-        self.SolubilityFe = None#[float(SizingParametersReader[j+6][i]) for i in range(self.RowStart,self.RowEnd)] #[mol/kg] (Tremaine & LeBlanc)
-        self.SolubilityCr = None#[float(SizingParametersReader[j+7][i]) for i in range(self.RowStart,self.RowEnd)] #[mol/kg] 
-        self.SolubilityCo = None#[float(SizingParametersReader[j+8][i]) for i in range(self.RowStart,self.RowEnd)] #[mol/kg] (Sandler & Kunig) 
-        self.SolubilityNi = None#[float(SizingParametersReader[j+9][i]) for i in range(self.RowStart,self.RowEnd)] #[mol/kg] (Sandler & Kunig)
+        self.DensityH2O = None
+        self.ViscosityH2O = None
+        self.SolubilityFe = None
+        self.SolubilityCr = None
+        self.SolubilityCo = None
+        self.SolubilityNi = None
         
-        self.InnerOxThickness = None#[float(SizingParametersReader[j+10][i]) for i in range(self.RowStart,self.RowEnd)] #[g/cm^2] 
-        self.InnerIronOxThickness = None#self.InnerOxThickness
-        self.OuterFe3O4Thickness = None#[float(SizingParametersReader[j+11][i]) for i in range(self.RowStart,self.RowEnd)] #[g/cm^2]
-        self.NiThickness = None#[float(SizingParametersReader[j+12][i]) for i in range(self.RowStart,self.RowEnd)] #[g/cm^2]
-        self.OuterOxThickness = None#self.OuterFe3O4Thickness #[g/cm^2]
-        self.CoThickness = None#[i*0 for i in self.OuterFe3O4Thickness]
-        self.OxThickness = None#[x+y for x,y in zip(self.OuterFe3O4Thickness,self.InnerOxThickness)] #adds the lists together element by element
+        self.InnerOxThickness = None
+        self.InnerIronOxThickness = None
+        self.OuterFe3O4Thickness = None
+        self.NiThickness = None
+        self.OuterOxThickness = None
+        self.CoThickness = None
+        self.OxThickness = None
         
         self.StandardEqmPotentialFe = [float(SizingParametersReader[j+13][i]) for i in range(self.RowStart,self.RowEnd)]
         self.StandardEqmPotentialFe3O4red = [float(SizingParametersReader[j+14][i]) for i in range(self.RowStart,self.RowEnd)]
         self.StandardEqmPotentialFe3O4oxid = [float(SizingParametersReader[j+15][i]) for i in range(self.RowStart,self.RowEnd)]
         self.StandardEqmPotentialH2 = [float(SizingParametersReader[j+16][i]) for i in range(self.RowStart,self.RowEnd)]
         self.StandardEqmPotentialNi = [float(SizingParametersReader[j+17][i]) for i in range(self.RowStart,self.RowEnd)]
-        self.NodeNumber = None#int(SizingParametersReader[j+18][0])      
-        
+         
         self.km = None
         self.KpFe3O4electrochem = None
         self.KdFe3O4electrochem = None
@@ -321,6 +320,7 @@ class Section(): #Defining each primary heat transport section as a class
         
         self.ElapsedTime = None
         self.SpallTime = []
+        self.TubeNumber = None
         
  
 #Creates the 4 PHTS sections and their methods based on the Sections class template/blueprint
@@ -334,15 +334,6 @@ SteamGenerator= Section(84,0,22)
 SG_Zone1= Section(84,0,22)
 SG_Zone2 =Section(84,0,22)
 ##
-
-#Node Number 
-Inlet.NodeNumber = 7
-Core.NodeNumber = 12
-Outlet.NodeNumber = 9
-SteamGenerator.NodeNumber = 22
-SG_Zone1.NodeNumber = 22
-SG_Zone2.NodeNumber = 22 
-
 
 #Diameter [cm]
 Inlet.Diameter = [44.3, 50, 106, 5.68, 5.68, 5.68, 5.68] 
@@ -367,17 +358,17 @@ Inlet.Length.magnitude = [477.6, 281.8, 78.6, 350, 350, 350, 350]
 Core.Length.magnitude = [49.5]*Core.NodeNumber 
 Outlet.Length.magnitude = [17, 3.5, 139.5, 432, 225.5, 460.3, 460.3, 400, 100]
 SteamGenerator.Length.magnitude = [71.2, 75, 75, 75, 101.633, 101.633, 101.633, 112.95, 112.95, 39.25, 39.25, 39.25, 39.25, 112.95, 112.95, 101.633, 101.633, 101.633, 75, 75, 75, 40.4]
-SG_Zone1.Length.magnitude = [71.2, 75, 75, 75, 101.633, 101.633, 101.633, 112.95, 112.95, 39.25, 39.25, 39.25, 39.25, 112.95, 112.95, 101.633, 101.633, 101.633, 75, 75, 75, 40.4]
+SG_Zone1.Length.magnitude = [71.2, 75, 75, 75, 101.633, 101.633, 101.633, 112.95, 112.95, 139.25, 139.25, 139.25, 139.25, 112.95, 112.95, 101.633, 101.633, 101.633, 75, 75, 75, 40.4]
 SG_Zone2.Length.magnitude = [71.2, 75, 75, 75, 101.633, 101.633, 101.633, 112.95, 112.95, 239.25, 239.25, 239.25, 239.25, 112.95, 112.95, 101.633, 101.633, 101.633, 75, 75, 75, 40.4]
 
 
 #Solubility (mol/kg)
-Inlet.SolubilityFe = [1.28494E-08]*Inlet.NodeNumber
+#Inlet.SolubilityFe = [1.28494E-08]*Inlet.NodeNumber
 Inlet.SolubilityNi = [2.71098E-09]*Inlet.NodeNumber
 Inlet.SolubilityCo = [3.77742E-09]*Inlet.NodeNumber
 Inlet.SolubilityCr = [8.81E-11]*Inlet.NodeNumber
 
-Core.SolubilityFe = [1.28521E-08, 1.35852E-08, 1.449E-08, 1.54787E-08, 1.65654E-08, 1.77722E-08, 1.91309E-08, 2.06833E-08, 2.25034E-08, 2.46889E-08, 2.64104E-08, 2.64104E-08]
+#Core.SolubilityFe = [1.28521E-08, 1.35852E-08, 1.449E-08, 1.54787E-08, 1.65654E-08, 1.77722E-08, 1.91309E-08, 2.06833E-08, 2.25034E-08, 2.46889E-08, 2.64104E-08, 2.64104E-08]
 Core.SolubilityNi = [2.71098E-09, 2.66196E-09, 2.60372E-09, 2.54535E-09, 2.29445E-09, 2.2137E-09, 1.91294E-09, 1.82788E-09, 1.54081E-09, 1.54384E-09, 1.54584E-09, 1.54584E-09]
 Core.SolubilityCo = [3.77742E-09, 3.51525E-09, 3.20371E-09, 2.8915E-09, 2.60041E-09, 2.3011E-09, 2.08369E-09, 1.86963E-09, 1.67578E-09, 1.53187E-09, 1.43654E-09, 1.43654E-09]
 Core.SolubilityCr = [8.81E-11, 9.61E-11, 1.01E-10, 9.40E-11, 8.69E-11, 7.98E-11, 7.28E-11, 6.57E-11, 5.86E-11, 5.16E-11, 4.69E-11, 4.69E-11]
@@ -388,9 +379,10 @@ Outlet.SolubilityCo = [1.44E-09]*Outlet.NodeNumber
 Outlet.SolubilityCr = [4.84E-11]*Outlet.NodeNumber
 
 #Replicate solubilities and temperatures here for now 
-SGZones = [SteamGenerator, SG_Zone1, SG_Zone2]
+SGZones = [SteamGenerator, SG_Zone1]
 for SGZone in SGZones:
-    SGZone.SolubilityFe = [2.58E-08, 2.56E-08, 2.55E-08, 2.52546E-08, 2.32347E-08, 2.16094E-08, 2.03107E-08, 1.9246E-08, 1.83579E-08, 1.75642E-08, 1.68473E-08, 1.62692E-08, 1.58017E-08, 1.53906E-08, 1.50304E-08, 1.47083E-08, 1.44316E-08, 1.42108E-08, 1.39481E-08, 1.35926E-08, 1.31784E-08, 1.27883E-08]
+    SGZone.TubeNumber = nc.TotalSGTubeNumber/len(SGZones)
+    #SGZone.SolubilityFe = [2.58E-08, 2.56E-08, 2.55E-08, 2.52546E-08, 2.32347E-08, 2.16094E-08, 2.03107E-08, 1.9246E-08, 1.83579E-08, 1.75642E-08, 1.68473E-08, 1.62692E-08, 1.58017E-08, 1.53906E-08, 1.50304E-08, 1.47083E-08, 1.44316E-08, 1.42108E-08, 1.39481E-08, 1.35926E-08, 1.31784E-08, 1.27883E-08]
     SGZone.SolubilityNi = [1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 1.96011E-09, 2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09, 2.60733E-09, 2.62118E-09, 2.63802E-09, 2.66147E-09, 2.68978E-09, 2.71747E-09]
     SGZone.SolubilityCo = [1.46729E-09, 1.46729E-09, 1.46729E-09, 1.49896E-09, 1.62443E-09, 1.75595E-09, 1.91821E-09, 2.06673E-09, 2.2024E-09, 2.35035E-09, 2.5275E-09, 2.67907E-09, 2.80762E-09, 2.92529E-09, 3.0321E-09, 3.13232E-09, 3.22305E-09, 3.2971E-09, 3.38716E-09, 3.51258E-09, 3.66401E-09, 3.81211E-09]
     SGZone.SolubilityCr = [4.84E-11, 4.84E-11, 4.84E-11, 4.99E-11, 5.61E-11, 6.20E-11, 6.73E-11, 7.22E-11, 7.67E-11, 8.10E-11, 8.52E-11, 8.88E-11, 9.18E-11, 9.46E-11, 9.71E-11, 9.94E-11, 1.01E-10, 1.03E-10, 1.00E-10, 9.62E-11, 9.15E-11, 8.70E-11]
@@ -406,7 +398,7 @@ UnitConverter(Inlet, "Celsius", "Kelvin", None, None, None, None, None, [266.55,
 Outlet.PrimaryBulkTemperature = UnitConverter(Inlet, "Celsius", "Kelvin", None, None, None, None, None, [310]*Outlet.NodeNumber)
 
 
-Sections = [Inlet, Core, Outlet, SteamGenerator, SG_Zone1, SG_Zone2]
+Sections = [Inlet, Core, Outlet, SteamGenerator, SG_Zone1]
 for Section in Sections:
  
     ##Particulate #[mg/kg] (ppm)

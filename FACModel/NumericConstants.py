@@ -151,3 +151,5 @@ ErosionConstant = 2.4e-11 #[g/cm^2 s]
 #In-core deposition constants
 KVap = 0.1
 Enrichment = 1
+
+TotalSGTubeNumber = 3542
