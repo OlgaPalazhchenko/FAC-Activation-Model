@@ -118,9 +118,10 @@ def OxideGrowth(Section, Saturations, BulkConcentrations):
             Section.MetalOxide.FeTotal = it.MetalOxideInterfaceConcentration(Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, Section.CorrRate)
             Section.CorrRate, Section.MetalOxide.MixedPotential = it.CorrosionRate(Section)
             
-        if Section == ld.SteamGenerator or Section==ld.SG_Zone1:
+        if Section in ld.SGZones:
             Section.MetalOxide.NiTotal = it.MetalOxideInterfaceConcentration(Section, "Ni", Section.SolutionOxide.NiTotal, Section.InnerOxThickness, Section.OuterOxThickness, Section.CorrRate)
-        else:
+        
+        elif Section == ld.Inlet or Section==ld.Outlet:
             Section.MetalOxide.NiTotal = [0]*Section.NodeNumber
             #MetalOxideCo = it.MetalOxideInterfaceConcentration(Section, "Co", SolutionOxideCoTotal, InnerOxThickness, OuterOxThickness, CorrRate)
                     

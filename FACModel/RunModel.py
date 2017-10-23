@@ -17,7 +17,7 @@ for Zone in ld.SGZones:
     Zone.DensityH2O = [ld.Density("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
     Zone.ViscosityH2O = [ld.Viscosity("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
     Zone.NernstConstant= [x*(2.303*nc.R/(2*nc.F)) for x in Zone.PrimaryBulkTemperature]
-   
+
 ##Initial Concentrations
 for Section in ld.Sections:    
     ##Temperature-dependent parameters            
@@ -51,7 +51,7 @@ for Section in ld.Sections:
         
         ##Initial RIHT temperature 
         if Section == ld.Inlet:
-            Section.PrimaryBulkTemperature = SGHX.EnergyBalance(ld.SteamGenerator.NodeNumber-1, Section.NodeNumber)
+            Section.PrimaryBulkTemperature = [SGHX.EnergyBalance(ld.SteamGenerator.NodeNumber-1)]*Section.NodeNumber
         
         if Section != ld.Outlet:
             if Interface == Section.SolutionOxide:
@@ -157,8 +157,7 @@ class RunModel():
         if self.Section1 == ld.Core:
             self.Section2.Bulk.CoTotal[0]=self.Section1.Bulk.CoTotal[end]+nc.CobaltWear
             self.Section2.Bulk.CrTotal[0]=self.Section1.Bulk.CrTotal[end]+nc.CobaltWear*(nc.FractionCr_Stellite/nc.FractionCo_Stellite)
-        ##
-        
+   
 #         else:
 #             ##Surface activities 
 #             self.Section1.MetalOxide.Co60 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
@@ -184,23 +183,21 @@ class RunModel():
             ##    
         
         ##SG heat transfer 
-        for Zone in ld.SGZones:
-            if self.Section1 == Zone:
-                #Sets input concentrations for all SG zones to be same as input of first (Outlet output)
-                Zone.Bulk.FeTotal[0] = ld.SteamGenerator.Bulk.FeTotal[0]
-                Zone.Bulk.NiTotal[0]= ld.SteamGenerator.Bulk.NiTotal[0]
-                Zone.Bulk.CoTotal[0] = ld.SteamGenerator.Bulk.CoTotal[0]
-                
-                self.Section1.PrimaryBulkTemperature = SGHX.TemperatureProfile(self.Section1, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness)
-                self.Section1.Bulk.FeSatFe3O4 = c.IronSolubility(self.Section1)
-#                 if j %500==0:
-#                     print ([i-273.15 for i in self.Section1.PrimaryBulkTemperature],j)
-#                     print ()
+#         if self.Section1 in ld.SGZones:   
+#             self.Section1.PrimaryBulkTemperature = SGHX.TemperatureProfile(self.Section1, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness)
+#             self.Section1.Bulk.FeSatFe3O4 = c.IronSolubility(self.Section1) 
+            
+#         if self.Section1 == ld.SG_Zone1:    
+#             if j %699==0: #(17520)
+#                 print ([i-273.15 for i in self.Section1.PrimaryBulkTemperature],j)
+#                 print (self.Section1.SolutionOxide.FeSatFe3O4, "FeSat S/O")
+#                 print(self.Section1.SolutionOxide.FeTotal, "FeTot S/O")
+#                 print()
         
         ##RIHT  
-        if self.Section1 == ld.Inlet:
-            self.Section1.PrimaryBulkTemperature = SGHX.EnergyBalance(end, self.Section1.NodeNumber)
-            self.Section1.Bulk.FeSatFe3O4 = c.IronSolubility(self.Section1)
+#         if self.Section1 == ld.Inlet:
+#             self.Section1.PrimaryBulkTemperature = SGHX.EnergyBalance(21, self.Section1.NodeNumber)
+#             self.Section1.Bulk.FeSatFe3O4 = c.IronSolubility(self.Section1)
         ##
         
         ##Deposit thickness around PHTS
@@ -215,44 +212,48 @@ class RunModel():
         self.Section1.ElapsedTime, self.Section1.SpallTime = RK4.Spall(self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime)
         ##
         
-    
-TotalTime = []
-SACo60 = [] 
-SACo58 = [] 
-SAFe59 = []
-SAFe55 = []
-SAMn54 = []
-SACr51 = []
-SANi63 = []       
+  
+# TotalTime = []
+# SACo60 = [] 
+# SACo58 = [] 
+# SAFe59 = []
+# SAFe55 = []
+# SAMn54 = []
+# SACr51 = []
+# SANi63 = []       
+
+RIHT = []
+T_SG = []
+T_SG1 =[]
+T_SG2 =[]
+T_SG3 = []
+coldlegoxide = []
+hotlegoxide = []
+FACrate = []
 
 import time
 start_time = time.time()
-for j in range(150):#nc.SimulationDuration
+for j in range(87*10):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator,  j)
-    #O = RunModel(ld.Outlet, ld.SG_Zone1, j)
-    
     SG = RunModel(ld.SteamGenerator, ld.Inlet, j)
-    SG1 = RunModel(ld.SG_Zone1, ld.Inlet, j)
-#     if j %1000==0:
-#         totalthicknessSG=[x+y for x,y in zip(SG1.Section1.OuterOxThickness, SG1.Section1.InnerOxThickness)]
-#         convertedtotalthicknessSG = ld.UnitConverter(SG1.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, totalthicknessSG, None, None, None)
-#   
-#         Corrosion= []
-#         Rates = [I.Section1.CorrRate, C.Section1.CorrRate, O.Section1.CorrRate, SG1.Section1.CorrRate]
-#         for Rate, Section in zip (Rates, Sections):
-#             x = ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None)
-#             Corrosion.append(x)
-#         CorrosionRate = Corrosion[0] + Corrosion[1] + Corrosion[2] + Corrosion[3]
-#   
-#         print (sum(convertedtotalthicknessSG[11:22])/(22-11), "average cold leg [um] oxide thickness", j)
-#         print (sum(ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, O.Section1.CorrRate, None, None, None, None))\
-#                /(O.Section1.NodeNumber), "average outlet corrosion rate [um/a]")
-#         print (CorrosionRate)
-#         print ()
-        
-    
+    if j %87==0: #8759
+        totalthicknessSG=[x+y for x,y in zip(SG.Section1.OuterOxThickness, SG.Section1.InnerOxThickness)]
+        convertedtotalthicknessSG = ld.UnitConverter(SG.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, totalthicknessSG, None, None, None)
+
+        RIHT = (SGHX.EnergyBalance(21))
+        print(RIHT-273.15, "RIHT")
+        print(ld.SteamGenerator.PrimaryBulkTemperature[21]-273.15, ld.SG_Zone1.PrimaryBulkTemperature[21]-273.15, \
+                  ld.SG_Zone2.PrimaryBulkTemperature[21]-273.15, ld.SG_Zone3.PrimaryBulkTemperature[21]-273.15)
+        print()
+        print(SG.Section1.SolutionOxide.FeTotal, "FeTotal")
+        print(SG.Section1.SolutionOxide.FeSatFe3O4, "FeSat")
+        print()
+        print (sum(convertedtotalthicknessSG[11:22])/(22-11), "Average SG cold leg [um] oxide thickness", j, "time [h]")
+        print (sum(ld.UnitConverter(O.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, O.Section1.CorrRate, None, None, None, None))\
+                   /(O.Section1.NodeNumber), "Average outlet corrosion rate [um/a]")
+        print()
 #     TotalTime.append(j/7000)# converts to EFPY
 #     SACo60.append(sum(S.Section1.MetalOxide.Co60)/S.Section1.NodeNumber)
 #     SACo58.append(sum(S.Section1.MetalOxide.Co58)/S.Section1.NodeNumber)
@@ -271,70 +272,78 @@ minutes = delta_time//60
 seconds = delta_time - 60*minutes
 print('%d:%d:%d' %(hours,minutes,seconds))
 
+Corrosion= []
+Rates = [I.Section1.CorrRate, C.Section1.CorrRate, O.Section1.CorrRate, SG.Section1.CorrRate]
+for Rate, Section in zip (Rates, ld.Sections):
+    x = ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None)
+    Corrosion.append(x)
+CorrosionRate = Corrosion[0] + Corrosion[1] + Corrosion[2] + Corrosion[3]
+print (CorrosionRate)
+print(-np.log10(O.Section1.SolutionOxide.ConcentrationH[0]), "Outlet pH")
+print([i-273.15 for i in SG.Section1.PrimaryBulkTemperature], "Temperature profile")
 
 
+# ActivityTime = TotalTime[0::3]
+# Co60SGActivity = SACo60[0::3]
+# Co58SGActivity = SACo58[0::3]
+# Fe59SGActivity = SAFe59[0::3]
+# Fe55SGActivity = SAFe55[0::3]
+# Mn54SGActivity = SAMn54[0::3]
+# Cr51SGActivity = SACr51[0::3]
+# Ni63SGActivity = SANi63[0::3]
 
-ActivityTime = TotalTime[0::3]
-Co60SGActivity = SACo60[0::3]
-Co58SGActivity = SACo58[0::3]
-Fe59SGActivity = SAFe59[0::3]
-Fe55SGActivity = SAFe55[0::3]
-Mn54SGActivity = SAMn54[0::3]
-Cr51SGActivity = SACr51[0::3]
-Ni63SGActivity = SANi63[0::3]
-
-LoopDistance = I.Section1.Length.magnitude + C.Section1.Length.magnitude + O.Section1.Length.magnitude + SG1.Section1.Length.magnitude
+LoopDistance = I.Section1.Length.magnitude + C.Section1.Length.magnitude + O.Section1.Length.magnitude + SG.Section1.Length.magnitude
 TotalLoopDistance = [i/100 for i in np.cumsum(LoopDistance)] #Distance down length of PHTS [m]
 
-BulkFeSat = [np.log10(i) for i in I.Section1.Bulk.FeSatFe3O4 + C.Section1.Bulk.FeSatFe3O4 + O.Section1.Bulk.FeSatFe3O4 + SG1.Section1.Bulk.FeSatFe3O4]
-BulkFeTotal = [np.log10(i) for i in I.Section1.Bulk.FeTotal + C.Section1.Bulk.FeTotal + O.Section1.Bulk.FeTotal + SG1.Section1.Bulk.FeTotal]
+BulkFeSat = [np.log10(i) for i in I.Section1.Bulk.FeSatFe3O4 + C.Section1.Bulk.FeSatFe3O4 + O.Section1.Bulk.FeSatFe3O4 + SG.Section1.Bulk.FeSatFe3O4]
+BulkFeTotal = [np.log10(i) for i in I.Section1.Bulk.FeTotal + C.Section1.Bulk.FeTotal + O.Section1.Bulk.FeTotal + SG.Section1.Bulk.FeTotal]
 SolutionOxideFeTotal = [np.log10(i) for i in I.Section1.SolutionOxide.FeTotal + C.Section1.SolutionOxide.FeTotal + \
-                        O.Section1.SolutionOxide.FeTotal + SG1.Section1.SolutionOxide.FeTotal]
+                        O.Section1.SolutionOxide.FeTotal + SG.Section1.SolutionOxide.FeTotal]
 SolutionOxideFeSat = [np.log10(i) for i in I.Section1.SolutionOxide.FeSatFe3O4 + C.Section1.SolutionOxide.FeSatFe3O4 + \
-                        O.Section1.SolutionOxide.FeSatFe3O4 + SG1.Section1.SolutionOxide.FeSatFe3O4]
+                        O.Section1.SolutionOxide.FeSatFe3O4 + SG.Section1.SolutionOxide.FeSatFe3O4]
 
-BulkNiTotal = [np.log10(i) for i in I.Section1.Bulk.NiTotal + C.Section1.Bulk.NiTotal + O.Section1.Bulk.NiTotal + SG1.Section1.Bulk.NiTotal]
+BulkNiTotal = [np.log10(i) for i in I.Section1.Bulk.NiTotal + C.Section1.Bulk.NiTotal + O.Section1.Bulk.NiTotal + SG.Section1.Bulk.NiTotal]
 SolutionOxideNiTotal = [np.log10(i) for i in I.Section1.SolutionOxide.NiTotal + C.Section1.SolutionOxide.NiTotal + \
-                        O.Section1.SolutionOxide.NiTotal + SG1.Section1.SolutionOxide.NiTotal]
+                        O.Section1.SolutionOxide.NiTotal + SG.Section1.SolutionOxide.NiTotal]
 SolutionOxideNiSat = [np.log10(i) for i in I.Section1.SolutionOxide.NiSatFerrite + C.Section1.SolutionOxide.NiSatFerrite + \
-                        O.Section1.SolutionOxide.NiSatFerrite + SG1.Section1.SolutionOxide.NiSatFerrite]
+                        O.Section1.SolutionOxide.NiSatFerrite + SG.Section1.SolutionOxide.NiSatFerrite]
 
-BulkCoTotal = [np.log10(i) for i in I.Section1.Bulk.CoTotal + C.Section1.Bulk.CoTotal + O.Section1.Bulk.CoTotal + SG1.Section1.Bulk.CoTotal]
+BulkCoTotal = [np.log10(i) for i in I.Section1.Bulk.CoTotal + C.Section1.Bulk.CoTotal + O.Section1.Bulk.CoTotal + SG.Section1.Bulk.CoTotal]
 SolutionOxideCoTotal = [np.log10(i) for i in I.Section1.SolutionOxide.CoTotal + C.Section1.SolutionOxide.CoTotal + \
-                        O.Section1.SolutionOxide.CoTotal + SG1.Section1.SolutionOxide.CoTotal]
+                        O.Section1.SolutionOxide.CoTotal + SG.Section1.SolutionOxide.CoTotal]
 SolutionOxideCoSat = [np.log10(i) for i in I.Section1.SolutionOxide.CoSatFerrite + C.Section1.SolutionOxide.CoSatFerrite + \
-                        O.Section1.SolutionOxide.CoSatFerrite + SG1.Section1.SolutionOxide.CoSatFerrite]
+                        O.Section1.SolutionOxide.CoSatFerrite + SG.Section1.SolutionOxide.CoSatFerrite]
 
 
-BulkCrTotal = [np.log10(i) for i in I.Section1.Bulk.CrTotal + C.Section1.Bulk.CrTotal + O.Section1.Bulk.CrTotal + SG1.Section1.Bulk.CrTotal]
+BulkCrTotal = [np.log10(i) for i in I.Section1.Bulk.CrTotal + C.Section1.Bulk.CrTotal + O.Section1.Bulk.CrTotal + SG.Section1.Bulk.CrTotal]
 
 SolutionOxideCrSat = [np.log10(i) for i in I.Section1.SolutionOxide.CrSat + C.Section1.SolutionOxide.CrSat + O.Section1.SolutionOxide.CrSat + \
-                      SG1.Section1.SolutionOxide.CrSat]
+                      SG.Section1.SolutionOxide.CrSat]
 
 
 InnerOxide = []
-InnerOxideThicknesses = [I.Section1.InnerOxThickness, C.Section1.InnerOxThickness, O.Section1.InnerOxThickness, SG1.Section1.InnerOxThickness]
+InnerOxideThicknesses = [I.Section1.InnerOxThickness, C.Section1.InnerOxThickness, O.Section1.InnerOxThickness, SG.Section1.InnerOxThickness]
 for Thickness, Sect in zip (InnerOxideThicknesses, ld.Sections):
     z = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
     InnerOxide.append(z)
 InnerOxideThickness = InnerOxide[0]+InnerOxide[1]+InnerOxide[2]+InnerOxide[3]
 
 OuterOxide = []
-OuterOxideThicknesses = [I.Section1.OuterOxThickness, C.Section1.OuterOxThickness, O.Section1.OuterOxThickness, SG1.Section1.OuterOxThickness]
+OuterOxideThicknesses = [I.Section1.OuterOxThickness, C.Section1.OuterOxThickness, O.Section1.OuterOxThickness, SG.Section1.OuterOxThickness]
 for Thickness, Sect in zip (OuterOxideThicknesses, ld.Sections):
     q = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
     OuterOxide.append(q)
 OuterOxideThickness = OuterOxide[0]+OuterOxide[1]+OuterOxide[2]+OuterOxide[3]
 
 Cobalt = []
-CoThicknesses = [I.Section1.CoThickness, C.Section1.CoThickness, O.Section1.CoThickness, SG1.Section1.CoThickness]
+CoThicknesses = [I.Section1.CoThickness, C.Section1.CoThickness, O.Section1.CoThickness, SG.Section1.CoThickness]
 for Thickness, Sect in zip (CoThicknesses, ld.Sections):
     c = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
     Cobalt.append(c)
 CobaltThickness = Cobalt[0]+Cobalt[1]+Cobalt[2]+Cobalt[3]
 
 Nickel = []
-NiThicknesses = [I.Section1.NiThickness, C.Section1.NiThickness, O.Section1.NiThickness, SG1.Section1.NiThickness]
+NiThicknesses = [I.Section1.NiThickness, C.Section1.NiThickness, O.Section1.NiThickness, SG.Section1.NiThickness]
 for Thickness, Sect in zip (NiThicknesses, ld.Sections):
     n = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
     Nickel.append(n)
@@ -415,75 +424,4 @@ plt.show()
 # plt.tight_layout()
 # plt.show()
 
-
-
-
-
-
-# fig3, ax1 = plt.subplots()
-# #ax3 = fig2.add_subplot(222)
-# ax1.plot(TotalLoopDistance, SpallTime, linestyle = '-', marker = 'o', color = 'b', label='Spall Time')
-# ax1.plot(TotalLoopDistance, ElapsedTime, linestyle = '--', marker = 'o', color = 'r', label = 'Elapsed Time')
-# ax1.set_xlabel('Distance (m)')
-# ax1.set_ylabel('Spalling and Elapsed Time (h)')
-# ax1.legend()
-# plt.tight_layout()
-# plt.show()
-
-
-# plt.plot(TotalLoopDistance, CorrosionRate, 'ro')
-# #plt.axis([4, 69, -2, 3]) 
-# plt.show()
-
-
-
-
-
-
-
-
-# def OxideThicknessConverter(OxideType, OxideThicknesses, Sects):
-#     InnerOxide = []
-#     OxideDensity = []
-#    
-#     for Thickness, Sect, Section in zip(OxideThicknesses, Sects, [ld.Inlet, ld.Core, ld.Outlet, ld.SteamGenerator]):
-#         if OxideType == "Inner":
-#             for i in range(Sect.NodeNumber):
-#                 if Sect.OuterOxThickness == 0 and (Sect.CoThickness[i] + Sect.NiThickness[i] > 0):
-#                     x = nc.NiFe2O4Density
-#                 elif Sect == S.Section1: 
-#                     x = nc.NiFe2O4Density
-#                 else:
-#                     x = nc.Fe3O4Density
-#         
-#             OxideDensity.append(x)
-#             
-#             if Sect == C.Section1:
-#                 y = 0
-#             else:
-#                 y1 = [c.FractionChromite(Section)*i for i in ld.UnitConverter(Sect, "Oxide Thickness Grams", "Oxide Thickness Micrometers", None, None, \
-#                                                                           Thickness, [nc.FeCr2O4Density]*Sect.NodeNumber, None)]
-#                 y2 = [(1-c.FractionChromite(Section))*i for i in ld.UnitConverter(Sect, "Oxide Thickness Grams", "Oxide Thickness Micrometers", None, None, \
-#                                                                           Thickness, OxideDensity, None)]
-#             
-#                 y = [j+k for j,k in zip(y1, y2)]
-#             
-#             InnerOxide.append(y)
-#         
-#         
-#         else:
-#             if Sect.CoThickness[i] + Sect.NiThickness[i] > 0:
-#                 q = nc.NiFe2O4Density
-#             else:
-#                 q=nc.Fe3O4Density
-#             
-#             OxideDensity.append(q)
-#             
-#             z= ld.UnitConverter(Sect, "Oxide Thickness Grams", "Oxide Thickness Micrometers", None, None, Thickness, OxideDensity, None)
-#             
-#             InnerOxide.append(z)
-#                
-#     return InnerOxide
-# 
-# print (OxideThicknessConverter("Inner", InnerOxideThicknesses, [I.Section1, C.Section1, O.Section1, S.Section1]))
 

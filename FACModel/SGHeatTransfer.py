@@ -219,7 +219,7 @@ def WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerA
         
         if abs(RE1) <= 0.01 and abs(RE2) <= 0.01:
             R_F.magnitude = FoulingResistance(InnerAccumulation, OuterAccumulation)[i] #[cm^2 K/W] (100*100)*(1e-5)
-             
+            
             inverseU_total = (PrimaryConvectionResistance(Section, "Dittus-Boetler", PrimaryT_film, i) + ConductionResistance(Section, T_PrimaryWall, i) + \
                     SecondaryConvectionResistance(Section, SecondaryT_film, T_SecondaryWall, x_in, i))*OuterArea(Section)[i] + R_F.magnitude
                        
@@ -292,6 +292,7 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation):
                 T_SecondaryBulkIn=T_SecondaryBulkOut 
                 #print (T_PrimaryBulkOutEnd-273.15, T_SecondaryBulkOutEnd-273.15)
             
+            if i==20: print(U)
             T_SecondaryBulkOut=T_SecondaryBulkOut-i
             #T_PrimaryBulkOut = T_SecondaryBulkOut+ (T_PrimaryBulkIn-T_SecondaryBulkIn)*(1+U*OuterArea(Section)[i]*nc.TotalSGTubeNumber*((1/C_min) - (1/C_max)))
             T_PrimaryBulkOut = T_PrimaryBulkIn-(U*OuterArea(Section)[i]*nc.TotalSGTubeNumber/(Cp_h*MassFlow_h.magnitude))*(T_PrimaryBulkIn-T_SecondaryBulkIn)
@@ -316,13 +317,16 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation):
 #     print ([j-273.15 for j in SecondaryBulk])
 #     print ([j-273.15 for j in SecondaryWall])   
     return PrimaryBulk  
+# TemperatureProfile(ld.SteamGenerator, ld.SteamGenerator.InnerOxThickness, ld.SteamGenerator.OuterOxThickness)
 
-
-def EnergyBalance(OutputNode, NodeNumber):
+def EnergyBalance(OutputNode):
     Balance = []
     for Zone in ld.SGZones:
+        Zone.PrimaryBulkTemperature = TemperatureProfile(Zone, ld.SGZones[0].InnerOxThickness, ld.SGZones[0].OuterOxThickness)
         x = (Zone.TubeNumber/nc.TotalSGTubeNumber)*MassFlow_h.magnitude*ld.Enthalpy("PHT", Zone.PrimaryBulkTemperature[OutputNode])
         Balance.append(x)
         Enthalpy = sum(Balance)/MassFlow_h.magnitude
-    OutputTemperature = [ld.TemperaturefromEnthalpy("PHT", Enthalpy)]*NodeNumber
-    return OutputTemperature
+    RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy)
+    return RIHT
+
+
