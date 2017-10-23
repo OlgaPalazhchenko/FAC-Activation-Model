@@ -67,7 +67,7 @@ def FoulingResistance(InnerAccumulation, OuterAccumulation):
     #[cm]/ [W/cm K] =[cm^2 K/W]
     InnerFouling = [i/ThermalConductivity(None, "magnetite") for i in InnerThickness]
     OuterFouling =  [i/ThermalConductivity(None, "magnetite") for i in OuterThickness]
-    return InnerFouling + OuterFouling
+    return [x+y for x,y in zip(InnerFouling, OuterFouling)]
 
 
 def ConductionResistance(Section, Twall, i):
@@ -226,7 +226,7 @@ def WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerA
             U_total.magnitude = 1/inverseU_total#[W/ cm^2 K]
 #             if i ==19:print (U_total.magnitude, PrimaryConvectionResistance(Section, "Dittus-Boetler", PrimaryT_film, i), \
 #                    SecondaryConvectionResistance(Section, SecondaryT_film, T_SecondaryWall, x_in, i), ConductionResistance(Section, T_PrimaryWall, i))
-            
+            #print (inverseU_total,R_F.magnitude, i)
             return T_PrimaryWall, T_SecondaryWall, U_total.magnitude
             
 
@@ -275,6 +275,7 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation):
             SecondaryWall.append(T_wc)
         else:
             if Section.Length.label[i] == "preheater start": 
+                #print(U,i)
                 C_min= Cp_c*MassFlow_c.magnitude #[J/g K]*[g/s] = [J/Ks] ] [W/K]
                 C_max = Cp_h*MassFlow_h.magnitude
                 C_r = C_min/C_max
@@ -292,7 +293,6 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation):
                 T_SecondaryBulkIn=T_SecondaryBulkOut 
                 #print (T_PrimaryBulkOutEnd-273.15, T_SecondaryBulkOutEnd-273.15)
             
-            if i==20: print(U)
             T_SecondaryBulkOut=T_SecondaryBulkOut-i
             #T_PrimaryBulkOut = T_SecondaryBulkOut+ (T_PrimaryBulkIn-T_SecondaryBulkIn)*(1+U*OuterArea(Section)[i]*nc.TotalSGTubeNumber*((1/C_min) - (1/C_max)))
             T_PrimaryBulkOut = T_PrimaryBulkIn-(U*OuterArea(Section)[i]*nc.TotalSGTubeNumber/(Cp_h*MassFlow_h.magnitude))*(T_PrimaryBulkIn-T_SecondaryBulkIn)
@@ -328,5 +328,3 @@ def EnergyBalance(OutputNode):
         Enthalpy = sum(Balance)/MassFlow_h.magnitude
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy)
     return RIHT
-
-

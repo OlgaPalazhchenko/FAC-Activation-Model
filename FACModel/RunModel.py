@@ -233,23 +233,22 @@ FACrate = []
 
 import time
 start_time = time.time()
-for j in range(87*10):#nc.SimulationDuration
+for j in range(8760*10):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator,  j)
     SG = RunModel(ld.SteamGenerator, ld.Inlet, j)
-    if j %87==0: #8759
+    if j %8759==0: #8759
         totalthicknessSG=[x+y for x,y in zip(SG.Section1.OuterOxThickness, SG.Section1.InnerOxThickness)]
         convertedtotalthicknessSG = ld.UnitConverter(SG.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, totalthicknessSG, None, None, None)
 
         RIHT = (SGHX.EnergyBalance(21))
-        print(RIHT-273.15, "RIHT")
+        print(RIHT-273.15,  "RIHT")
         print(ld.SteamGenerator.PrimaryBulkTemperature[21]-273.15, ld.SG_Zone1.PrimaryBulkTemperature[21]-273.15, \
                   ld.SG_Zone2.PrimaryBulkTemperature[21]-273.15, ld.SG_Zone3.PrimaryBulkTemperature[21]-273.15)
         print()
-        print(SG.Section1.SolutionOxide.FeTotal, "FeTotal")
-        print(SG.Section1.SolutionOxide.FeSatFe3O4, "FeSat")
-        print()
+        #print(SG.Section1.SolutionOxide.FeTotal, "FeTotal")
+        #print(SG.Section1.SolutionOxide.FeSatFe3O4, "FeSat")
         print (sum(convertedtotalthicknessSG[11:22])/(22-11), "Average SG cold leg [um] oxide thickness", j, "time [h]")
         print (sum(ld.UnitConverter(O.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, O.Section1.CorrRate, None, None, None, None))\
                    /(O.Section1.NodeNumber), "Average outlet corrosion rate [um/a]")
