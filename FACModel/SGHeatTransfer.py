@@ -4,6 +4,7 @@ import NumericConstants as nc
 
 T_sat = 260.1 + 273.15
 T_PreheaterIn = 186.5 + 273.15
+T_PrimaryIn = 310 + 273.15
 
 h_i = ld.SGParameters()
 h_o = ld.SGParameters()
@@ -16,6 +17,7 @@ ShellDiameter = ld.SGParameters()
 MassFlux_c = ld.SGParameters() 
 EnthalpySaturatedSteam = ld.SGParameters()
 MassFlow_h = ld.SGParameters()
+MasssFlow_dividerplate = ld.SGParameters()
 EquivalentDiameter = ld.SGParameters()
 TubePitch = ld.SGParameters()
 
@@ -30,10 +32,9 @@ R_F.unit = "cm^2 K/W"
 MassFlow_c.magnitude = 239.25*1000 
 MassFlow_h.magnitude = 1719.25*1000
 
-
 ShellDiameter.magnitude = 2.28*100
 
-for i in [MassFlow_c, MassFlow_h]:
+for i in [MassFlow_c, MassFlow_h, MasssFlow_dividerplate]:
     i.unit = "g/s"
 
 for i in [ShellDiameter, EquivalentDiameter,TubePitch]:
@@ -110,7 +111,6 @@ def SecondaryConvectionResistance(Section, Tfilm, Twall, x_in, i):
         S_c = 0.5373*D_s*(1-(Section.OuterDiameter[i]/100)/0.0219)
         G_c = MassFlow_c.magnitude/1000/S_c
         G_e = np.sqrt(G_b*G_c)*1000/(100**2)       
-        #G_e = 1512*1000/(100**2) #[g/cm^2 s] weighted average mass velocity in preheater 
         
         #First two (raised to exponent) terms are unitless 
         #[W/cm K]/[cm] = [W/cm^2 K]
@@ -119,7 +119,6 @@ def SecondaryConvectionResistance(Section, Tfilm, Twall, x_in, i):
         (ld.HeatCapacity("SHT", Tfilm)*ld.Viscosity("water", "SHT", Tfilm)/ThermalConductivity(Tfilm, "water"))**0.33
     
     else:
-        
         if i<=10:
             x= x_in*100
         else:
@@ -129,11 +128,11 @@ def SecondaryConvectionResistance(Section, Tfilm, Twall, x_in, i):
         p_crit = 22.0640 #[MPa]
         #V*rho =[cm/s]([cm^2]*[g/cm^3] = [g/s]
         
-        F = (1+(x*Prandtl(Section, T_sat, i)*((ld.Density("water", "SHT", T_sat)/rho_v)-1)))**0.35
+        F = (1+(x*Prandtl(T_sat, i)*((ld.Density("water", "SHT", T_sat)/rho_v)-1)))**0.35
        
         Re_D = EquivalentDiameter.magnitude*MassFlux_c.magnitude/ld.Viscosity("water", "SHT", T_sat)#4*MassFlow/((ld.Viscosity("water", "SHT", T_sat)/1000)*np.pi*Shell_ID)
         
-        h_l = 0.023*ld.ThermalConductivityH2O("SHT", T_sat)*((Re_D)**0.8)*(Prandtl(Section, T_sat, i)**0.4)/EquivalentDiameter.magnitude #[W/cm^2 K]
+        h_l = 0.023*ld.ThermalConductivityH2O("SHT", T_sat)*((Re_D)**0.8)*(Prandtl(T_sat, i)**0.4)/EquivalentDiameter.magnitude #[W/cm^2 K]
         
         Q_prime =F*h_l*(Twall-T_sat) #[W/cm^2]
         S = (1+0.055*(F**0.1)*(Re_D)**0.16)**(-1) 
@@ -149,13 +148,12 @@ def SecondaryConvectionResistance(Section, Tfilm, Twall, x_in, i):
    
 
 def NusseltNumber(Section, correlation, Temperature,i):
+#     ViscosityH2O = ld.Viscosity("water", "PHT", Temperature)
+#     DensityH2O = ld.Density("water", "PHT", Temperature)
     
-    ViscosityH2O = ld.Viscosity("water", "PHT", Temperature)
-    DensityH2O = ld.Density("water", "PHT", Temperature)
-    
-    Re_D = Section.Velocity[i]*Section.Diameter[i]/(ViscosityH2O*DensityH2O) 
-#     MassFlux_h = MassFlow_h.magnitude/(NumberTubes*((np.pi/4)*(Section.Diameter[i]**2))) #[g/cm^2 s] 
-#     Re_D =[(MassFlux_h/ld.Viscosity("water", "PHT", Temperature))*i for i in Section.Diameter] 
+    #Re_D = Section.Velocity[i]*Section.Diameter[i]/(ViscosityH2O*DensityH2O) 
+    MassFlux_h = MassFlow_h.magnitude/(nc.TotalSGTubeNumber*((np.pi/4)*(Section.Diameter[i]**2))) #[g/cm^2 s] 
+    Re_D =[(MassFlux_h/ld.Viscosity("water", "PHT", Temperature))*i for i in Section.Diameter] 
 #     print (Re_D[i], Re_[i])
     
     if correlation == "Dittus-Boetler":
@@ -167,11 +165,11 @@ def NusseltNumber(Section, correlation, Temperature,i):
     C = 0.023
     m = 4/5
     
-    Nu = C*(Re_D**m)*((Prandtl(Section, Temperature, i))**n)
+    Nu = C*(Re_D[i]**m)*((Prandtl(Temperature, i))**n)
     return Nu
 
 
-def Prandtl(Section, Temperature, i):
+def Prandtl(Temperature, i):
     #Need a better reference for Cp/viscosity data 
     ViscosityH2O = ld.Viscosity("water", "PHT", Temperature)
     Pr =  ld.HeatCapacity("PHT", Temperature)*ViscosityH2O/ld.ThermalConductivityH2O("PHT", Temperature)
@@ -230,8 +228,7 @@ def WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerA
             return T_PrimaryWall, T_SecondaryWall, U_total.magnitude
             
 
-    
-def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation):
+def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakagecorrection):
     PrimaryWall = []
     PrimaryBulk = []
     SecondaryBulk = []
@@ -250,18 +247,15 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation):
         
         if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater":    
             
-            T_PrimaryBulkOut = T_PrimaryBulkIn-(U*(T_PrimaryBulkIn-T_SecondaryBulkIn)*OuterArea(Section)[i]*nc.TotalSGTubeNumber)/(Cp_h*MassFlow_h.magnitude)
+            T_PrimaryBulkOut = T_PrimaryBulkIn-(U*(T_PrimaryBulkIn-T_SecondaryBulkIn)*OuterArea(Section)[i]*nc.TotalSGTubeNumber)/(Cp_h*m_h_leakagecorrection)
             #Ti = Ti+1 = Tsat    
             T_SecondaryBulkOut = T_sat
             
             #for one tube --> multiply by NumberTubes = for all tubes
-            #Q = MassFlow_h.magnitude*Cp_h*(T_PrimaryBulkIn-T_PrimaryBulkOut)
+            #Q = m_h_leakagecorrection*Cp_h*(T_PrimaryBulkIn-T_PrimaryBulkOut)
 
             #for one tube (U based on one tube) (heat transfer area x number tubes) --> would cancel out in U calc (1/h*NA) NA
             Q = U*(T_PrimaryBulkOut-T_SecondaryBulkOut)*OuterArea(Section)[i]*nc.TotalSGTubeNumber 
-            
-            #+Q2+Q3   
-            #Q = MassFlow_h.magnitude*ld.HeatCapacity("PHT", T_PrimaryBulkIn)
            
             x_out = x_in + Q/(MassFlow_c.magnitude*EnthalpySaturatedSteam.magnitude)
             
@@ -277,7 +271,7 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation):
             if Section.Length.label[i] == "preheater start": 
                 #print(U,i)
                 C_min= Cp_c*MassFlow_c.magnitude #[J/g K]*[g/s] = [J/Ks] ] [W/K]
-                C_max = Cp_h*MassFlow_h.magnitude
+                C_max = Cp_h* m_h_leakagecorrection
                 C_r = C_min/C_max
                 Q_max = C_min*(T_PrimaryBulkIn-T_PreheaterIn)
                 TotalArea= sum(OuterArea(Section)[i:Section.NodeNumber]) 
@@ -287,15 +281,14 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation):
                 #eta = 1-np.exp(((NTU**0.28)/C_r)*(np.exp(-C_r*(NTU**0.78))-1))
                 Q_NTU = eta*Q_max
         
-                T_PrimaryBulkOutEnd = T_PrimaryBulkIn - Q_NTU/(MassFlow_h.magnitude*Cp_h)
+                T_PrimaryBulkOutEnd = T_PrimaryBulkIn - Q_NTU/(m_h_leakagecorrection*Cp_h)
                 T_SecondaryBulkOutEnd = T_PreheaterIn + Q_NTU/(MassFlow_c.magnitude*Cp_c)
-                T_SecondaryBulkOut= T_SecondaryBulkOutEnd
-                T_SecondaryBulkIn=T_SecondaryBulkOut 
+                T_SecondaryBulkIn = T_SecondaryBulkOutEnd
                 #print (T_PrimaryBulkOutEnd-273.15, T_SecondaryBulkOutEnd-273.15)
             
             T_SecondaryBulkOut=T_SecondaryBulkOut-i
             #T_PrimaryBulkOut = T_SecondaryBulkOut+ (T_PrimaryBulkIn-T_SecondaryBulkIn)*(1+U*OuterArea(Section)[i]*nc.TotalSGTubeNumber*((1/C_min) - (1/C_max)))
-            T_PrimaryBulkOut = T_PrimaryBulkIn-(U*OuterArea(Section)[i]*nc.TotalSGTubeNumber/(Cp_h*MassFlow_h.magnitude))*(T_PrimaryBulkIn-T_SecondaryBulkIn)
+            T_PrimaryBulkOut = T_PrimaryBulkIn-(U*OuterArea(Section)[i]*nc.TotalSGTubeNumber/(Cp_h* m_h_leakagecorrection))*(T_PrimaryBulkIn-T_SecondaryBulkIn)
             
             T_PrimaryBulkIn=T_PrimaryBulkOut
             T_SecondaryBulkIn = T_SecondaryBulkOut
@@ -310,21 +303,26 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation):
             PrimaryWall.append(T_wh)
             SecondaryWall.append(T_wc)
     
-      
 #     print ([j-273.15 for j in PrimaryBulk])
 #     print ([j-273.15 for j in PrimaryWall])
 #     print ()
 #     print ([j-273.15 for j in SecondaryBulk])
-#     print ([j-273.15 for j in SecondaryWall])   
+#     print ([j-273.15 for j in SecondaryWall])
+#     print()   
     return PrimaryBulk  
-# TemperatureProfile(ld.SteamGenerator, ld.SteamGenerator.InnerOxThickness, ld.SteamGenerator.OuterOxThickness)
 
-def EnergyBalance(OutputNode):
+def EnergyBalance(OutputNode, j):
+    InitialLeakage = 0.03
+    YearlyRateLeakage =0.0065
+    Leakage = InitialLeakage + (j/8760)*YearlyRateLeakage   
+    MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude*Leakage
+    m_h_leakagecorrection = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude
+    
     Balance = []
     for Zone in ld.SGZones:
-        Zone.PrimaryBulkTemperature = TemperatureProfile(Zone, ld.SGZones[0].InnerOxThickness, ld.SGZones[0].OuterOxThickness)
-        x = (Zone.TubeNumber/nc.TotalSGTubeNumber)*MassFlow_h.magnitude*ld.Enthalpy("PHT", Zone.PrimaryBulkTemperature[OutputNode])
+        Zone.PrimaryBulkTemperature = TemperatureProfile(Zone, ld.SGZones[0].InnerOxThickness, ld.SGZones[0].OuterOxThickness,  m_h_leakagecorrection)
+        x = (Zone.TubeNumber/nc.TotalSGTubeNumber)*m_h_leakagecorrection*ld.Enthalpy("PHT", Zone.PrimaryBulkTemperature[OutputNode])
         Balance.append(x)
-        Enthalpy = sum(Balance)/MassFlow_h.magnitude
+        Enthalpy = (sum(Balance) + MasssFlow_dividerplate.magnitude*ld.Enthalpy("PHT", T_PrimaryIn))/ MassFlow_h.magnitude
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy)
     return RIHT

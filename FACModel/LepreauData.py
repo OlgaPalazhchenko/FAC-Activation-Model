@@ -10,7 +10,7 @@ class SGParameters():
         self.steam_quality = None
 
 PrimarySidePressure = 10 #MPa
-SecondarySidePressure= 4.70 #MPa
+SecondarySidePressure= 4.593 #MPa
 
 SizingParameters = open('SizingParameters.txt','r')      
 SizingParametersReader = list(csv.reader(SizingParameters, delimiter = ',')) #Assign file data to list, Reader[row][column], delimiter = comma 

@@ -13,7 +13,7 @@ rc('mathtext', default='regular')
 
 ##Initial Temperatures and T-dependent parametrs in SG zones
 for Zone in ld.SGZones:
-    Zone.PrimaryBulkTemperature = SGHX.TemperatureProfile(Zone, Zone.InnerOxThickness, Zone.OuterOxThickness)
+    Zone.PrimaryBulkTemperature = SGHX.TemperatureProfile(Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, SGHX.MassFlow_h.magnitude-0.03*SGHX.MassFlow_h.magnitude)
     Zone.DensityH2O = [ld.Density("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
     Zone.ViscosityH2O = [ld.Viscosity("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
     Zone.NernstConstant= [x*(2.303*nc.R/(2*nc.F)) for x in Zone.PrimaryBulkTemperature]
@@ -51,7 +51,7 @@ for Section in ld.Sections:
         
         ##Initial RIHT temperature 
         if Section == ld.Inlet:
-            Section.PrimaryBulkTemperature = [SGHX.EnergyBalance(ld.SteamGenerator.NodeNumber-1)]*Section.NodeNumber
+            Section.PrimaryBulkTemperature = [SGHX.EnergyBalance(ld.SteamGenerator.NodeNumber-1, 0)]*Section.NodeNumber
         
         if Section != ld.Outlet:
             if Interface == Section.SolutionOxide:
@@ -222,15 +222,6 @@ class RunModel():
 # SACr51 = []
 # SANi63 = []       
 
-RIHT = []
-T_SG = []
-T_SG1 =[]
-T_SG2 =[]
-T_SG3 = []
-coldlegoxide = []
-hotlegoxide = []
-FACrate = []
-
 import time
 start_time = time.time()
 for j in range(8760*10):#nc.SimulationDuration
@@ -242,7 +233,7 @@ for j in range(8760*10):#nc.SimulationDuration
         totalthicknessSG=[x+y for x,y in zip(SG.Section1.OuterOxThickness, SG.Section1.InnerOxThickness)]
         convertedtotalthicknessSG = ld.UnitConverter(SG.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, totalthicknessSG, None, None, None)
 
-        RIHT = (SGHX.EnergyBalance(21))
+        RIHT = (SGHX.EnergyBalance(21, j))
         print(RIHT-273.15,  "RIHT")
         print(ld.SteamGenerator.PrimaryBulkTemperature[21]-273.15, ld.SG_Zone1.PrimaryBulkTemperature[21]-273.15, \
                   ld.SG_Zone2.PrimaryBulkTemperature[21]-273.15, ld.SG_Zone3.PrimaryBulkTemperature[21]-273.15)
