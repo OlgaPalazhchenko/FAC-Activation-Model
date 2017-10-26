@@ -213,6 +213,7 @@ def CorrosionRate(Section):
     rate = [x*y for x,y in zip(CorrosionCurrent, Constant)] #[g/cm^2*s] 
     if Section == ld.Core:
         rate = [0]*Section.NodeNumber
-    
+    if Section == ld.Outlet:
+        rate = [3e-9]*Section.NodeNumber
     return rate, MixedECP 
     

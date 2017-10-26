@@ -224,12 +224,12 @@ class RunModel():
 
 import time
 start_time = time.time()
-for j in range(210):#nc.SimulationDuration
+for j in range(8760*1):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator,  j)
     SG = RunModel(ld.SteamGenerator, ld.Inlet, j)
-    if j %200==0: #8759
+    if j %500==0: #8759
         totalthicknessSG=[x+y for x,y in zip(SG.Section1.OuterOxThickness, SG.Section1.InnerOxThickness)]
         convertedtotalthicknessSG = ld.UnitConverter(SG.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, totalthicknessSG, None, None, None)
  
@@ -271,8 +271,11 @@ CorrosionRate = Corrosion[0] + Corrosion[1] + Corrosion[2] + Corrosion[3]
 print (CorrosionRate)
 print(-np.log10(O.Section1.SolutionOxide.ConcentrationH[0]), "Outlet pH")
 print([i-273.15 for i in SG.Section1.PrimaryBulkTemperature], "Temperature profile")
-
-
+print()
+print (SG.Section1.SolutionOxide.FeTotal, "FeTot")
+print (SG.Section1.SolutionOxide.FeSatFe3O4, "FeSat")
+print (SG.Section1.InnerOxThickness, "InnerOx")
+print(SG.Section1.OuterOxThickness, "OuterOx")
 # ActivityTime = TotalTime[0::3]
 # Co60SGActivity = SACo60[0::3]
 # Co58SGActivity = SACo58[0::3]
