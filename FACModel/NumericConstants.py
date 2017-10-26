@@ -126,14 +126,14 @@ SAFactor = 1.73 #surface area factor
 CobaltWear = 0.0000000015 #mol/kg (spike input term)
 
 #Activation Energies [J/mol]
-ActivationEnergyFe = 264525.6598
-ActivationEnergyH2onFe = 261952.0037
+ActivationEnergyFe = 264525.6598#at 80 um/a = 266254.4854
+ActivationEnergyH2onFe = 259854.1543 #at 80 um/a = 265246.0692
 
 DissolutionActivationEnergyFe3O4 = 131838.7907
 DissolutionActivationEnergyH2onFe3O4 =285989.8292
 
 PrecipitationActivationEnergyFe3O4 = 179876.4692
-PrecipitationActivationEnergyH2onFe3O4 = 279573.2157
+PrecipitationActivationEnergyH2onFe3O4 = 281688.6659
 
 ActivationEnergyAlloy800 = 291941.6273
 ActivationEnergyH2onAlloy800 = 279425.4806

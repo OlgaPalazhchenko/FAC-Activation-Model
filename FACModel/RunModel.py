@@ -224,15 +224,15 @@ class RunModel():
 
 import time
 start_time = time.time()
-for j in range(8760*10):#nc.SimulationDuration
+for j in range(210):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator,  j)
     SG = RunModel(ld.SteamGenerator, ld.Inlet, j)
-    if j %8759==0: #8759
+    if j %200==0: #8759
         totalthicknessSG=[x+y for x,y in zip(SG.Section1.OuterOxThickness, SG.Section1.InnerOxThickness)]
         convertedtotalthicknessSG = ld.UnitConverter(SG.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, totalthicknessSG, None, None, None)
-
+ 
         RIHT = (SGHX.EnergyBalance(21, j))
         print(RIHT-273.15,  "RIHT")
         print(ld.SteamGenerator.PrimaryBulkTemperature[21]-273.15, ld.SG_Zone1.PrimaryBulkTemperature[21]-273.15, \

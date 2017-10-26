@@ -99,7 +99,6 @@ def SecondaryConvectionResistance(Section, Tfilm, Twall, x_in, i):
 
     EquivalentDiameter.magnitude = 4*((TubePitch.magnitude**2)-(np.pi*(Section.OuterDiameter[i]**2))/4)/(np.pi*Section.OuterDiameter[i])
     
-    
     if Section.Length.label[i] == "preheater" or Section.Length.label[i] == "preheater start": #from Silpsrikul thesis
         #Based on PLGS data and Silpsrikul calculations 
         f_b = 0.2119 #fraction of cross-sectional area of shell occupied by a baffle window
@@ -122,7 +121,7 @@ def SecondaryConvectionResistance(Section, Tfilm, Twall, x_in, i):
         if i<=10:
             x= x_in*100
         else:
-            x=24-i
+            x=24-1.15*i
         
         rho_v = 1000*23.753/(100**3) #[g/cm^3]
         p_crit = 22.0640 #[MPa]
@@ -133,7 +132,7 @@ def SecondaryConvectionResistance(Section, Tfilm, Twall, x_in, i):
         Re_D = EquivalentDiameter.magnitude*MassFlux_c.magnitude/ld.Viscosity("water", "SHT", T_sat)#4*MassFlow/((ld.Viscosity("water", "SHT", T_sat)/1000)*np.pi*Shell_ID)
         
         h_l = 0.023*ld.ThermalConductivityH2O("SHT", T_sat)*((Re_D)**0.8)*(Prandtl(T_sat, i)**0.4)/EquivalentDiameter.magnitude #[W/cm^2 K]
-        
+      
         Q_prime =F*h_l*(Twall-T_sat) #[W/cm^2]
         S = (1+0.055*(F**0.1)*(Re_D)**0.16)**(-1) 
         A_p = (55*((4.70/p_crit)**0.12)*((-np.log10(4.70/p_crit))**(-0.55))*(nc.H2MolarMass)**(-0.5))/(100**2)
@@ -234,7 +233,7 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakag
     SecondaryBulk = []
     SecondaryWall = []
     
-    for i in range(Section.NodeNumber):
+    for i in range(Section.NodeNumber-1):
         if i == 0:
             #Temperatures entering SG --> not first node temps.
             T_PrimaryBulkIn = 583.15 #[K]
@@ -245,7 +244,7 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakag
         Cp_c = ld.HeatCapacity("SHT", T_SecondaryBulkIn)
         T_wh, T_wc, U = WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerAccumulation, OuterAccumulation)
         
-        if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater":    
+        if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater" and Section.Length.label[i] != "thermal plate":    
             
             T_PrimaryBulkOut = T_PrimaryBulkIn-(U*(T_PrimaryBulkIn-T_SecondaryBulkIn)*OuterArea(Section)[i]*nc.TotalSGTubeNumber)/(Cp_h*m_h_leakagecorrection)
             #Ti = Ti+1 = Tsat    
@@ -269,12 +268,11 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakag
             SecondaryWall.append(T_wc)
         else:
             if Section.Length.label[i] == "preheater start": 
-                #print(U,i)
                 C_min= Cp_c*MassFlow_c.magnitude #[J/g K]*[g/s] = [J/Ks] ] [W/K]
                 C_max = Cp_h* m_h_leakagecorrection
                 C_r = C_min/C_max
                 Q_max = C_min*(T_PrimaryBulkIn-T_PreheaterIn)
-                TotalArea= sum(OuterArea(Section)[i:Section.NodeNumber]) 
+                TotalArea= sum(OuterArea(Section)[i:(Section.NodeNumber-1)]) 
                 NTU = U*TotalArea*nc.TotalSGTubeNumber/C_min
                 
                 eta = (1-np.exp(-NTU*(1-C_r)))/(1-C_r*np.exp(-NTU*(1-C_r)))
@@ -285,7 +283,7 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakag
                 T_SecondaryBulkOutEnd = T_PreheaterIn + Q_NTU/(MassFlow_c.magnitude*Cp_c)
                 T_SecondaryBulkIn = T_SecondaryBulkOutEnd
                 #print (T_PrimaryBulkOutEnd-273.15, T_SecondaryBulkOutEnd-273.15)
-            
+           
             T_SecondaryBulkOut=T_SecondaryBulkOut-i
             #T_PrimaryBulkOut = T_SecondaryBulkOut+ (T_PrimaryBulkIn-T_SecondaryBulkIn)*(1+U*OuterArea(Section)[i]*nc.TotalSGTubeNumber*((1/C_min) - (1/C_max)))
             T_PrimaryBulkOut = T_PrimaryBulkIn-(U*OuterArea(Section)[i]*nc.TotalSGTubeNumber/(Cp_h* m_h_leakagecorrection))*(T_PrimaryBulkIn-T_SecondaryBulkIn)
@@ -293,16 +291,20 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakag
             T_PrimaryBulkIn=T_PrimaryBulkOut
             T_SecondaryBulkIn = T_SecondaryBulkOut
      
-            if i ==Section.NodeNumber-1:
+            if i ==Section.NodeNumber-2:
                 T_SecondaryBulkOut = T_PreheaterIn
                 T_PrimaryBulkOut = T_PrimaryBulkOutEnd
             
-            SecondaryBulk[17] = T_SecondaryBulkOutEnd  
+            
+            SecondaryBulk[16] = T_SecondaryBulkOutEnd  
             PrimaryBulk.append(T_PrimaryBulkOut)
             SecondaryBulk.append(T_SecondaryBulkOut)   
             PrimaryWall.append(T_wh)
             SecondaryWall.append(T_wc)
-    
+            
+    PrimaryBulk.append(PrimaryBulk[20])
+    PrimaryWall.append(PrimaryWall[20])
+#         
 #     print ([j-273.15 for j in PrimaryBulk])
 #     print ([j-273.15 for j in PrimaryWall])
 #     print ()
@@ -312,7 +314,7 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakag
     return PrimaryBulk  
 
 def EnergyBalance(OutputNode, j):
-    InitialLeakage = 0.03
+    InitialLeakage = 0.035
     YearlyRateLeakage =0.0065
     Leakage = InitialLeakage + (j/8760)*YearlyRateLeakage   
     MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude*Leakage
