@@ -3,7 +3,7 @@ import numpy as np
 import NumericConstants as nc
 
 T_sat = 260.1 + 273.15
-T_PreheaterIn = 186.5 + 273.15
+T_PreheaterIn = 186.7 + 273.15
 T_PrimaryIn = 310 + 273.15
 
 h_i = ld.SGParameters()
@@ -30,7 +30,7 @@ for i in [U_h, U_c, U_total]:
 R_F.unit = "cm^2 K/W"
 
 MassFlow_c.magnitude = 239.25*1000 
-MassFlow_h.magnitude = 1719.25*1000
+MassFlow_h.magnitude = 1825*1000
 
 ShellDiameter.magnitude = 2.28*100
 
@@ -66,7 +66,7 @@ def FoulingResistance(InnerAccumulation, OuterAccumulation):
     OuterThickness = [i/nc.Fe3O4Density for i in  OuterAccumulation]
     
     #[cm]/ [W/cm K] =[cm^2 K/W]
-    InnerFouling = [i/ThermalConductivity(None, "magnetite") for i in InnerThickness]
+    InnerFouling = [i/2*ThermalConductivity(None, "magnetite") for i in InnerThickness]
     OuterFouling =  [i/ThermalConductivity(None, "magnetite") for i in OuterThickness]
     return [x+y for x,y in zip(InnerFouling, OuterFouling)]
 
@@ -186,7 +186,7 @@ def OuterArea(Section):
 def WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerAccumulation, OuterAccumulation):
     #i = each node of SG tube 
     T_PrimaryWall = T_PrimaryBulkIn-(1/3)*(T_PrimaryBulkIn-T_SecondaryBulkIn) #perhaps call from outside function
-    T_SecondaryWall =T_PrimaryBulkIn
+    T_SecondaryWall =T_PrimaryBulkIn-(1/3)*(T_PrimaryBulkIn-T_SecondaryBulkIn)#T_PrimaryBulkIn
     
     for k in range(50):        
         WT_h = T_PrimaryWall
@@ -283,7 +283,8 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakag
                 T_SecondaryBulkOutEnd = T_PreheaterIn + Q_NTU/(MassFlow_c.magnitude*Cp_c)
                 T_SecondaryBulkIn = T_SecondaryBulkOutEnd
                 #print (T_PrimaryBulkOutEnd-273.15, T_SecondaryBulkOutEnd-273.15)
-           
+            
+            #Guessing cold-side temperatures for remaining nodes inside preheater 
             T_SecondaryBulkOut=T_SecondaryBulkOut-i
             #T_PrimaryBulkOut = T_SecondaryBulkOut+ (T_PrimaryBulkIn-T_SecondaryBulkIn)*(1+U*OuterArea(Section)[i]*nc.TotalSGTubeNumber*((1/C_min) - (1/C_max)))
             T_PrimaryBulkOut = T_PrimaryBulkIn-(U*OuterArea(Section)[i]*nc.TotalSGTubeNumber/(Cp_h* m_h_leakagecorrection))*(T_PrimaryBulkIn-T_SecondaryBulkIn)
@@ -314,7 +315,7 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakag
     return PrimaryBulk  
 
 def EnergyBalance(OutputNode, j):
-    InitialLeakage = 0.035
+    InitialLeakage = 0.03
     YearlyRateLeakage =0.0065
     Leakage = InitialLeakage + (j/8760)*YearlyRateLeakage   
     MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude*Leakage
@@ -328,3 +329,4 @@ def EnergyBalance(OutputNode, j):
         Enthalpy = (sum(Balance) + MasssFlow_dividerplate.magnitude*ld.Enthalpy("PHT", T_PrimaryIn))/ MassFlow_h.magnitude
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy)
     return RIHT
+#print (EnergyBalance(21, 1)-273.15)
