@@ -30,7 +30,7 @@ for i in [U_h, U_c, U_total]:
 R_F.unit = "cm^2 K/W"
 
 MassFlow_c.magnitude = 239.25*1000 
-MassFlow_h.magnitude = 1825*1000
+MassFlow_h.magnitude = 1750*1000
 
 ShellDiameter.magnitude = 2.28*100
 
@@ -223,7 +223,6 @@ def WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerA
             U_total.magnitude = 1/inverseU_total#[W/ cm^2 K]
 #             if i ==19:print (U_total.magnitude, PrimaryConvectionResistance(Section, "Dittus-Boetler", PrimaryT_film, i), \
 #                    SecondaryConvectionResistance(Section, SecondaryT_film, T_SecondaryWall, x_in, i), ConductionResistance(Section, T_PrimaryWall, i))
-            #print (inverseU_total,R_F.magnitude, i)
             return T_PrimaryWall, T_SecondaryWall, U_total.magnitude
             
 
@@ -306,7 +305,7 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakag
     PrimaryBulk.append(PrimaryBulk[20])
     PrimaryWall.append(PrimaryWall[20])
 #         
-#     print ([j-273.15 for j in PrimaryBulk])
+    print ([j-273.15 for j in PrimaryBulk])
 #     print ([j-273.15 for j in PrimaryWall])
 #     print ()
 #     print ([j-273.15 for j in SecondaryBulk])
@@ -316,7 +315,7 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakag
 
 def EnergyBalance(OutputNode, j):
     InitialLeakage = 0.03
-    YearlyRateLeakage =0.0065
+    YearlyRateLeakage =0.0085
     Leakage = InitialLeakage + (j/8760)*YearlyRateLeakage   
     MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude*Leakage
     m_h_leakagecorrection = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude
@@ -329,4 +328,4 @@ def EnergyBalance(OutputNode, j):
         Enthalpy = (sum(Balance) + MasssFlow_dividerplate.magnitude*ld.Enthalpy("PHT", T_PrimaryIn))/ MassFlow_h.magnitude
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy)
     return RIHT
-#print (EnergyBalance(21, 1)-273.15)
+print (EnergyBalance(21, 8760*9)-273.15)

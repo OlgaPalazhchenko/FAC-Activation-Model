@@ -237,12 +237,11 @@ for j in range(8760*9):#nc.SimulationDuration
         print(RIHT-273.15,  "RIHT")
         print(ld.SteamGenerator.PrimaryBulkTemperature[21]-273.15, ld.SG_Zone1.PrimaryBulkTemperature[21]-273.15, \
                   ld.SG_Zone2.PrimaryBulkTemperature[21]-273.15, ld.SG_Zone3.PrimaryBulkTemperature[21]-273.15)
-        print()
-        #print(SG.Section1.SolutionOxide.FeTotal, "FeTotal")
-        #print(SG.Section1.SolutionOxide.FeSatFe3O4, "FeSat")
+        print(SG.Section1.SolutionOxide.FeTotal, "FeTotal")
+        print(SG.Section1.SolutionOxide.FeSatFe3O4, "FeSat")
         print (sum(convertedtotalthicknessSG[11:22])/(22-11), "Average SG cold leg [um] oxide thickness", j, "time [h]")
-        print (sum(ld.UnitConverter(O.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, O.Section1.CorrRate, None, None, None, None))\
-                   /(O.Section1.NodeNumber), "Average outlet corrosion rate [um/a]")
+#         print (sum(ld.UnitConverter(O.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, O.Section1.CorrRate, None, None, None, None))\
+#                    /(O.Section1.NodeNumber), "Average outlet corrosion rate [um/a]")
         print()
 #     TotalTime.append(j/7000)# converts to EFPY
 #     SACo60.append(sum(S.Section1.MetalOxide.Co60)/S.Section1.NodeNumber)
@@ -262,20 +261,18 @@ minutes = delta_time//60
 seconds = delta_time - 60*minutes
 print('%d:%d:%d' %(hours,minutes,seconds))
 
-Corrosion= []
-Rates = [I.Section1.CorrRate, C.Section1.CorrRate, O.Section1.CorrRate, SG.Section1.CorrRate]
-for Rate, Section in zip (Rates, ld.Sections):
-    x = ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None)
-    Corrosion.append(x)
-CorrosionRate = Corrosion[0] + Corrosion[1] + Corrosion[2] + Corrosion[3]
-print (CorrosionRate)
-print(-np.log10(O.Section1.SolutionOxide.ConcentrationH[0]), "Outlet pH")
+# Corrosion= []
+# Rates = [I.Section1.CorrRate, C.Section1.CorrRate, O.Section1.CorrRate, SG.Section1.CorrRate]
+# for Rate, Section in zip (Rates, ld.Sections):
+#     x = ld.UnitConverter(Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None)
+#     Corrosion.append(x)
+# CorrosionRate = Corrosion[0] + Corrosion[1] + Corrosion[2] + Corrosion[3]
+# print (CorrosionRate)
+# print(-np.log10(O.Section1.SolutionOxide.ConcentrationH[0]), "Outlet pH")
 print([i-273.15 for i in SG.Section1.PrimaryBulkTemperature], "Temperature profile")
-print()
-print (SG.Section1.SolutionOxide.FeTotal, "FeTot")
-print (SG.Section1.SolutionOxide.FeSatFe3O4, "FeSat")
-print (SG.Section1.InnerOxThickness, "InnerOx")
-print(SG.Section1.OuterOxThickness, "OuterOx")
+# print()
+# print (SG.Section1.InnerOxThickness, "InnerOx")
+# print(SG.Section1.OuterOxThickness, "OuterOx")
 # ActivityTime = TotalTime[0::3]
 # Co60SGActivity = SACo60[0::3]
 # Co58SGActivity = SACo58[0::3]
