@@ -305,7 +305,7 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakag
     PrimaryBulk.append(PrimaryBulk[20])
     PrimaryWall.append(PrimaryWall[20])
 #         
-    print ([j-273.15 for j in PrimaryBulk])
+#     print ([j-273.15 for j in PrimaryBulk])
 #     print ([j-273.15 for j in PrimaryWall])
 #     print ()
 #     print ([j-273.15 for j in SecondaryBulk])
@@ -328,4 +328,4 @@ def EnergyBalance(OutputNode, j):
         Enthalpy = (sum(Balance) + MasssFlow_dividerplate.magnitude*ld.Enthalpy("PHT", T_PrimaryIn))/ MassFlow_h.magnitude
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy)
     return RIHT
-print (EnergyBalance(21, 8760*9)-273.15)
+# print (EnergyBalance(21, 8760*9)-273.15)

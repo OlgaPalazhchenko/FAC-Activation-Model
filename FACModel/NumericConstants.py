@@ -87,8 +87,8 @@ Avagadro = 6.022E+23                 #[atoms/mol]
 CoreSurfaceArea = 2430                 #[cm^2]
 
 #Kinetic precipitation/dissolution constants [cm/s]
-KpFe3O4  = 0.01#0.004
-KdFe3O4  = 0.01
+KpFe3O4  = 0.018#0.004
+KdFe3O4  = 0.012
 #KpFe_Ferrite = 0.014 #same as magnetite precipitation
 #KdFe_Ferrite  = 0.044 'same as magnetite dissolution
     
@@ -135,8 +135,8 @@ DissolutionActivationEnergyH2onFe3O4 =285989.8292
 PrecipitationActivationEnergyFe3O4 = 179876.4692
 PrecipitationActivationEnergyH2onFe3O4 = 281688.6659
 
-ActivationEnergyAlloy800 = 291941.6273
-ActivationEnergyH2onAlloy800 = 279425.4806
+ActivationEnergyAlloy800 = 293241.9186
+ActivationEnergyH2onAlloy800 = 282290.1404
 
 SimulationDuration = 10 #Total runtime [h]
 TimeIncrement = 3600 #s  Based on desired time step (3600 s/h for 1h time step)
