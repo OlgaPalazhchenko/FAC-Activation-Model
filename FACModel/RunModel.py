@@ -13,7 +13,7 @@ rc('mathtext', default='regular')
 
 ##Initial Temperatures and T-dependent parametrs in SG zones
 for Zone in ld.SGZones:
-    Zone.PrimaryBulkTemperature = SGHX.TemperatureProfile(Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, SGHX.MassFlow_h.magnitude-0.03*SGHX.MassFlow_h.magnitude)
+    Zone.PrimaryBulkTemperature = SGHX.TemperatureProfile(Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, SGHX.MassFlow_h.magnitude-0.03*SGHX.MassFlow_h.magnitude,0)
     Zone.DensityH2O = [ld.Density("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
     Zone.ViscosityH2O = [ld.Viscosity("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
     Zone.NernstConstant= [x*(2.303*nc.R/(2*nc.F)) for x in Zone.PrimaryBulkTemperature]
@@ -224,7 +224,7 @@ class RunModel():
 
 import time
 start_time = time.time()
-for j in range(8760*1):#nc.SimulationDuration
+for j in range(8760*9):#nc.SimulationDuration
     I = RunModel(ld.Inlet, ld.Core, j)
     C = RunModel(ld.Core, ld.Outlet, j)
     O = RunModel(ld.Outlet, ld.SteamGenerator,  j)
