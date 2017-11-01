@@ -27,12 +27,15 @@ def bulkpH_calculator(Section):  # Bulk pH calculation
         ConcentrationOH = Section.k_W[i] / ((gamma_1 ** 2) * (ConcentrationH))
 
         # At high temp, LiOH doesn't dissociate 100% - eq'm established: LiOH(aq) <-> Li+(aq) + OH-(aq)
-        # KLi = ([Li+]gamma_1 *[OH-]gamma_1)/[LiOH]; ConcentrationLiTotal = ConcentrationLi  + LiConcentrationOH (sub in eq'm expression for LiConcentrationOH
+        # KLi = ([Li+]gamma_1 *[OH-]gamma_1)/[LiOH]; 
+        # ConcentrationLiTotal = ConcentrationLi  + LiConcentrationOH (sub in eq'm expression for LiConcentrationOH
         ConcentrationLi = Section.k_Li[i] * nc.ConcentrationLiTotal / (Section.k_Li[i] + ((gamma_1 ** 2) * ConcentrationOH))
         # k_W = ConcentrationH*gamma_1*ConcentrationOH*gamma_1;   ConcentrationOH = k_W/ConcentrationH*gamma_1**2
         # H+ + Li+ = OH-;                    ConcentrationH = ConcentrationLi + k_W/ConcentrationH*gamma_1**2
-        for k in range(50):  # no more than 10 iterations should really be necessary for convergence at the provided error  
-            FH = ConcentrationH ** 2 + (ConcentrationH * ConcentrationLi) - (Section.k_W[i] / (gamma_1 ** 2))  # function of H
+        for k in range(50):
+            # no more than 10 iterations should really be necessary for convergence at the provided error    
+            # function of H
+            FH = ConcentrationH ** 2 + (ConcentrationH * ConcentrationLi) - (Section.k_W[i] / (gamma_1 ** 2))  
             DFH = 2 * ConcentrationH + ConcentrationLi  # derivative of function
 
             NewConcentrationH = ConcentrationH - (FH / DFH)
@@ -46,7 +49,7 @@ def bulkpH_calculator(Section):  # Bulk pH calculation
             IonicStrength = ((1 ** 2) * ConcentrationH + (1 ** 2) * ConcentrationLi + (1 ** 2) * ConcentrationOH) / 2
             # Davies equation loggamma_1 = -DebyeHuckConst*(z**2)*[(sqrt(I)/(1+sqrt(I)))-beta*I]
             gamma_1 = 10 ** (Section.DebyeHuckelConstant[i] * (1 ** 2) * (((IonicStrength ** 0.5) / (1 + (IonicStrength ** 0.5))) - 0.2 * IonicStrength))
-            # All entries in ConcentrationH list must meet error convergence requirement (no matter if SG 22 element list or Inlet 7 element list)
+            # All entries in ConcentrationH list must meet error convergence requirement
             if RE < 0.0000001:
                 break 
         H.append(ConcentrationH)
@@ -54,7 +57,8 @@ def bulkpH_calculator(Section):  # Bulk pH calculation
 
 
 def IronSolubility(Section):
-    # As temperature changes, constants (k_Li, k_w, etc. change), pH changes as well, both effecting solubility --> Bulk FeSatFe3O4
+    # As temperature changes, constants (k_Li, k_w, etc. change), pH changes as well, 
+    # both effecting solubility --> Bulk FeSatFe3O4
     Section.SolutionOxide.ConcentrationH = bulkpH_calculator(Section)
     Section.k_Fe2 = 10 ** (np.polyval(nc.KFe2SchikorrPolynomial, Section.PrimaryBulkTemperature))
     Section.k_FeOH3_Fe3 = 10 ** (np.polyval(nc.KFeOH3SchikorrPolynomial, Section.PrimaryBulkTemperature))
@@ -63,12 +67,22 @@ def IronSolubility(Section):
     P_H2 = [x * y / (nc.kH2 * np.exp(-500 * ((1 / z) - (1 / 298.15)))) for x, y, z in zip([nc.H2 * nc.H2Density / nc.H2MolarMass] * Section.NodeNumber, Section.DensityH2O, \
             Section.PrimaryBulkTemperature)]
 
-    ActivityFe2 = [x * (y ** 2) * z ** (1 / 3) for x, y, z in zip(Section.k_Fe2, Section.SolutionOxide.ConcentrationH , P_H2)]
+    ActivityFe2 = [
+        x * (y ** 2) * z ** (1 / 3) for x, y, z in zip(Section.k_Fe2, Section.SolutionOxide.ConcentrationH , P_H2)
+        ]
     ActivityFeOH = [x * y / z for x, y, z in zip(Section.k_FeOH, ActivityFe2, Section.SolutionOxide.ConcentrationH)]
-    ActivityFeOH2 = [x * y / (z ** 2) for x, y, z in zip(Section.k_FeOH2, ActivityFe2, Section.SolutionOxide.ConcentrationH)]
-    ActivityFeOH3 = [x * y / (z ** 3) for x, y, z in zip(Section.k_FeOH3, ActivityFe2, Section.SolutionOxide.ConcentrationH)]
+    
+    ActivityFeOH2 = [
+        x * y / (z ** 2) for x, y, z in zip(Section.k_FeOH2, ActivityFe2, Section.SolutionOxide.ConcentrationH)
+        ]
+    ActivityFeOH3 = [
+        x * y / (z ** 3) for x, y, z in zip(Section.k_FeOH3, ActivityFe2, Section.SolutionOxide.ConcentrationH)
+        ]
     ActivityFeOH3_Fe3 = [x / (y ** (1 / 6)) for x, y in zip(Section.k_FeOH3_Fe3, P_H2)]
-    ActivityFeOH4_Fe3 = [x / (y * (z ** (1 / 6))) for x, y, z in zip(Section.k_FeOH4_Fe3, Section.SolutionOxide.ConcentrationH , P_H2)]
+    
+    ActivityFeOH4_Fe3 = [
+        x / (y * (z ** (1 / 6))) for x, y, z in zip(Section.k_FeOH4_Fe3, Section.SolutionOxide.ConcentrationH , P_H2)
+        ]
 
     FeTotalActivity = [x + y + z + q + w + t for x, y, z, q, t, w in zip (ActivityFe2, ActivityFeOH, ActivityFeOH2, ActivityFeOH3, ActivityFeOH3_Fe3, ActivityFeOH4_Fe3)]
     return FeTotalActivity
@@ -113,7 +127,8 @@ def Hydrolysis(Section, FeTotal, NiTotal, ConcentrationH):
 def CobaltComposition(Section):
     if Section in ld.SGZones:
         CompositionCr_Alloy = nc.FractionCr_Alloy800
-        MolesCobalt = (nc.FractionCo_Alloy800 / (5 / 3)) / nc.CoMolarMass  # 5/3 term comes from lattice energy preference for Co chromite retention
+        # 5/3 term comes from lattice energy preference for Co chromite retention
+        MolesCobalt = (nc.FractionCo_Alloy800 / (5 / 3)) / nc.CoMolarMass  
         # x + y = 0.0015;  x/y = 2/3 --> y =(3/2)x
         # 3/2x + x = 0.00015 --> 5/2x = 0.00015
 
@@ -128,7 +143,8 @@ def FractionChromite(Section):
     if Section in ld.SGZones:
         AlloyDensity = nc.Alloy800Density
         CompositionCr_Alloy = nc.FractionCr_Alloy800
-        # MolesCobalt = (nc.FractionCo_Alloy800 / (5 / 3)) / nc.CoMolarMass #5/3 term comes from lattice energy preference for Co chromite retention
+        # MolesCobalt = (nc.FractionCo_Alloy800 / (5 / 3)) / nc.CoMolarMass #5/3 term comes from lattice energy 
+        # preference for Co chromite retention
         # x + y = 0.00006;  x/y = 2/3 --> y =(3/2)x
         # 3/2x + x = 0.00006 --> 5/2x = 0.00006
     elif Section == ld.Inlet or Section == ld.Outlet:
@@ -145,7 +161,12 @@ def FractionChromite(Section):
         VolumeAlloyCorroded = 1 / AlloyDensity
         MolesChromium = CompositionCr_Alloy / nc.CrMolarMass
         MolesChromite = MolesChromium / 2  # 1:2 stoichiometry in FeCr2O4 b/w compound and Cr
-        MassChromite = MolesChromite * (CobaltComposition(Section) * nc.CoMolarMass + 2 * nc.CrMolarMass + 4 * nc.OMolarMass + (1 - CobaltComposition(Section)) * nc.FeMolarMass) 
+        MassChromite = MolesChromite * (
+            CobaltComposition(Section) * nc.CoMolarMass
+            + 2 * nc.CrMolarMass
+            + 4 * nc.OMolarMass
+            + (1 - CobaltComposition(Section)) * nc.FeMolarMass
+            ) 
         VolumeChromite = MassChromite / nc.FeCr2O4Density
 
     return VolumeChromite / VolumeAlloyCorroded
@@ -159,7 +180,8 @@ def FractionMetalInnerOxide(Section, Element):
         FractionFeSecondOxide = 2.4 * nc.FeMolarMass / (2.4 * nc.FeMolarMass + 0.6 * nc.NiMolarMass + 4 * nc.OMolarMass)
         FractionNiSecondOxide = 0.6 * nc.NiMolarMass / (2.4 * nc.FeMolarMass + 0.6 * nc.NiMolarMass + 4 * nc.OMolarMass)
         FractionCrSecondOxide = 0
-        FractionCoSecondOxide = 0  # assumed that amount based on lattice energies retained in inner layer, while rest diffuses
+        # assumed that amount based on lattice energies retained in inner layer, while rest diffuses
+        FractionCoSecondOxide = 0
 
     elif Section == ld.Inlet or Section == ld.Outlet:  # Second oxide = Fe3O4
         FractionFeSecondOxide = 3 * nc.FeMolarMass / (3 * nc.FeMolarMass + 4 * nc.OMolarMass)
@@ -169,8 +191,10 @@ def FractionMetalInnerOxide(Section, Element):
 
     if Section != ld.Core:
         FractionSecondOxide = 1 - FractionChromite(Section)
-        FractionFeChromite = (1 - CobaltComposition(Section)) * nc.FeMolarMass / (CobaltComposition(Section) * nc.CoMolarMass + 2 * 
-                                                                                 nc.CrMolarMass + 4 * nc.OMolarMass + (1 - CobaltComposition(Section)) * nc.FeMolarMass)
+        FractionFeChromite = (1 - CobaltComposition(Section)) * nc.FeMolarMass / (
+            CobaltComposition(Section) * nc.CoMolarMass + 2 * nc.CrMolarMass + 4 * nc.OMolarMass + (1 - CobaltComposition(Section)) * nc.FeMolarMass
+            )
+        
         FractionCrChromite = 2 * nc.CrMolarMass / (CobaltComposition(Section) * nc.CoMolarMass + 2 * nc.CrMolarMass + 4 * nc.OMolarMass + (1 - CobaltComposition(Section)) * nc.FeMolarMass)
         FractionCoChromite = CobaltComposition(Section) * nc.CoMolarMass / (CobaltComposition(Section) * nc.CoMolarMass + 2 * nc.CrMolarMass + 4 * nc.OMolarMass + (1 - CobaltComposition(Section)) * nc.FeMolarMass)
         FractionNiChromite = 0 
@@ -196,11 +220,17 @@ def FractionMetalInOxide(Section, Element, Oxide):
             return (0.6 * nc.NiMolarMass) / (2.4 * nc.FeMolarMass + 0.6 * nc.NiMolarMass + 4 * nc.OMolarMass)
     elif Oxide == "Cobalt Nickel Ferrite":  # Co0.24Ni0.22Fe2.54O4
         if Element == "Fe":
-            return (2.54 * nc.FeMolarMass) / (0.24 * nc.CoMolarMass + 0.22 * nc.NiMolarMass + 2.54 * nc.FeMolarMass + 4 * nc.OMolarMass)
+            return (2.54 * nc.FeMolarMass) / (
+                0.24 * nc.CoMolarMass + 0.22 * nc.NiMolarMass + 2.54 * nc.FeMolarMass + 4 * nc.OMolarMass
+                )
         if Element == "Ni":
-            return  (0.22 * nc.NiMolarMass) / (0.24 * nc.CoMolarMass + 0.22 * nc.NiMolarMass + 2.54 * nc.FeMolarMass + 4 * nc.OMolarMass)
+            return  (0.22 * nc.NiMolarMass) / (
+                0.24 * nc.CoMolarMass + 0.22 * nc.NiMolarMass + 2.54 * nc.FeMolarMass + 4 * nc.OMolarMass
+                )
         if Element == "Co":
-            return (0.24 * nc.CoMolarMass) / (0.24 * nc.CoMolarMass + 0.22 * nc.NiMolarMass + 2.54 * nc.FeMolarMass + 4 * nc.OMolarMass)
+            return (0.24 * nc.CoMolarMass) / (
+                0.24 * nc.CoMolarMass + 0.22 * nc.NiMolarMass + 2.54 * nc.FeMolarMass + 4 * nc.OMolarMass
+                )
     elif Oxide == "Cobalt Ferrite":  # CoFe2O4
         if Element == "Fe":
             return (2 * nc.FeMolarMass) / (nc.CoMolarMass + 2 * nc.FeMolarMass + 4 * nc.OMolarMass)

@@ -31,7 +31,9 @@ def ElectrochemicalKineticConstant(Section, KineticConstant, EquilibriumPotentia
     else:
         Beta_prime = nc.Beta
     
-    return [nc.SAFactor * x * np.exp(Beta_prime * nc.n * nc.F * (y - z) / (nc.R * q)) for x, y, z, q in zip(KineticConstant, MixedECP, EquilibriumPotential, Section.PrimaryBulkTemperature)] 
+    return [nc.SAFactor * x * np.exp(Beta_prime * nc.n * nc.F * (y - z) / (nc.R * q)) for x, y, z, q in zip(
+        KineticConstant, MixedECP, EquilibriumPotential, Section.PrimaryBulkTemperature
+        )] 
 
 
 def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPotential, Kelvin, Dissolution):
@@ -90,7 +92,7 @@ def MixedPotential(Section, CathodeCurrent, CathodePotential, AnodeCurrent, Anod
     return  [(nc.R * x / (nc.n * nc.F)) * np.log(y / z) for x, y, z in zip(Section.PrimaryBulkTemperature, Numerator, Denominator)]
     
 
-def ExchangeCurrentDensity(Section, ActivationE, Concentration, Potential, DensityH2O, Kelvin, Species):
+def exchangecurrentdensity(Section, ActivationE, Concentration, Potential, DensityH2O, Kelvin, Species):
     # A^z+ + ze- -> D,   where A = e- acceptor and D = e- donor (Bockris & Reddy - Modern Electrochemistry)
     # If in terms of acceptor:  io = (F(C_A)kT/h)*exp(-ActivationEnergy/RT)*exp((-BnF/RT)Eeqm), C donor/acceptor is 
     # [mol/cm^2] (raise to the 2/3)
@@ -161,12 +163,12 @@ def ECP(Section):
                 ActivityCoefficient1[i], 2, Section.DensityH2O[i], Section.NernstConstant[i], "aqueous"
                 )
             
-            y = ExchangeCurrentDensity(
+            y = exchangecurrentdensity(
                 Section, nc.PrecipitationActivationEnergyFe3O4, 1, x, Section.DensityH2O[i],
                 Section.PrimaryBulkTemperature[i], "Donor"
                 )
             
-            z = ExchangeCurrentDensity(
+            z = exchangecurrentdensity(
                 Section, nc.PrecipitationActivationEnergyH2onFe3O4, Section.SolutionOxide.ConcentrationH[i], q,
                 Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor"
                 )
@@ -177,11 +179,11 @@ def ECP(Section):
                 Section.SolutionOxide.ConcentrationH[i], ActivityCoefficient1[i], 2, Section.DensityH2O[i], 
                 Section.NernstConstant[i], "aqueous"
                 )
-            y = ExchangeCurrentDensity(
+            y = exchangecurrentdensity(
                 Section, nc.DissolutionActivationEnergyFe3O4, ConcentrationFeOH2[i], x, Section.DensityH2O[i],
                 Section.PrimaryBulkTemperature[i], "Donor"
                 ) 
-            z = ExchangeCurrentDensity(
+            z = exchangecurrentdensity(
                 Section, nc.DissolutionActivationEnergyH2onFe3O4, Section.SolutionOxide.ConcentrationH[i], q, 
                 Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor"
                 )
