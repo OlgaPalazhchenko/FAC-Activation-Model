@@ -1,6 +1,6 @@
 import numpy as np
 import csv 
-import NumericConstants as nc
+import constants as nc
 
 
 class SGParameters():
@@ -55,8 +55,8 @@ R_IAPWS = 0.461526  # [kJ/kg K]
 i_1 = [0, 1, 2, 3, 0, 1, 2, 3, 5, 0, 1, 2, 3, 4, 0, 1, 0, 3, 4, 3, 5]
 j_1 = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4, 4, 5, 6, 6]
 H_1 = [
-    0.520094, 0.0850895, -1.08374, -0.289555, 0.222531, 0.999115, 1.88797, 1.26613, 0.120573, -0.281378, -0.906851, -0.772479, -0.489837, -0.25704, 0.161913, 0.257399,
-    - 0.0325372, 0.0698452, 0.00872102, -0.00435673, -5.93E-04
+    0.520094, 0.0850895, -1.08374, -0.289555, 0.222531, 0.999115, 1.88797, 1.26613, 0.120573, -0.281378, -0.906851, 
+    -0.772479, -0.489837, -0.25704, 0.161913, 0.257399, - 0.0325372, 0.0698452, 0.00872102, -0.00435673, -5.93E-04
     ]
 
 
@@ -165,7 +165,7 @@ def HeatCapacity(side, Temperature):
     return (-ratio_temperatures ** 2) * Gibbs_TT * R_IAPWS  # [kJ/kg K] ([J/g K] or *nc.H2OMolarMass for [J/mol K]
  
  
-def ThermalConductivityH2O(side, Temperature):
+def thermal_conductivityH2O(side, Temperature):
 #     if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
 #         p = PrimarySidePressure
 #     else:
@@ -220,12 +220,14 @@ def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, Ox
         return [i / (3.7 * 10 ** 10) for i in Concentration]
     
     # Converts concentrations between mol/kg to g/cm^3 and vice versa
-    # [mol_solute/kg_coolant] *[1 kg/1000 g coolant]* [g/mol solute] = [g_solute]/[g_coolant]* [g/cm^3 coolant] = [g_solute/cm^3 coolant]
+    # [mol_solute/kg_coolant] *[1 kg/1000 g coolant]* [g/mol solute] = [g_solute]/[g_coolant]* [g/cm^3 coolant]
+    # = [g_solute/cm^3 coolant]
     elif UnitInput == "Mol per Kg" and UnitOutput == "Grams per Cm Cubed":
         return [(x / 1000) * (MolarMass * y) for x, y in zip(Concentration, Section.DensityH2O)]
 
     elif UnitInput == "Grams per Cm Cubed" and UnitOutput == "Mol per Kg":
-    # [g_solute/cm^3 coolant]/([g/cm^3 coolant]*[g/mol solute]) = [mol_solute/g coolant]*[1000 g/1 kg coolant] = [mol solute/kg coolant]
+    # [g_solute/cm^3 coolant]/([g/cm^3 coolant]*[g/mol solute]) = [mol_solute/g coolant]*[1000 g/1 kg coolant]
+    # = [mol solute/kg coolant]
         return [x * 1000 / (MolarMass * y) for x, y in zip(Concentration, Section.DensityH2O)]
 
     # Converts corrosion rates from [g/cm^2 s] to micrometers per annum [um/yr]
@@ -336,11 +338,16 @@ class Section():  # Defining each primary heat transport section as a class
         self.CoThickness = None
         self.OxThickness = None
 
-        self.StandardEqmPotentialFe = [float(SizingParametersReader[j + 13][i]) for i in range(self.RowStart, self.RowEnd)]
-        self.StandardEqmPotentialFe3O4red = [float(SizingParametersReader[j + 14][i]) for i in range(self.RowStart, self.RowEnd)]
-        self.StandardEqmPotentialFe3O4oxid = [float(SizingParametersReader[j + 15][i]) for i in range(self.RowStart, self.RowEnd)]
-        self.StandardEqmPotentialH2 = [float(SizingParametersReader[j + 16][i]) for i in range(self.RowStart, self.RowEnd)]
-        self.StandardEqmPotentialNi = [float(SizingParametersReader[j + 17][i]) for i in range(self.RowStart, self.RowEnd)]
+        self.StandardEqmPotentialFe = [float(SizingParametersReader[j + 13][i])\
+                                       for i in range(self.RowStart, self.RowEnd)]
+        self.StandardEqmPotentialFe3O4red = [float(SizingParametersReader[j + 14][i]) \
+                                            for i in range(self.RowStart, self.RowEnd)]
+        self.StandardEqmPotentialFe3O4oxid = [float(SizingParametersReader[j + 15][i]) \
+                                            for i in range(self.RowStart, self.RowEnd)]
+        self.StandardEqmPotentialH2 = [float(SizingParametersReader[j + 16][i]) \
+                                    for i in range(self.RowStart, self.RowEnd)]
+        self.StandardEqmPotentialNi = [float(SizingParametersReader[j + 17][i]) \
+                                    for i in range(self.RowStart, self.RowEnd)]
 
         self.km = None
         self.KpFe3O4electrochem = None
@@ -432,7 +439,7 @@ for Zone in SGZones:
         474
         ]
     Zone.TubeNumber = nc.TotalSGTubeNumber / len(SGZones)
-    # SGZone.SolubilityFe = [2.58E-08, 2.56E-08, 2.55E-08, 2.52546E-08, 2.32347E-08, 2.16094E-08, 2.03107E-08, 1.9246E-08, 1.83579E-08, 1.75642E-08, 1.68473E-08, 1.62692E-08, 1.58017E-08, 1.53906E-08, 1.50304E-08, 1.47083E-08, 1.44316E-08, 1.42108E-08, 1.39481E-08, 1.35926E-08, 1.31784E-08, 1.27883E-08]
+    
     Zone.SolubilityNi = [
         1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 1.96011E-09, 
         2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09, 2.60733E-09, 

@@ -1,19 +1,21 @@
 import numpy as np
-import NumericConstants as nc
-import LepreauData as ld
-import Composition as c
-import RK4
-import Activities as a
-import Electrochemistry as e
-import Iteration as it
-import SGHeatTransfer as SGHX
+import constants as nc
+import lepreau_data as ld
+import composition as c
+import rk_4
+import activities as a
+import electrochemistry as e
+import iteration as it
+import sg_heattransfer as SGHX
 import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('mathtext', default='regular')
 
 ##Initial Temperatures and T-dependent parametrs in SG zones
 for Zone in ld.SGZones:
-    Zone.PrimaryBulkTemperature = SGHX.TemperatureProfile(Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, SGHX.MassFlow_h.magnitude-0.03*SGHX.MassFlow_h.magnitude,0)
+    Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
+        Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, SGHX.MassFlow_h.magnitude-0.03*SGHX.MassFlow_h.magnitude,0
+        )
     Zone.DensityH2O = [ld.Density("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
     Zone.ViscosityH2O = [ld.Viscosity("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
     Zone.NernstConstant= [x*(2.303*nc.R/(2*nc.F)) for x in Zone.PrimaryBulkTemperature]
@@ -35,7 +37,7 @@ for Section in ld.Sections:
     Interfaces = [Section.MetalOxide, Section.SolutionOxide, Section.Bulk]
     for Interface in Interfaces:
         Interface.ConcentrationH2 =[nc.H2*nc.H2Density/nc.H2MolarMass]*Section.NodeNumber #makes into array with appropriate # of nodes for that PHTS section
-        Interface.ConcentrationH = c.BulkpHCalculator(Section) #from system pH calculation
+        Interface.ConcentrationH = c.bulkpH_calculator(Section) #from system pH calculation
         
         ##Concentration/Saturation Input [mol/kg]
         Interface.FeTotal = c.IronSolubility(Section)
@@ -51,7 +53,7 @@ for Section in ld.Sections:
         
         ##Initial RIHT temperature 
         if Section == ld.Inlet:
-            Section.PrimaryBulkTemperature = [SGHX.EnergyBalance(ld.SteamGenerator.NodeNumber-1, 0)]*Section.NodeNumber
+            Section.PrimaryBulkTemperature = [SGHX.energy_balance(ld.SteamGenerator.NodeNumber-1, 0)]*Section.NodeNumber
         
         if Section != ld.Outlet:
             if Interface == Section.SolutionOxide:
@@ -77,7 +79,7 @@ for Section in ld.Sections:
     e.ElectrochemicalAdjustment(Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential, \
                                 Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4, \
                                 Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH)
-##
+
 
 class RunModel():
     def __init__(self, ActiveSection, OutgoingSection, j): #j = overall time step
@@ -105,12 +107,12 @@ class RunModel():
         for i in range(self.Section1.NodeNumber):
             if i >0: 
                 for r,q in zip (BulkConcentrations, SolutionOxideConcentrations):
-                    r[i] = RK4.Spatial(q[i-1], r[i-1], ld.MassTransfer(self.Section1)[i-1], self.Section1.Diameter[i-1], self.Section1.Velocity[i-1], self.Section1.Length.magnitude[i-1])
+                    r[i] = rk_4.Spatial(q[i-1], r[i-1], ld.MassTransfer(self.Section1)[i-1], self.Section1.Diameter[i-1], self.Section1.Velocity[i-1], self.Section1.Length.magnitude[i-1])
 
                 #Exponential decay of bulk particulate at start of section as function of distance + removal due to deposition and erosion source
-                self.Section1.BigParticulate[i] = RK4.Particulate(self.Section1, self.Section1.BigParticulate[0], self.Section1.Diameter[i],\
+                self.Section1.BigParticulate[i] = rk_4.Particulate(self.Section1, self.Section1.BigParticulate[0], self.Section1.Diameter[i],\
                                                 self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i])
-                self.Section1.SmallParticulate[i] = RK4.Particulate(Section, self.Section1.SmallParticulate[0], self.Section1.Diameter[i],\
+                self.Section1.SmallParticulate[i] = rk_4.Particulate(Section, self.Section1.SmallParticulate[0], self.Section1.Diameter[i],\
                                                 self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i])
                                 
 #                 for x,y in zip (BulkActivities, Tags):
@@ -132,9 +134,9 @@ class RunModel():
                 ##    
                     
                     if i >3: #decay for the rest of the inlet section depends on purification system 
-                        self.Section1.BigParticulate[i] = RK4.Particulate(Section, self.Section1.BigParticulate[3], self.Section1.Diameter[i], \
+                        self.Section1.BigParticulate[i] = rk_4.Particulate(Section, self.Section1.BigParticulate[3], self.Section1.Diameter[i], \
                                                         self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i])
-                        self.Section1.SmallParticulate[i] = RK4.Particulate(Section, self.Section1.SmallParticulate[3], self.Section1.Diameter[i], \
+                        self.Section1.SmallParticulate[i] = rk_4.Particulate(Section, self.Section1.SmallParticulate[3], self.Section1.Diameter[i], \
                                                         self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]) 
                         
 #                         for x,y in zip (BulkActivities, Tags):
@@ -184,7 +186,7 @@ class RunModel():
         
         ##SG heat transfer 
 #         if self.Section1 in ld.SGZones:   
-#             self.Section1.PrimaryBulkTemperature = SGHX.TemperatureProfile(self.Section1, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness)
+#             self.Section1.PrimaryBulkTemperature = SGHX.temperature_profile(self.Section1, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness)
 #             self.Section1.Bulk.FeSatFe3O4 = c.IronSolubility(self.Section1) 
             
 #         if self.Section1 == ld.SG_Zone1:    
@@ -196,7 +198,7 @@ class RunModel():
         
         ##RIHT  
 #         if self.Section1 == ld.Inlet:
-#             self.Section1.PrimaryBulkTemperature = SGHX.EnergyBalance(21, self.Section1.NodeNumber)
+#             self.Section1.PrimaryBulkTemperature = SGHX.energy_balance(21, self.Section1.NodeNumber)
 #             self.Section1.Bulk.FeSatFe3O4 = c.IronSolubility(self.Section1)
         ##
         
@@ -204,12 +206,12 @@ class RunModel():
         #self.Section1.DepositThickness = a.Deposition(self.Section1, self.Section1.BigParticulate, self.Section1.SmallParticulate, j)
         ##
                         
-        ##RK4 oxide thickness calculation (no spalling)
-        RK4.OxideGrowth(self.Section1, Saturations, BulkConcentrations)
+        ##rk_4 oxide thickness calculation (no spalling)
+        rk_4.oxidegrowth(self.Section1, Saturations, BulkConcentrations)
         ##
                 
         ##Spalling    
-        self.Section1.ElapsedTime, self.Section1.SpallTime = RK4.Spall(self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime)
+        self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.Spall(self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime)
         ##
         
   
@@ -233,13 +235,13 @@ for j in range(8760*9):#nc.SimulationDuration
         totalthicknessSG=[x+y for x,y in zip(SG.Section1.OuterOxThickness, SG.Section1.InnerOxThickness)]
         convertedtotalthicknessSG = ld.UnitConverter(SG.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, totalthicknessSG, None, None, None)
   
-        RIHT = (SGHX.EnergyBalance(21, j))
+        RIHT = (SGHX.energy_balance(21, j))
         print(RIHT-273.15,  "RIHT")
         print(ld.SteamGenerator.PrimaryBulkTemperature[21]-273.15, ld.SG_Zone1.PrimaryBulkTemperature[21]-273.15, \
                   ld.SG_Zone2.PrimaryBulkTemperature[21]-273.15, ld.SG_Zone3.PrimaryBulkTemperature[21]-273.15)
         print(SG.Section1.SolutionOxide.FeTotal, "FeTotal")
         print(SG.Section1.SolutionOxide.FeSatFe3O4, "FeSat")
-        print (sum(convertedtotalthicknessSG[11:22])/(22-11), "Average SG cold leg [um] oxide thickness", j, "time [h]")
+        print (sum(convertedtotalthicknessSG[11:22])/(22-11), "Average SG cold leg [g/m^2] oxide thickness", j, "time [h]")
 #         print (sum(ld.UnitConverter(O.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, O.Section1.CorrRate, None, None, None, None))\
 #                    /(O.Section1.NodeNumber), "Average outlet corrosion rate [um/a]")
         print()

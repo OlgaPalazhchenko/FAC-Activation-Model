@@ -1,8 +1,8 @@
-import LepreauData as ld
+import lepreau_data as ld
 import numpy as np
-import NumericConstants as nc
-import Composition as c
-import Electrochemistry as e
+import constants as nc
+import composition as c
+import electrochemistry as e
 
 def Diffusion(Section, Element):
     #Inner oxide density is determined as a weighted average of the densities of the 2 comprising oxides 
@@ -187,7 +187,7 @@ def CorrosionRate(Section):
                                          Section.PrimaryBulkTemperature[i], "Acceptor")
             
         if Section in ld.SGZones:
-            #EqmPotentialNi = e.Potential(Section, Section.StandardEqmPotentialNi, [1]*Section.NodeNumber, 1, 1, Composition.ConcentrationNi2, Composition.ActivityCoefficient2, 1, "aqueous")
+            #EqmPotentialNi = e.Potential(Section, Section.StandardEqmPotentialNi, [1]*Section.NodeNumber, 1, 1, composition.ConcentrationNi2, composition.ActivityCoefficient2, 1, "aqueous")
             w = e.ExchangeCurrentDensity(Section, nc.ActivationEnergyH2onAlloy800, Section.MetalOxide.ConcentrationH[i], x, Section.DensityH2O[i], \
                                          Section.PrimaryBulkTemperature[i], "Acceptor")
             

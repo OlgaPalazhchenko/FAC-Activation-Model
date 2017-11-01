@@ -1,8 +1,8 @@
-import LepreauData as ld
-import Iteration as it
+import lepreau_data as ld
+import iteration as it
 import numpy as np
-import NumericConstants as nc
-import RK4
+import constants as nc
+import rk_4
     
  
 def Eta(Section,CorrosionRate,FeSatFe3O4,InnerOxThickness):
@@ -102,10 +102,10 @@ def InCoreActiveDeposit(Section1, Section2, InnerOxThickness, OuterOxThickness, 
                 Outer = "no"
                 OxideType = InnerOxThickness[i]
         
-        Fe = RK4.OxideComposition(Section2, "Fe", OxideType, Outer, OuterFe3O4Thickness[i], NiThickness[i], CoThickness[i], InnerIronOxThickness[i])
-        Ni = RK4.OxideComposition(Section2, "Ni", OxideType, Outer, OuterFe3O4Thickness[i], NiThickness[i], CoThickness[i], InnerIronOxThickness[i])
-        Co = RK4.OxideComposition(Section2, "Co", OxideType, Outer, OuterFe3O4Thickness[i], NiThickness[i], CoThickness[i], InnerIronOxThickness[i])
-        Cr = RK4.OxideComposition(Section2, "Cr", OxideType, Outer, OuterFe3O4Thickness[i], NiThickness[i], CoThickness[i], InnerIronOxThickness[i])
+        Fe = rk_4.OxideComposition(Section2, "Fe", OxideType, Outer, OuterFe3O4Thickness[i], NiThickness[i], CoThickness[i], InnerIronOxThickness[i])
+        Ni = rk_4.OxideComposition(Section2, "Ni", OxideType, Outer, OuterFe3O4Thickness[i], NiThickness[i], CoThickness[i], InnerIronOxThickness[i])
+        Co = rk_4.OxideComposition(Section2, "Co", OxideType, Outer, OuterFe3O4Thickness[i], NiThickness[i], CoThickness[i], InnerIronOxThickness[i])
+        Cr = rk_4.OxideComposition(Section2, "Cr", OxideType, Outer, OuterFe3O4Thickness[i], NiThickness[i], CoThickness[i], InnerIronOxThickness[i])
     
     #Checks which oxide layer is uppermost (i.e., if outer layer removed due to spalling) and calculates elemental composition, adds that node's composition   
     #to the list below until all nodes in outlet are computed

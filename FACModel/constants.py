@@ -152,5 +152,5 @@ ErosionConstant = 2.4e-11  # [g/cm^2 s]
 KVap = 0.1
 Enrichment = 1
 
-NumberPluggedTubes = 8
+NumberPluggedTubes = 10
 TotalSGTubeNumber = 3542 - NumberPluggedTubes

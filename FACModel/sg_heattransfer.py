@@ -1,6 +1,6 @@
-import LepreauData as ld
+import lepreau_data as ld
 import numpy as np
-import NumericConstants as nc
+import constants as nc
 
 T_sat = 260.1 + 273.15
 T_PreheaterIn = 186.7 + 273.15
@@ -31,8 +31,8 @@ for i in [U_h, U_c, U_total]:
 for i in [R_F_primary, R_F_secondary]:
     i.unit = "cm^2 K/W"
 
-MassFlow_c.magnitude = 239.25 * 1000
-MassFlow_h.magnitude = 1750 * 1000
+MassFlow_c.magnitude = 275 * 1000
+MassFlow_h.magnitude = 1900 * 1000
 
 ShellDiameter.magnitude = 2.28 * 100
 
@@ -54,14 +54,14 @@ def ThermalConductivity(Twall, material):
     if material == "Alloy-800" or material == "Alloy800" or material == "A800" or material == "Alloy 800":
         return (11.450 + 0.0161 * Twall) / 100  # M.K.E thesis for Alloy-800 tubing [W/cm K]
     elif material == "water":
-        return ld.ThermalConductivityH2O("PHT", Twall)
+        return ld.thermal_conductivityH2O("PHT", Twall)
     elif material == "magnetite":
         return 1.4 / 100  # [W/cm K]
     else:
         print ("Error: material not specified")
 
 
-def FoulingResistance(InnerAccumulation, OuterAccumulation):
+def fouling_resistance(InnerAccumulation, OuterAccumulation):
     # thickness/thermal conductivity [cm]/[W/cm K] = [cm^2 K/W]
     # [g/cm^2]/[g/cm^3] = [cm]
 
@@ -137,7 +137,7 @@ def SecondaryConvectionResistance(Section, Tfilm, Twall, x_in, i):
         Re_D = EquivalentDiameter.magnitude * MassFlux_c.magnitude / ld.Viscosity("water", "SHT", T_sat)
         # 4*MassFlow/((ld.Viscosity("water", "SHT", T_sat)/1000)*np.pi*Shell_ID)
 
-        h_l = 0.023 * ld.ThermalConductivityH2O("SHT", T_sat) * ((Re_D) ** 0.8) * (Prandtl(T_sat, i) ** 0.4) \
+        h_l = 0.023 * ld.thermal_conductivityH2O("SHT", T_sat) * ((Re_D) ** 0.8) * (Prandtl(T_sat, i) ** 0.4) \
             / EquivalentDiameter.magnitude  # [W/cm^2 K]
 
         Q_prime = F * h_l * (Twall - T_sat)  # [W/cm^2]
@@ -179,7 +179,7 @@ def NusseltNumber(Section, correlation, Temperature, i):
 def Prandtl(Temperature, i):
     # Need a better reference for Cp/viscosity data
     ViscosityH2O = ld.Viscosity("water", "PHT", Temperature)
-    Pr = ld.HeatCapacity("PHT", Temperature) * ViscosityH2O / ld.ThermalConductivityH2O("PHT", Temperature)
+    Pr = ld.HeatCapacity("PHT", Temperature) * ViscosityH2O / ld.thermal_conductivityH2O("PHT", Temperature)
     return Pr
 
 
@@ -226,13 +226,21 @@ def WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerA
         RE2 = (T_SecondaryWall - WT_c)
 
         if abs(RE1) <= 0.01 and abs(RE2) <= 0.01:
-            R_F_primary.magnitude = FoulingResistance(InnerAccumulation, OuterAccumulation)[i]  # [cm^2 K/W]
-            year = (j/8760) + 1983
-            if 1983 < year <= 1988:
-                R_F_secondary.magnitude = R_F_primary.magnitude
+            R_F_primary.magnitude = fouling_resistance(InnerAccumulation, OuterAccumulation)[i]  # [cm^2 K/W]
+            
+            year = (j/8760) 
+            calendaryear = year + 1983
+            Initial_SHTSFouling = 0.0005 # [g/cm2] same as for PHT (~ 1 um/a)
+            
+            if 1983 <= calendaryear <= 1987:
+                SHTSFouling = Initial_SHTSFouling + year*0.0024
+                # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
             else:
-                R_F_secondary.magnitude = 0
-
+                # CPP installation reduces secondary side crud by 50% (assumed proportional red. in deposit formation)
+                SHTSFouling = Initial_SHTSFouling + year*0.0012
+                
+            R_F_secondary.magnitude = fouling_resistance([0]*Section.NodeNumber, [SHTSFouling]*Section.NodeNumber)[i]
+            
             # [cm^2 K/W]
             inverseU_total = (PrimaryConvectionResistance(Section, "Dittus-Boelter", PrimaryT_film, i)
                               + ConductionResistance(Section, T_PrimaryWall, i)
@@ -244,7 +252,7 @@ def WallTemperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerA
             return T_PrimaryWall, T_SecondaryWall, U_total.magnitude
 
 
-def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakagecorrection, j):
+def temperature_profile(Section, InnerAccumulation, OuterAccumulation, m_h_leakagecorrection, j):
     PrimaryWall = []
     PrimaryBulk = []
     SecondaryBulk = []
@@ -337,16 +345,16 @@ def TemperatureProfile(Section, InnerAccumulation, OuterAccumulation, m_h_leakag
     return PrimaryBulk
 
 
-def EnergyBalance(OutputNode, j):
-    InitialLeakage = 0.03
-    YearlyRateLeakage = 0.0065
+def energy_balance(OutputNode, j):
+    InitialLeakage = 0.02
+    YearlyRateLeakage = 0.006
     Leakage = InitialLeakage + (j / 8760) * YearlyRateLeakage
     MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude * Leakage
     m_h_leakagecorrection = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude
 
     Balance = []
     for Zone in ld.SGZones:
-        Zone.PrimaryBulkTemperature = TemperatureProfile(
+        Zone.PrimaryBulkTemperature = temperature_profile(
             Zone, ld.SGZones[0].InnerOxThickness, ld.SGZones[0].OuterOxThickness, m_h_leakagecorrection, j
             )
         
@@ -359,6 +367,4 @@ def EnergyBalance(OutputNode, j):
 
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy)
     return RIHT
-
-
-# print (EnergyBalance(21, 8960*7)-273.15)
+# print (energy_balance(21, 8960*7)-273.15)

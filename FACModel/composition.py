@@ -1,5 +1,5 @@
-import NumericConstants as nc
-import LepreauData as ld
+import constants as nc
+import lepreau_data as ld
 import numpy as np
 
 
@@ -18,7 +18,7 @@ def T_DependentParameters(Section):
     Section.k_NiOH3 = 10 ** (np.polyval(nc.KNiOH3Polynomial, Section.PrimaryBulkTemperature))
 
 
-def BulkpHCalculator(Section):  # Bulk pH calculation
+def bulkpH_calculator(Section):  # Bulk pH calculation
     T_DependentParameters(Section)
     H = []
     ConcentrationH = 0.0000000001  # initial guess [mol/kg]
@@ -55,7 +55,7 @@ def BulkpHCalculator(Section):  # Bulk pH calculation
 
 def IronSolubility(Section):
     # As temperature changes, constants (k_Li, k_w, etc. change), pH changes as well, both effecting solubility --> Bulk FeSatFe3O4
-    Section.SolutionOxide.ConcentrationH = BulkpHCalculator(Section)
+    Section.SolutionOxide.ConcentrationH = bulkpH_calculator(Section)
     Section.k_Fe2 = 10 ** (np.polyval(nc.KFe2SchikorrPolynomial, Section.PrimaryBulkTemperature))
     Section.k_FeOH3_Fe3 = 10 ** (np.polyval(nc.KFeOH3SchikorrPolynomial, Section.PrimaryBulkTemperature))
     Section.k_FeOH4_Fe3 = 10 ** (np.polyval(nc.KFeOH4SchikorrPolynomial, Section.PrimaryBulkTemperature))
@@ -137,7 +137,7 @@ def FractionChromite(Section):
         # MolesCobalt = (nc.FractionCo_CS / (5 / 2)) / nc.CoMolarMass
 
         # Assumptions:
-        # 1. volume inner oxide replaces volume of carbon steel lost due to corrosion - used to solve for mass oxide via substitution
+        # 1. volume inner oxide replaces volume CS lost due to corrosion -used to solve for mass oxide via substitution
         # 2. all Cr is retained inside the inner oxide layer as FeCr2O4 (for both CS and Alloy-800)
         # 3. 1 g basis of metal lost
 
@@ -220,3 +220,5 @@ def FractionMetalInOxide(Section, Element, Oxide):
             return (2 * nc.CrMolarMass) / (nc.CrMolarMass * 2 + nc.NiMolarMass + 4 * nc.OMolarMass)
     elif Oxide == "Nickel":
         return 1
+    else:
+        return None

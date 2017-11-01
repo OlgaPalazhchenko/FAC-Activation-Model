@@ -1,9 +1,9 @@
-import LepreauData as ld
-import NumericConstants as nc
-import Composition as c
+import lepreau_data as ld
+import constants as nc
+import composition as c
 import numpy as np
-import Iteration as it
-import Electrochemistry as e
+import iteration as it
+import electrochemistry as e
 import random
 
 
@@ -79,7 +79,7 @@ def Spatial(Solution, Bulk, km, Diameter, Velocity, Length):
     return BulkConccentration 
 
 
-def OxideGrowth(Section, Saturations, BulkConcentrations):
+def oxidegrowth(Section, Saturations, BulkConcentrations):
 
     RK4_InnerIronOxThickness = Section.InnerIronOxThickness
     RK4_OuterFe3O4Thickness = Section.OuterFe3O4Thickness
@@ -123,16 +123,23 @@ def OxideGrowth(Section, Saturations, BulkConcentrations):
             Section.MetalOxide.MixedPotential = [0] * Section.NodeNumber
         else:
 
-            Section.MetalOxide.FeTotal = it.MetalOxideInterfaceConcentration(Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, Section.CorrRate)
+            Section.MetalOxide.FeTotal = it.MetalOxideInterfaceConcentration(
+                Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
+                Section.CorrRate
+                )
             Section.CorrRate, Section.MetalOxide.MixedPotential = it.CorrosionRate(Section)
 
         if Section in ld.SGZones:
-            Section.MetalOxide.NiTotal = it.MetalOxideInterfaceConcentration(Section, "Ni", Section.SolutionOxide.NiTotal, Section.InnerOxThickness, Section.OuterOxThickness, Section.CorrRate)
+            Section.MetalOxide.NiTotal = it.MetalOxideInterfaceConcentration(
+                Section, "Ni", Section.SolutionOxide.NiTotal, Section.InnerOxThickness, Section.OuterOxThickness,
+                Section.CorrRate
+                )
 
         elif Section == ld.Inlet or Section == ld.Outlet:
             Section.MetalOxide.NiTotal = [0] * Section.NodeNumber
-            # MetalOxideCo = it.MetalOxideInterfaceConcentration(Section, "Co", SolutionOxideCoTotal, InnerOxThickness, OuterOxThickness, CorrRate)
-
+#             MetalOxideCo = it.MetalOxideInterfaceConcentration(
+#             Section, "Co", SolutionOxideCoTotal, InnerOxThickness, OuterOxThickness, CorrRate
+#             )
 
         Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4, Section.MetalOxide.ConcentrationH = \
         e.ElectrochemicalAdjustment(Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential, Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, \
@@ -313,7 +320,9 @@ def ParticleSize():
     return Size * 0.0001 * nc.Fe3O4Density  # [um to cm to g/cm^2]
 
 
-def SpallingTime(Section, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4electrochem, OuterOxThickness, Velocity):
+def SpallingTime(
+        Section, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4electrochem, OuterOxThickness, Velocity
+        ):
 
     if SolutionOxideFeSat > SolutionOxideFeTotal:  # Outlet 
         if OuterOxThickness > 0:
@@ -329,7 +338,7 @@ def SpallingTime(Section, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, Kd
     return SpTime
 
 
-def Oxide(Layer, TotalOxideThickness, Spalling):
+def oxide(Layer, TotalOxideThickness, Spalling):
     # inner/outer oxthickness & spalling = [g/cm^2]
     # This assumes that solid corrosion product species (Fe3O4, Ni0.6Fe2.4O4, etc.), if present simultaneously, are uniformally distributed with depth/layer thickness
     if TotalOxideThickness > 0:
@@ -340,7 +349,8 @@ def Oxide(Layer, TotalOxideThickness, Spalling):
 
 
 def Spall(Section, j, ElapsedTime, SpallTime):
-    # #Current time step's RK4 input from OxideGrowth function for each of InnerOx, InnerIronOx, OuterFe3O4, Co, and Ni at each node of current section 
+    # Current time step's RK4 input from oxidegrowth function for each of InnerOx, InnerIronOx, OuterFe3O4, Co, and 
+    # Ni at each node of current section 
 
     # Silences spalling for desired sections
     if Section != ld.Outlet:
@@ -349,14 +359,16 @@ def Spall(Section, j, ElapsedTime, SpallTime):
     ConvertedConcentrations = []
     Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.SolutionOxide.FeTotal]
     for i in range(2):
-        x = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", Concentrations[i], None, None, None, nc.FeMolarMass, None)
+        x = ld.UnitConverter(
+            Section, "Mol per Kg", "Grams per Cm Cubed", Concentrations[i], None, None, None, nc.FeMolarMass, None
+            )
         ConvertedConcentrations.append(x)
 
     FeSat, FeTotal = ConvertedConcentrations
 
     for i in range(Section.NodeNumber):    
 
-        # # Oxide totals for RK4 iterations (M/O Concentration depends on total oxide thickness) and before spalling function
+        # Oxide totals for RK4 iterations (M/O Concentration depends on total ox thickness) and before spalling function
         if Section.OuterFe3O4Thickness[i] > 0:  # from previous time step
             # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer  
             Section.OuterOxThickness[i] = Section.OuterFe3O4Thickness[i] + Section.CoThickness[i] + Section.NiThickness[i]
@@ -368,9 +380,13 @@ def Spall(Section, j, ElapsedTime, SpallTime):
             # First time step call generate particle sizes and calc spalling times, respectively
             x = ParticleSize()
             # Amount of time it will take each node's particle to spall 
-            y = SpallingTime(Section, x, FeSat[i], FeTotal[i], Section.KdFe3O4electrochem[i], Section.OuterFe3O4Thickness[i], Section.Velocity[i])
-
-            Section.Particle.append(x)  # list of random particle sizes based on input distribution in ParticleSize function
+            y = SpallingTime(
+                Section, x, FeSat[i], FeTotal[i], Section.KdFe3O4electrochem[i], Section.OuterFe3O4Thickness[i], 
+                Section.Velocity[i]
+                )
+            
+            # list of random particle sizes based on input distribution in ParticleSize function
+            Section.Particle.append(x)
             SpallTime.append(y)
 
             if Section == ld.Outlet:  # Outlet header spalling corrector 
@@ -380,18 +396,36 @@ def Spall(Section, j, ElapsedTime, SpallTime):
             ElapsedTime = [0] * Section.NodeNumber  # No time has elapsed yet at first time step for all nodes
 
         else:  # after first time step
-            if ElapsedTime[i] >= SpallTime[i]:  # enough time elapsed for particle of that size (with respective spall time) to come off
+            if ElapsedTime[i] >= SpallTime[i]:
+                # enough time elapsed for particle of that size (with respective spall time) to come off
                 if Section.OuterOxThickness[i] > 0:
                     # [cm]*[g/cm^3] = [g/cm^2] of layer removed due to spalling
-                    Section.OuterFe3O4Thickness[i] = Oxide(Section.OuterFe3O4Thickness[i], Section.OuterOxThickness[i], Section.Particle[i]) 
-                    Section.CoThickness[i] = Oxide(Section.CoThickness[i], Section.OuterOxThickness[i], Section.Particle[i])
-                    Section.NiThickness[i] = Oxide(Section.NiThickness[i], Section.OuterOxThickness[i], Section.Particle[i])
-                    Section.OuterOxThickness[i] = Oxide(Section.OuterOxThickness[i], Section.OuterOxThickness[i], Section.Particle[i])  # new total outer ox
+                    Section.OuterFe3O4Thickness[i] = oxide(
+                        Section.OuterFe3O4Thickness[i], Section.OuterOxThickness[i], Section.Particle[i]
+                        ) 
+                    Section.CoThickness[i] = oxide(
+                        Section.CoThickness[i], Section.OuterOxThickness[i], Section.Particle[i]
+                        )
+                    Section.NiThickness[i] = oxide(
+                        Section.NiThickness[i], Section.OuterOxThickness[i], Section.Particle[i]
+                        )
+                    Section.OuterOxThickness[i] = oxide(
+                        Section.OuterOxThickness[i], Section.OuterOxThickness[i], Section.Particle[i]
+                        )  # new total outer ox
+                
                 else:  # OuterOXThickness == 0, spalling takes place at inner layer  
-                    Section.InnerIronOxThickness[i] = Oxide(Section.InnerIronOxThickness[i], Section.InnerOxThickness[i], Section.Particle[i])
-                    Section.CoThickness[i] = Oxide(Section.CoThickness[i], Section.InnerOxThickness[i], Section.Particle[i])
-                    Section.NiThickness[i] = Oxide(Section.NiThickness[i], Section.InnerOxThickness[i], Section.Particle[i])
-                    Section.InnerOxThickness[i] = Oxide(Section.InnerOxThickness[i], Section.InnerOxThickness[i], Section.Particle[i])  # new total inner ox
+                    Section.InnerIronOxThickness[i] = oxide(
+                        Section.InnerIronOxThickness[i], Section.InnerOxThickness[i], Section.Particle[i]
+                        )
+                    Section.CoThickness[i] = oxide(
+                        Section.CoThickness[i], Section.InnerOxThickness[i], Section.Particle[i]
+                        )
+                    Section.NiThickness[i] = oxide(
+                        Section.NiThickness[i], Section.InnerOxThickness[i], Section.Particle[i]
+                        )
+                    Section.InnerOxThickness[i] = oxide(
+                        Section.InnerOxThickness[i], Section.InnerOxThickness[i], Section.Particle[i]
+                        )  # new total inner ox
 
                 Section.Particle[i] = ParticleSize()
                 # once particle spalled off, another size (just at that node) is randomly generated w/i distribution
