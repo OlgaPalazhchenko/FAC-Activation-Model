@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('mathtext', default='regular')
 
-# #Initial Temperatures and T-dependent parametrs in SG zones
+
+# Initial Temperatures and T-dependent parametrs in SG zones
 for Zone in ld.SGZones:
     Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
         Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, 
@@ -29,8 +30,8 @@ for Section in ld.Sections:
     Section.DensityH2O = [ld.Density("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
     Section.ViscosityH2O = [ld.Viscosity("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
     
-    Section.FractionFeInnerOxide = c.FractionMetalInnerOxide(Section, "Fe")
-    Section.FractionNiInnerOxide = c.FractionMetalInnerOxide(Section, "Ni")
+    Section.FractionFeInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe")
+    Section.FractionNiInnerOxide = c.fraction_metal_inner_oxide(Section, "Ni")
     
     [
         Section.Bulk.Co60, Section.Bulk.Co58, Section.Bulk.Fe55, Section.Bulk.Fe59, Section.Bulk.Mn54, 
@@ -44,8 +45,8 @@ for Section in ld.Sections:
         Interface.ConcentrationH = c.bulkpH_calculator(Section)  # from system pH calculation
         
         # Concentration/Saturation Input [mol/kg]
-        Interface.FeTotal = c.IronSolubility(Section)
-        Interface.FeSatFe3O4 = [1 * i for i in c.IronSolubility(Section)]
+        Interface.FeTotal = c.iron_solubility(Section)
+        Interface.FeSatFe3O4 = [1 * i for i in c.iron_solubility(Section)]
         Interface.NiTotal = [i * 1 for i in Section.SolubilityNi]
         Interface.NiSatFerrite = [i * 1 for i in Section.SolubilityNi]
         Interface.NiSatMetallicNi = [i * 1 for i in Section.SolubilityNi]
@@ -62,7 +63,7 @@ for Section in ld.Sections:
         
         if Section != ld.Outlet:
             if Interface == Section.SolutionOxide:
-                Interface.FeTotal = [i * 0.8 for i in c.IronSolubility(Section)]
+                Interface.FeTotal = [i * 0.8 for i in c.iron_solubility(Section)]
         
         if Section == ld.Core and Interface == Section.MetalOxide:
             Interface.FeTotal = [0] * Section.NodeNumber
@@ -81,8 +82,10 @@ for Section in ld.Sections:
     else:
         Section.CorrRate, Section.MetalOxide.MixedPotential = it.CorrosionRate(Section)
         
-    Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,\
-    Section.MetalOxide.ConcentrationH = e.ElectrochemicalAdjustment(
+    [
+        Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4, 
+        Section.MetalOxide.ConcentrationH
+        ] = e.ElectrochemicalAdjustment(
         Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
         Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
         Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
@@ -160,11 +163,11 @@ class PHT_FAC():
                         self.Section1.BigParticulate[i] = 0  # 0.45 um filter removes everything over this size   
                     
                     if i > 3:  # decay for the rest of the inlet section depends on purification system 
-                        self.Section1.BigParticulate[i] = rk_4.Particulate(
+                        self.Section1.BigParticulate[i] = rk_4.particulate(
                             Section, self.Section1.BigParticulate[3], self.Section1.Diameter[i],
                             self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
                             )
-                        self.Section1.SmallParticulate[i] = rk_4.Particulate(
+                        self.Section1.SmallParticulate[i] = rk_4.particulate(
                             Section, self.Section1.SmallParticulate[3], self.Section1.Diameter[i],
                             self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
                             ) 
@@ -188,7 +191,8 @@ class PHT_FAC():
         # #Stellite wear bulk input term for cobalt and chromium    
         if self.Section1 == ld.Core:
             self.Section2.Bulk.CoTotal[0] = self.Section1.Bulk.CoTotal[end] + nc.CobaltWear
-            self.Section2.Bulk.CrTotal[0] = self.Section1.Bulk.CrTotal[end] + nc.CobaltWear * (nc.FractionCr_Stellite / nc.FractionCo_Stellite)
+            self.Section2.Bulk.CrTotal[0] = (self.Section1.Bulk.CrTotal[end]
+                                             + nc.CobaltWear * (nc.FractionCr_Stellite / nc.FractionCo_Stellite))
    
 #         else:
 #             ##Surface activities 
@@ -212,12 +216,11 @@ class PHT_FAC():
 #             
 #             self.Section1.MetalOxide.Ni63 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
 #                                                           self.Section1.InnerOxThickness, self.Section1.Bulk.Ni63, j, "Ni63")
-            # #    
-        
+
         # #SG heat transfer 
 #         if self.Section1 in ld.SGZones:   
 #             self.Section1.PrimaryBulkTemperature = SGHX.temperature_profile(self.Section1, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness)
-#             self.Section1.Bulk.FeSatFe3O4 = c.IronSolubility(self.Section1) 
+#             self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1) 
             
 #         if self.Section1 == ld.SG_Zone1:    
 #             if j %699==0: #(17520)
@@ -229,17 +232,14 @@ class PHT_FAC():
         # RIHT  
 #         if self.Section1 == ld.Inlet:
 #             self.Section1.PrimaryBulkTemperature = SGHX.energy_balance(21, self.Section1.NodeNumber)
-#             self.Section1.Bulk.FeSatFe3O4 = c.IronSolubility(self.Section1)
+#             self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1)
 
-        
         # Deposit thickness around PHTS
         # self.Section1.DepositThickness = a.Deposition(self.Section1, self.Section1.BigParticulate, self.Section1.SmallParticulate, j)
-        # #
                         
         # #rk_4 oxide thickness calculation (no spalling)
         rk_4.oxidegrowth(self.Section1, Saturations, BulkConcentrations)
-
-                
+        
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.Spall(
             self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime
@@ -256,7 +256,7 @@ class PHT_FAC():
 
 import time
 start_time = time.time()
-for j in range(8760 * 9):  # nc.SimulationDuration
+for j in range(8760*9):  # nc.SimulationDuration
     I = PHT_FAC(ld.Inlet, ld.Core, j)
     C = PHT_FAC(ld.Core, ld.Outlet, j)
     O = PHT_FAC(ld.Outlet, ld.SteamGenerator, j)

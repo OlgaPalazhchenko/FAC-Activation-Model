@@ -28,9 +28,9 @@ for j in range(7000):#nc.SimulationDuration
 #             x[0] = y[O.Section1.NodeNumber-1]
     
     SG = RunModel(ld.SteamGenerator, ld.Inlet, j)
-#     SG1 = run_model(ld.SG_Zone1, ld.Inlet, j)
-#     SG2 = run_model(ld.SG_Zone2, ld.Inlet, j)
-#     SG3 = run_model(ld.SG_Zone3, ld.Inlet, j)
+#     SG1 = pht_model(ld.SG_Zone1, ld.Inlet, j)
+#     SG2 = pht_model(ld.SG_Zone2, ld.Inlet, j)
+#     SG3 = pht_model(ld.SG_Zone3, ld.Inlet, j)
      
 #     I.Section1.PrimaryBulkTemperature = SGHX.EnergyBalance(21, I.Section1.NodeNumber)
 #     I.Section1.Bulk.FeSatFe3O4 = c.IronSolubility(I.Section1)

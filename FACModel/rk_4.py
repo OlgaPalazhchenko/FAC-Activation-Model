@@ -31,7 +31,7 @@ def OxideComposition(
         if OxideType > 0:  # For the total oxide value in each node
                 # Fraction of iron in Fe3O4 * fraction of magnetite in outer oxide
             if Element == "Fe":
-                return OuterFe3O4Thickness * c.FractionMetalInOxide(Section, Element, "Magnetite") / OxideType
+                return OuterFe3O4Thickness * c.fraction_metal_in_oxide(Section, Element, "Magnetite") / OxideType
                 # Outer ox thickness includes Fe3O4 and any incorporated Ni and Co
             elif Element == "Ni":
                 return NiThickness / OxideType
@@ -48,22 +48,22 @@ def OxideComposition(
     if Outer == "no":  # inner oxide layer composition only
         if OxideType > 0:  # For the InnerIronOxThickness value in each node
             if Element == "Fe":
-                return c.FractionMetalInnerOxide(Section, Element)
+                return c.fraction_metal_inner_oxide(Section, Element)
             if OuterFe3O4Thickness > 0:
                 if Element == "Ni":
                     # no Ni or Co incorporation via precip - only if present in inner layer through diffusion
-                    return c.FractionMetalInnerOxide(Section, Element)
+                    return c.fraction_metal_inner_oxide(Section, Element)
                 if Element == "Co":
-                    return c.FractionMetalInnerOxide(Section, Element)
+                    return c.fraction_metal_inner_oxide(Section, Element)
             else:  # InnerOxThickness includes Ni incorporation from precipitation
                 if Element == "Ni":
-                    return (NiThickness + c.FractionMetalInnerOxide(Section, Element) * InnerIronOxThickness) \
-                        / OxideType
+                    return (NiThickness
+                            + c.fraction_metal_inner_oxide(Section, Element) * InnerIronOxThickness) / OxideType
                 if Element == "Co":
-                    return (CoThickness + c.FractionMetalInnerOxide(Section, Element) * InnerIronOxThickness) \
-                        / OxideType
+                    return (CoThickness
+                            + c.fraction_metal_inner_oxide(Section, Element) * InnerIronOxThickness) / OxideType
             if Element == "Cr":
-                return c.FractionMetalInnerOxide(Section, "Cr")
+                return c.fraction_metal_inner_oxide(Section, "Cr")
 
             if OxideType == 0:  # InnerIronOxide = 0
                 return 0
@@ -106,7 +106,7 @@ def oxidegrowth(Section, Saturations, BulkConcentrations):
         SOConc = []
         for x, y, z, w in zip (SolutionOxideConcentrations, BulkConcentrations[0:3], Saturations, ["Fe", "Ni", "Co"]):
             q = it.SolutionOxide(
-                Section, y, z, x, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness, 
+                Section, y, z, x, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness,
                 w
                 )
 
@@ -145,10 +145,11 @@ def oxidegrowth(Section, Saturations, BulkConcentrations):
 #             Section, "Co", SolutionOxideCoTotal, InnerOxThickness, OuterOxThickness, CorrRate
 #             )
 
-        Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4, Section.MetalOxide.ConcentrationH = \
-        e.ElectrochemicalAdjustment(
+        [
+            Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
+            Section.MetalOxide.ConcentrationH] = e.ElectrochemicalAdjustment(
             Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
-            Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4, 
+            Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
             Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
             )
 

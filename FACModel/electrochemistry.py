@@ -121,10 +121,19 @@ def exchangecurrentdensity(Section, ActivationE, Concentration, Potential, Densi
         
 
 def Energy(Section, ExchangeCurrent, Concentration, Acceptor, EquilibriumPotential):
+    E = nc.Beta * nc.n * nc.F
     if Acceptor == "yes":
-        return [nc.R * x * -np.log10(y * nc.hp / (nc.F * ((z * q / 1000) ** (2 / 3)) * nc.kb * x * np.exp(-nc.Beta * nc.n * nc.F * w / (nc.R * x)))) for x, y, z, q, w in (Section.PrimaryBulkTemperature, ExchangeCurrent, Concentration, Section.DensityH2O, EquilibriumPotential)]
+        return [nc.R * x * -np.log10(
+                y * nc.hp / (nc.F * ((z * q / 1000) ** (2 / 3)) * nc.kb * x * np.exp(-E * w / (nc.R * x)))
+                )
+                for x, y, z, q, w in (Section.PrimaryBulkTemperature, ExchangeCurrent, Concentration,
+                                      Section.DensityH2O, EquilibriumPotential)]
     else:  # (1-Beta) vs. -Beta (sign change)
-        return [nc.R * x * -np.log10(y * nc.hp / (nc.F * ((z * q / 1000) ** (2 / 3)) * nc.kb * x * np.exp(nc.Beta * nc.n * nc.F * w / (nc.R * x)))) for x, y, z, q, w in (Section.PrimaryBulkTemperature, ExchangeCurrent, Concentration, Section.DensityH2O, EquilibriumPotential)]
+        return [nc.R * x * -np.log10(
+            y * nc.hp / (nc.F * ((z * q / 1000) ** (2 / 3)) * nc.kb * x * np.exp(E * w / (nc.R * x)))
+            )
+                for x, y, z, q, w in (Section.PrimaryBulkTemperature, ExchangeCurrent, Concentration, 
+                                      Section.DensityH2O, EquilibriumPotential)]
         
     if Concentration == 1 and Acceptor == "yes":
         return [nc.R * x * -np.log10(y * nc.hp / (nc.F * nc.kb * x * np.exp(-nc.Beta * nc.n * nc.F * w / (nc.R * x)))) for x, y, w in (Section.PrimaryBulkTemperature, ExchangeCurrent, EquilibriumPotential)]
@@ -133,13 +142,13 @@ def Energy(Section, ExchangeCurrent, Concentration, Acceptor, EquilibriumPotenti
 
 
 def ECP(Section):
-    for i in range(Section.NodeNumber):
-        if Section.SolutionOxide.FeTotal[i] < 0:
-            print ("Error: Fe concentration <0 in ECP function")
-            Section.SolutionOxide.FeTotal[i] = 5e-10
-            print ("Corrected, concentration reset to:", Section.SolutionOxide.FeTotal[i])
+#     for i in range(Section.NodeNumber):
+#         if Section.SolutionOxide.FeTotal[i] < 0:
+#             print ("Error: Fe concentration <0 in ECP function")
+#             Section.SolutionOxide.FeTotal[i] = 5e-10
+#             print ("Corrected, concentration reset to:", Section.SolutionOxide.FeTotal[i])
              
-    ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2 = c.Hydrolysis(
+    ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2 = c.hydrolysis(
         Section, Section.SolutionOxide.FeTotal, Section.SolutionOxide.NiTotal, Section.SolutionOxide.ConcentrationH
         )
         

@@ -235,11 +235,12 @@ def wall_temperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, Inner
             calendaryear = year + 1983
             Initial_SHTSFouling = 0.0005 # [g/cm2] same as for PHT (~ 1 um/a)
             
-            if 1983 <= calendaryear <= 1987:
+            if 1983 <= calendaryear < 1987:
                 SHTSFouling = Initial_SHTSFouling + year*0.0016
                 # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
             else:
-                # CPP installation reduces secondary side crud by 50% (assumed proportional red. in deposit formation)
+                # CPP installation (late 1986) reduces secondary side crud by 50% 
+                # (assumed proportional red. in deposit formation)
                 SHTSFouling = Initial_SHTSFouling + year*0.0008
                 
             R_F_secondary.magnitude = fouling_resistance([0]*Section.NodeNumber, [SHTSFouling]*Section.NodeNumber)[i]
@@ -370,4 +371,4 @@ def energy_balance(OutputNode, j):
 
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy)
     return RIHT
-# print (energy_balance(21, 8960*7)-273.15)
+print (energy_balance(21, 1)-273.15)
