@@ -340,7 +340,7 @@ def temperature_profile(Section, InnerAccumulation, OuterAccumulation, m_h_leaka
     PrimaryBulk.append(PrimaryBulk[20])
     PrimaryWall.append(PrimaryWall[20])
 
-    print ([j - 273.15 for j in PrimaryBulk])
+#     print ([j - 273.15 for j in PrimaryBulk])
 #     print ([j-273.15 for j in PrimaryWall])
 #     print ()
 #     print ([j-273.15 for j in SecondaryBulk])
@@ -371,4 +371,4 @@ def energy_balance(OutputNode, j):
 
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy)
     return RIHT
-print (energy_balance(21, 1)-273.15)
+# print (energy_balance(21, 1)-273.15)

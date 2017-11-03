@@ -1,25 +1,30 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
 '''
 Created on Oct 22, 2017
 
 @author: opalazhc
 '''
-for j in range(7000):#nc.SimulationDuration
-    I = RunModel(ld.Inlet, ld.Core, j)
-    C = RunModel(ld.Core, ld.Outlet, j)
-    O = RunModel(ld.Outlet, ld.SteamGenerator,  j)
+import csv
+header1 = ['time']
+j = [[1983, 1984, 1985], [1986,1987,1988]]
+header2= ['oxide']
+oxide = [0.00025, 0.0005, 0.00075]
+csvfile = "lol.txt"
+
+
+# Assuming res is a flat list
+with open(csvfile, "w") as output:
+    writer = csv.writer(output, lineterminator='\n')
+    writer.writerow(header1)
+    writer.writerows([j])
+    writer.writerow(['oxide'])
+    writer.writerows([oxide])    
+
+
+
+# for j in range(7000):#nc.SimulationDuration
+#     I = RunModel(ld.Inlet, ld.Core, j)
+#     C = RunModel(ld.Core, ld.Outlet, j)
+#     O = RunModel(ld.Outlet, ld.SteamGenerator,  j)
     #Sets input concentrations for all SG zones to be same as input of first (Outlet output)
 #     for Zone in ld.SGZones[1:len(ld.SGZones)]:
 #         BulkOutletOutput= [O.Section1.Bulk.FeTotal, O.Section1.Bulk.NiTotal, O.Section1.Bulk.CoTotal, O.Section1.Bulk.CrTotal]
@@ -27,7 +32,7 @@ for j in range(7000):#nc.SimulationDuration
 #         for x,y in zip(BulkSGInput,BulkOutletOutput):
 #             x[0] = y[O.Section1.NodeNumber-1]
     
-    SG = RunModel(ld.SteamGenerator, ld.Inlet, j)
+#     SG = RunModel(ld.SteamGenerator, ld.Inlet, j)
 #     SG1 = pht_model(ld.SG_Zone1, ld.Inlet, j)
 #     SG2 = pht_model(ld.SG_Zone2, ld.Inlet, j)
 #     SG3 = pht_model(ld.SG_Zone3, ld.Inlet, j)
@@ -54,11 +59,11 @@ for j in range(7000):#nc.SimulationDuration
 #         CorrosionRate = ld.UnitConverter(ld.Outlet, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, O.Section1.CorrRate, None, None, None, None)   
 #         FACrate.append(sum(CorrosionRate)/len(CorrosionRate))  
 
-hours = delta_time//3600
-temp = delta_time - 3600*hours
-minutes = delta_time//60
-seconds = delta_time - 60*minutes
-print('%d:%d:%d' %(hours,minutes,seconds))
+# hours = delta_time//3600
+# temp = delta_time - 3600*hours
+# minutes = delta_time//60
+# seconds = delta_time - 60*minutes
+# print('%d:%d:%d' %(hours,minutes,seconds))
 
 # print (FACrate, "FAC rate, [um/a]")
 # print()

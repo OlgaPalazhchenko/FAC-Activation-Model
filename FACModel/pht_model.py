@@ -10,12 +10,12 @@ import sg_heattransfer as SGHX
 import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('mathtext', default='regular')
-
+import csv
 
 # Initial Temperatures and T-dependent parametrs in SG zones
 for Zone in ld.SGZones:
     Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
-        Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, 
+        Zone, Zone.InnerOxThickness, Zone.OuterOxThickness,
         SGHX.MassFlow_h.magnitude - 0.03 * SGHX.MassFlow_h.magnitude, 0
         )
     Zone.DensityH2O = [ld.Density("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
@@ -34,7 +34,7 @@ for Section in ld.Sections:
     Section.FractionNiInnerOxide = c.fraction_metal_inner_oxide(Section, "Ni")
     
     [
-        Section.Bulk.Co60, Section.Bulk.Co58, Section.Bulk.Fe55, Section.Bulk.Fe59, Section.Bulk.Mn54, 
+        Section.Bulk.Co60, Section.Bulk.Co58, Section.Bulk.Fe55, Section.Bulk.Fe59, Section.Bulk.Mn54,
         Section.Bulk.Cr51, Section.Bulk.Ni63
         ] = [[1e-10] * Section.NodeNumber] * 7
     
@@ -83,7 +83,7 @@ for Section in ld.Sections:
         Section.CorrRate, Section.MetalOxide.MixedPotential = it.CorrosionRate(Section)
         
     [
-        Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4, 
+        Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
         Section.MetalOxide.ConcentrationH
         ] = e.ElectrochemicalAdjustment(
         Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
@@ -109,11 +109,11 @@ class PHT_FAC():
         # Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
         
         BulkConcentrations = [
-            self.Section1.Bulk.FeTotal, self.Section1.Bulk.NiTotal, self.Section1.Bulk.CoTotal, 
+            self.Section1.Bulk.FeTotal, self.Section1.Bulk.NiTotal, self.Section1.Bulk.CoTotal,
             self.Section1.Bulk.CrTotal
             ]
         BulkConcentrations2 = [
-            self.Section2.Bulk.FeTotal, self.Section2.Bulk.NiTotal, self.Section2.Bulk.CoTotal, 
+            self.Section2.Bulk.FeTotal, self.Section2.Bulk.NiTotal, self.Section2.Bulk.CoTotal,
             self.Section2.Bulk.CrTotal
             ]
         
@@ -122,7 +122,7 @@ class PHT_FAC():
             self.Section1.SolutionOxide.CoTotal, self.Section1.SolutionOxide.CrTotal
             ]
         Saturations = [
-            self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.NiSatFerrite, 
+            self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.NiSatFerrite,
             self.Section1.SolutionOxide.CoSatFerrite
             ]
         
@@ -137,7 +137,7 @@ class PHT_FAC():
                 # Exponential decay of bulk particulate at start of section as function of distance + removal due to 
                 # deposition and erosion source
                 self.Section1.BigParticulate[i] = rk_4.particulate(
-                    self.Section1, self.Section1.BigParticulate[0], self.Section1.Diameter[i], 
+                    self.Section1, self.Section1.BigParticulate[0], self.Section1.Diameter[i],
                     self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
                     )
                 self.Section1.SmallParticulate[i] = rk_4.particulate(
@@ -245,47 +245,66 @@ class PHT_FAC():
             self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime
             )
 
-# TotalTime = []
-# SACo60 = [] 
-# SACo58 = [] 
-# SAFe59 = []
-# SAFe55 = []
-# SAMn54 = []
-# SACr51 = []
-# SANi63 = []       
+     
 
+AverageColdLegLoading = []
+RIHT = []
+StreamOutletTemperatures = []
+
+SimulationYears = 1  # years
+SimulationHours = SimulationYears * 8760
+  
 import time
 start_time = time.time()
-for j in range(8760*9):  # nc.SimulationDuration
-    I = PHT_FAC(ld.Inlet, ld.Core, j)
-    C = PHT_FAC(ld.Core, ld.Outlet, j)
-    O = PHT_FAC(ld.Outlet, ld.SteamGenerator, j)
-    SG = PHT_FAC(ld.SteamGenerator, ld.Inlet, j)
-    if j % 8759 == 0:  # 8759
-        totalthicknessSG = [x + y for x, y in zip(SG.Section1.OuterOxThickness, SG.Section1.InnerOxThickness)]
-        convertedtotalthicknessSG = ld.UnitConverter(
-            SG.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, totalthicknessSG, None, None, None
-            )
-  
-        RIHT = (SGHX.energy_balance(21, j))
-        print(RIHT - 273.15, "RIHT")
-        print(ld.SteamGenerator.PrimaryBulkTemperature[21] - 273.15, ld.SG_Zone1.PrimaryBulkTemperature[21] - 273.15, \
-                  ld.SG_Zone2.PrimaryBulkTemperature[21] - 273.15, ld.SG_Zone3.PrimaryBulkTemperature[21] - 273.15)
-        print(SG.Section1.SolutionOxide.FeTotal, "FeTotal")
-        print(SG.Section1.SolutionOxide.FeSatFe3O4, "FeSat")
-        print (sum(convertedtotalthicknessSG[11:22]) / (22 - 11), "Average SG cold leg [g/m^2] oxide thickness", j, "time [h]")
-#         print (sum(ld.UnitConverter(O.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, O.Section1.CorrRate, None, None, None, None))\
-#                    /(O.Section1.NodeNumber), "Average outlet corrosion rate [um/a]")
-        print()
-#     TotalTime.append(j/7000)# converts to EFPY
-#     SACo60.append(sum(S.Section1.MetalOxide.Co60)/S.Section1.NodeNumber)
-#     SACo58.append(sum(S.Section1.MetalOxide.Co58)/S.Section1.NodeNumber)
-#     SAFe59.append(sum(S.Section1.MetalOxide.Fe59)/S.Section1.NodeNumber)
-#     SAFe55.append(sum(S.Section1.MetalOxide.Fe55)/S.Section1.NodeNumber)
-#     SAMn54.append(sum(S.Section1.MetalOxide.Mn54)/S.Section1.NodeNumber)
-#     SACr51.append(sum(S.Section1.MetalOxide.Cr51)/S.Section1.NodeNumber)
-#     SANi63.append(sum(S.Section1.MetalOxide.Ni63)/S.Section1.NodeNumber)
+
+for j in range(SimulationHours):
+    In = PHT_FAC(ld.Inlet, ld.Core, j)
+    Co = PHT_FAC(ld.Core, ld.Outlet, j)
+    Ou = PHT_FAC(ld.Outlet, ld.SteamGenerator, j)
+    Sg = PHT_FAC(ld.SteamGenerator, ld.Inlet, j)
     
+    if j % 8759 == 0:  # yearly
+        
+        TotalLoadingSG = [x + y for x, y in zip(Sg.Section1.OuterOxThickness, Sg.Section1.InnerOxThickness)]
+        ConvertedLoading = ld.UnitConverter(
+            Sg.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, TotalLoadingSG, None, None, None
+            )
+        AverageColdLeg = sum(ConvertedLoading[11:len(ConvertedLoading)]) \
+            / (len(ConvertedLoading) - 11)
+  
+        T_x = (SGHX.energy_balance(21, j)) - 273.15
+        
+        OutletTemperatures = []
+        for Zone in ld.SGZones:
+            Temperature = Zone.PrimaryBulkTemperature[Zone.NodeNumber - 1] - 273.15
+            OutletTemperatures.append(Temperature)
+        
+        StreamOutletTemperatures.append(OutletTemperatures)
+        AverageColdLegLoading.append(AverageColdLeg)
+        RIHT.append(T_x)
+
+FACRate = sum(
+    ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
+    None, None, None, None)
+    ) / (Ou.Section1.NodeNumber)
+
+csvfile = "RIHTOutput.csv"
+with open(csvfile, "w") as output:
+    writer = csv.writer(output, lineterminator='\n')
+    writer.writerow(["average cold leg loading"])
+    writer.writerows([AverageColdLegLoading])
+
+    writer.writerow(['Outlet Streams'])
+    writer.writerows(StreamOutletTemperatures)
+    
+    writer.writerow(['RIHT'])
+    writer.writerow(RIHT) 
+    
+    writer.writerow(['Inner Oxide Layer [g/cm^2]'])
+    writer.writerow(Sg.Section1.InnerOxThickness)
+    writer.writerow(['Outer Oxide Layer [g/cm^2]'])
+    writer.writerow(Sg.Section1.OuterOxThickness)   
+
 end_time = time.time()
 delta_time = end_time - start_time
 
@@ -295,6 +314,15 @@ minutes = delta_time // 60
 seconds = delta_time - 60 * minutes
 print('%d:%d:%d' % (hours, minutes, seconds))
 
+
+
+
+
+
+
+
+
+
 # Corrosion= []
 # Rates = [I.Section1.CorrRate, C.Section1.CorrRate, O.Section1.CorrRate, SG.Section1.CorrRate]
 # for Rate, Section in zip (Rates, ld.Sections):
@@ -302,135 +330,121 @@ print('%d:%d:%d' % (hours, minutes, seconds))
 #     Corrosion.append(x)
 # CorrosionRate = Corrosion[0] + Corrosion[1] + Corrosion[2] + Corrosion[3]
 # print (CorrosionRate)
-# print(-np.log10(O.Section1.SolutionOxide.ConcentrationH[0]), "Outlet pH")
-# print([i-273.15 for i in SG.Section1.PrimaryBulkTemperature], "Temperature profile")
-# print()
-print (SG.Section1.InnerOxThickness, "InnerOx")
-print(SG.Section1.OuterOxThickness, "OuterOx")
 
-# ActivityTime = TotalTime[0::3]
-# Co60SGActivity = SACo60[0::3]
-# Co58SGActivity = SACo58[0::3]
-# Fe59SGActivity = SAFe59[0::3]
-# Fe55SGActivity = SAFe55[0::3]
-# Mn54SGActivity = SAMn54[0::3]
-# Cr51SGActivity = SACr51[0::3]
-# Ni63SGActivity = SANi63[0::3]
-
-LoopDistance = I.Section1.Length.magnitude + C.Section1.Length.magnitude + O.Section1.Length.magnitude + SG.Section1.Length.magnitude
-TotalLoopDistance = [i / 100 for i in np.cumsum(LoopDistance)]  # Distance down length of PHTS [m]
-
-BulkFeSat = [np.log10(i) for i in I.Section1.Bulk.FeSatFe3O4 + C.Section1.Bulk.FeSatFe3O4 + O.Section1.Bulk.FeSatFe3O4 + SG.Section1.Bulk.FeSatFe3O4]
-BulkFeTotal = [np.log10(i) for i in I.Section1.Bulk.FeTotal + C.Section1.Bulk.FeTotal + O.Section1.Bulk.FeTotal + SG.Section1.Bulk.FeTotal]
-SolutionOxideFeTotal = [np.log10(i) for i in I.Section1.SolutionOxide.FeTotal + C.Section1.SolutionOxide.FeTotal + \
-                        O.Section1.SolutionOxide.FeTotal + SG.Section1.SolutionOxide.FeTotal]
-SolutionOxideFeSat = [np.log10(i) for i in I.Section1.SolutionOxide.FeSatFe3O4 + C.Section1.SolutionOxide.FeSatFe3O4 + \
-                        O.Section1.SolutionOxide.FeSatFe3O4 + SG.Section1.SolutionOxide.FeSatFe3O4]
-
-BulkNiTotal = [np.log10(i) for i in I.Section1.Bulk.NiTotal + C.Section1.Bulk.NiTotal + O.Section1.Bulk.NiTotal + SG.Section1.Bulk.NiTotal]
-SolutionOxideNiTotal = [np.log10(i) for i in I.Section1.SolutionOxide.NiTotal + C.Section1.SolutionOxide.NiTotal + \
-                        O.Section1.SolutionOxide.NiTotal + SG.Section1.SolutionOxide.NiTotal]
-SolutionOxideNiSat = [np.log10(i) for i in I.Section1.SolutionOxide.NiSatFerrite + C.Section1.SolutionOxide.NiSatFerrite + \
-                        O.Section1.SolutionOxide.NiSatFerrite + SG.Section1.SolutionOxide.NiSatFerrite]
-
-BulkCoTotal = [np.log10(i) for i in I.Section1.Bulk.CoTotal + C.Section1.Bulk.CoTotal + O.Section1.Bulk.CoTotal + SG.Section1.Bulk.CoTotal]
-SolutionOxideCoTotal = [np.log10(i) for i in I.Section1.SolutionOxide.CoTotal + C.Section1.SolutionOxide.CoTotal + \
-                        O.Section1.SolutionOxide.CoTotal + SG.Section1.SolutionOxide.CoTotal]
-SolutionOxideCoSat = [np.log10(i) for i in I.Section1.SolutionOxide.CoSatFerrite + C.Section1.SolutionOxide.CoSatFerrite + \
-                        O.Section1.SolutionOxide.CoSatFerrite + SG.Section1.SolutionOxide.CoSatFerrite]
-
-
-BulkCrTotal = [np.log10(i) for i in I.Section1.Bulk.CrTotal + C.Section1.Bulk.CrTotal + O.Section1.Bulk.CrTotal + SG.Section1.Bulk.CrTotal]
-
-SolutionOxideCrSat = [np.log10(i) for i in I.Section1.SolutionOxide.CrSat + C.Section1.SolutionOxide.CrSat + O.Section1.SolutionOxide.CrSat + \
-                      SG.Section1.SolutionOxide.CrSat]
-
-
-InnerOxide = []
-InnerOxideThicknesses = [I.Section1.InnerOxThickness, C.Section1.InnerOxThickness, O.Section1.InnerOxThickness, SG.Section1.InnerOxThickness]
-for Thickness, Sect in zip (InnerOxideThicknesses, ld.Sections):
-    z = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
-    InnerOxide.append(z)
-InnerOxideThickness = InnerOxide[0] + InnerOxide[1] + InnerOxide[2] + InnerOxide[3]
-
-OuterOxide = []
-OuterOxideThicknesses = [I.Section1.OuterOxThickness, C.Section1.OuterOxThickness, O.Section1.OuterOxThickness, SG.Section1.OuterOxThickness]
-for Thickness, Sect in zip (OuterOxideThicknesses, ld.Sections):
-    q = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
-    OuterOxide.append(q)
-OuterOxideThickness = OuterOxide[0] + OuterOxide[1] + OuterOxide[2] + OuterOxide[3]
-
-Cobalt = []
-CoThicknesses = [I.Section1.CoThickness, C.Section1.CoThickness, O.Section1.CoThickness, SG.Section1.CoThickness]
-for Thickness, Sect in zip (CoThicknesses, ld.Sections):
-    c = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
-    Cobalt.append(c)
-CobaltThickness = Cobalt[0] + Cobalt[1] + Cobalt[2] + Cobalt[3]
-
-Nickel = []
-NiThicknesses = [I.Section1.NiThickness, C.Section1.NiThickness, O.Section1.NiThickness, SG.Section1.NiThickness]
-for Thickness, Sect in zip (NiThicknesses, ld.Sections):
-    n = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
-    Nickel.append(n)
-NickelThickness = Nickel[0] + Nickel[1] + Nickel[2] + Nickel[3]
-
-
-# LogCorrosion= [np.log10(i) for i in Corrosion]
-
-
-fig1 = plt.figure()
-ax1 = fig1.add_subplot(221)
-ax1.plot(TotalLoopDistance, SolutionOxideFeTotal, marker='o', color='r', label='S/O Interface')
-ax1.plot(TotalLoopDistance, SolutionOxideFeSat, marker='o', color='0', label='Magnetite Solubility')
-ax1.plot(TotalLoopDistance, BulkFeTotal, marker='o', color='0.50', label='Bulk Coolant')
-ax1.set_xlabel('Distance (m)')
-ax1.set_ylabel('$Log_{10}$[Fe Concentration (mol/kg)]')
-# ax1.legend()
-
-ax2 = fig1.add_subplot(222)
-ax2.plot(TotalLoopDistance, SolutionOxideNiTotal, marker='o', color='b', label='S/O Interface')
-ax2.plot(TotalLoopDistance, SolutionOxideNiSat, marker='o', color='0', label='Ni-Ferrite Solubility')
-ax2.plot(TotalLoopDistance, BulkNiTotal, marker='o', color='0.50', label='Bulk Coolant') 
-ax2.set_xlabel('Distance (m)')
-ax2.set_ylabel('$Log_{10}$[Ni Concentration (mol/kg)]')
-# ax2.legend()
-
-ax3 = fig1.add_subplot(223)
-ax3.plot(TotalLoopDistance, SolutionOxideCoTotal, marker='^', color='m', label='S/O Interface')
-ax3.plot(TotalLoopDistance, SolutionOxideCoSat, marker='^', color='0', label='Co-Ferrite Solubility')
-ax3.plot(TotalLoopDistance, BulkCoTotal, marker='^', color='0.50', label='Bulk Coolant') 
-ax3.set_xlabel('Distance (m)')
-ax3.set_ylabel('$Log_{10}$[Co Concentration (mol/kg)]')
-# ax3.legend()
-
-
-ax4 = fig1.add_subplot(224)
-ax4.plot(TotalLoopDistance, SolutionOxideCrSat, marker='*', color='0', label='Chromite Solubility')
-ax4.plot(TotalLoopDistance, BulkCrTotal, marker='*', color='0.50', label='Bulk Coolant') 
-ax4.set_xlabel('Distance (m)')
-ax4.set_ylabel('$Log_{10}$[Cr Concentration (mol/kg)]')
-
-plt.tight_layout()
-plt.show()
-
-fig2, ax1 = plt.subplots()
-# ax1 = fig2.add_subplot(221)
-ax1.plot(TotalLoopDistance, InnerOxideThickness, linestyle=None, marker='o', color='0.50', label='Inner Oxide')
-ax1.plot(TotalLoopDistance, OuterOxideThickness, linestyle=None, marker='o', color='k', label='Outer Oxide')
-# ax1.axis([51,69, 0, 30])
-ax1.set_xlabel('Distance (m)')
-ax1.set_ylabel('Oxide Layer Loadings (${g/m^2}$)')
-           
-ax2 = ax1.twinx()
-ax2.plot(TotalLoopDistance, NickelThickness, linestyle=None, marker='o', color='c', label='Nickel')
-ax2.plot(TotalLoopDistance, CobaltThickness, linestyle=None, marker='o', color='m', label='Cobalt')
-ax2.set_ylabel('Ni, Co, and Cr Loadings (${g/m^2}$)', rotation=270, labelpad=20)
-lines, labels = ax1.get_legend_handles_labels()
-lines2, labels2 = ax2.get_legend_handles_labels()
-ax2.legend(lines + lines2, labels + labels2, loc=0)        
-# plt.axis([51, 69, 0, 30])
-plt.tight_layout()
-plt.show()
+# LoopDistance = I.Section1.Length.magnitude + C.Section1.Length.magnitude + O.Section1.Length.magnitude + SG.Section1.Length.magnitude
+# TotalLoopDistance = [i / 100 for i in np.cumsum(LoopDistance)]  # Distance down length of PHTS [m]
+# 
+# BulkFeSat = [np.log10(i) for i in I.Section1.Bulk.FeSatFe3O4 + C.Section1.Bulk.FeSatFe3O4 + O.Section1.Bulk.FeSatFe3O4 + SG.Section1.Bulk.FeSatFe3O4]
+# BulkFeTotal = [np.log10(i) for i in I.Section1.Bulk.FeTotal + C.Section1.Bulk.FeTotal + O.Section1.Bulk.FeTotal + SG.Section1.Bulk.FeTotal]
+# SolutionOxideFeTotal = [np.log10(i) for i in I.Section1.SolutionOxide.FeTotal + C.Section1.SolutionOxide.FeTotal + \
+#                         O.Section1.SolutionOxide.FeTotal + SG.Section1.SolutionOxide.FeTotal]
+# SolutionOxideFeSat = [np.log10(i) for i in I.Section1.SolutionOxide.FeSatFe3O4 + C.Section1.SolutionOxide.FeSatFe3O4 + \
+#                         O.Section1.SolutionOxide.FeSatFe3O4 + SG.Section1.SolutionOxide.FeSatFe3O4]
+# 
+# BulkNiTotal = [np.log10(i) for i in I.Section1.Bulk.NiTotal + C.Section1.Bulk.NiTotal + O.Section1.Bulk.NiTotal + SG.Section1.Bulk.NiTotal]
+# SolutionOxideNiTotal = [np.log10(i) for i in I.Section1.SolutionOxide.NiTotal + C.Section1.SolutionOxide.NiTotal + \
+#                         O.Section1.SolutionOxide.NiTotal + SG.Section1.SolutionOxide.NiTotal]
+# SolutionOxideNiSat = [np.log10(i) for i in I.Section1.SolutionOxide.NiSatFerrite + C.Section1.SolutionOxide.NiSatFerrite + \
+#                         O.Section1.SolutionOxide.NiSatFerrite + SG.Section1.SolutionOxide.NiSatFerrite]
+# 
+# BulkCoTotal = [np.log10(i) for i in I.Section1.Bulk.CoTotal + C.Section1.Bulk.CoTotal + O.Section1.Bulk.CoTotal + SG.Section1.Bulk.CoTotal]
+# SolutionOxideCoTotal = [np.log10(i) for i in I.Section1.SolutionOxide.CoTotal + C.Section1.SolutionOxide.CoTotal + \
+#                         O.Section1.SolutionOxide.CoTotal + SG.Section1.SolutionOxide.CoTotal]
+# SolutionOxideCoSat = [np.log10(i) for i in I.Section1.SolutionOxide.CoSatFerrite + C.Section1.SolutionOxide.CoSatFerrite + \
+#                         O.Section1.SolutionOxide.CoSatFerrite + SG.Section1.SolutionOxide.CoSatFerrite]
+# 
+# 
+# BulkCrTotal = [np.log10(i) for i in I.Section1.Bulk.CrTotal + C.Section1.Bulk.CrTotal + O.Section1.Bulk.CrTotal + SG.Section1.Bulk.CrTotal]
+# 
+# SolutionOxideCrSat = [np.log10(i) for i in I.Section1.SolutionOxide.CrSat + C.Section1.SolutionOxide.CrSat + O.Section1.SolutionOxide.CrSat + \
+#                       SG.Section1.SolutionOxide.CrSat]
+# 
+# 
+# InnerOxide = []
+# InnerOxideThicknesses = [I.Section1.InnerOxThickness, C.Section1.InnerOxThickness, O.Section1.InnerOxThickness, SG.Section1.InnerOxThickness]
+# for Thickness, Sect in zip (InnerOxideThicknesses, ld.Sections):
+#     z = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
+#     InnerOxide.append(z)
+# InnerOxideThickness = InnerOxide[0] + InnerOxide[1] + InnerOxide[2] + InnerOxide[3]
+# 
+# OuterOxide = []
+# OuterOxideThicknesses = [I.Section1.OuterOxThickness, C.Section1.OuterOxThickness, O.Section1.OuterOxThickness, SG.Section1.OuterOxThickness]
+# for Thickness, Sect in zip (OuterOxideThicknesses, ld.Sections):
+#     q = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
+#     OuterOxide.append(q)
+# OuterOxideThickness = OuterOxide[0] + OuterOxide[1] + OuterOxide[2] + OuterOxide[3]
+# 
+# Cobalt = []
+# CoThicknesses = [I.Section1.CoThickness, C.Section1.CoThickness, O.Section1.CoThickness, SG.Section1.CoThickness]
+# for Thickness, Sect in zip (CoThicknesses, ld.Sections):
+#     c = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
+#     Cobalt.append(c)
+# CobaltThickness = Cobalt[0] + Cobalt[1] + Cobalt[2] + Cobalt[3]
+# 
+# Nickel = []
+# NiThicknesses = [I.Section1.NiThickness, C.Section1.NiThickness, O.Section1.NiThickness, SG.Section1.NiThickness]
+# for Thickness, Sect in zip (NiThicknesses, ld.Sections):
+#     n = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
+#     Nickel.append(n)
+# NickelThickness = Nickel[0] + Nickel[1] + Nickel[2] + Nickel[3]
+# 
+# 
+# # LogCorrosion= [np.log10(i) for i in Corrosion]
+# 
+# 
+# fig1 = plt.figure()
+# ax1 = fig1.add_subplot(221)
+# ax1.plot(TotalLoopDistance, SolutionOxideFeTotal, marker='o', color='r', label='S/O Interface')
+# ax1.plot(TotalLoopDistance, SolutionOxideFeSat, marker='o', color='0', label='Magnetite Solubility')
+# ax1.plot(TotalLoopDistance, BulkFeTotal, marker='o', color='0.50', label='Bulk Coolant')
+# ax1.set_xlabel('Distance (m)')
+# ax1.set_ylabel('$Log_{10}$[Fe Concentration (mol/kg)]')
+# # ax1.legend()
+# 
+# ax2 = fig1.add_subplot(222)
+# ax2.plot(TotalLoopDistance, SolutionOxideNiTotal, marker='o', color='b', label='S/O Interface')
+# ax2.plot(TotalLoopDistance, SolutionOxideNiSat, marker='o', color='0', label='Ni-Ferrite Solubility')
+# ax2.plot(TotalLoopDistance, BulkNiTotal, marker='o', color='0.50', label='Bulk Coolant') 
+# ax2.set_xlabel('Distance (m)')
+# ax2.set_ylabel('$Log_{10}$[Ni Concentration (mol/kg)]')
+# # ax2.legend()
+# 
+# ax3 = fig1.add_subplot(223)
+# ax3.plot(TotalLoopDistance, SolutionOxideCoTotal, marker='^', color='m', label='S/O Interface')
+# ax3.plot(TotalLoopDistance, SolutionOxideCoSat, marker='^', color='0', label='Co-Ferrite Solubility')
+# ax3.plot(TotalLoopDistance, BulkCoTotal, marker='^', color='0.50', label='Bulk Coolant') 
+# ax3.set_xlabel('Distance (m)')
+# ax3.set_ylabel('$Log_{10}$[Co Concentration (mol/kg)]')
+# # ax3.legend()
+# 
+# 
+# ax4 = fig1.add_subplot(224)
+# ax4.plot(TotalLoopDistance, SolutionOxideCrSat, marker='*', color='0', label='Chromite Solubility')
+# ax4.plot(TotalLoopDistance, BulkCrTotal, marker='*', color='0.50', label='Bulk Coolant') 
+# ax4.set_xlabel('Distance (m)')
+# ax4.set_ylabel('$Log_{10}$[Cr Concentration (mol/kg)]')
+# 
+# plt.tight_layout()
+# plt.show()
+# 
+# fig2, ax1 = plt.subplots()
+# # ax1 = fig2.add_subplot(221)
+# ax1.plot(TotalLoopDistance, InnerOxideThickness, linestyle=None, marker='o', color='0.50', label='Inner Oxide')
+# ax1.plot(TotalLoopDistance, OuterOxideThickness, linestyle=None, marker='o', color='k', label='Outer Oxide')
+# # ax1.axis([51,69, 0, 30])
+# ax1.set_xlabel('Distance (m)')
+# ax1.set_ylabel('Oxide Layer Loadings (${g/m^2}$)')
+#            
+# ax2 = ax1.twinx()
+# ax2.plot(TotalLoopDistance, NickelThickness, linestyle=None, marker='o', color='c', label='Nickel')
+# ax2.plot(TotalLoopDistance, CobaltThickness, linestyle=None, marker='o', color='m', label='Cobalt')
+# ax2.set_ylabel('Ni, Co, and Cr Loadings (${g/m^2}$)', rotation=270, labelpad=20)
+# lines, labels = ax1.get_legend_handles_labels()
+# lines2, labels2 = ax2.get_legend_handles_labels()
+# ax2.legend(lines + lines2, labels + labels2, loc=0)        
+# # plt.axis([51, 69, 0, 30])
+# plt.tight_layout()
+# plt.show()
 
 # fig3, ax1 = plt.subplots()
 # #ax1 = fig2.add_subplot(221)
