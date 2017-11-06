@@ -3,7 +3,7 @@ import constants as nc
 import lepreau_data as ld
 import composition as c
 import rk_4
-import activities as a
+#import activities as a
 import electrochemistry as e
 import iteration as it
 import sg_heattransfer as SGHX
@@ -93,7 +93,7 @@ for Section in ld.Sections:
 
 
 class PHT_FAC():
-    def __init__(self, ActiveSection, OutgoingSection, j):  # j = overall time step
+    def __init__(self, ActiveSection, OutgoingSection, RealTimeHeatTransfer, j):  # j = overall time step
         self.Section1 = ActiveSection
         self.Section2 = OutgoingSection
             
@@ -217,22 +217,19 @@ class PHT_FAC():
 #             self.Section1.MetalOxide.Ni63 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
 #                                                           self.Section1.InnerOxThickness, self.Section1.Bulk.Ni63, j, "Ni63")
 
-        # #SG heat transfer 
-#         if self.Section1 in ld.SGZones:   
-#             self.Section1.PrimaryBulkTemperature = SGHX.temperature_profile(self.Section1, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness)
-#             self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1) 
-            
-#         if self.Section1 == ld.SG_Zone1:    
-#             if j %699==0: #(17520)
-#                 print ([i-273.15 for i in self.Section1.PrimaryBulkTemperature],j)
-#                 print (self.Section1.SolutionOxide.FeSatFe3O4, "FeSat S/O")
-#                 print(self.Section1.SolutionOxide.FeTotal, "FeTot S/O")
-#                 print()
+        # SG heat transfer 
+        if RealTimeHeatTransfer == "yes":
+            if self.Section1 in ld.SGZones:   
+                self.Section1.PrimaryBulkTemperature = SGHX.temperature_profile(
+                    self.Section1, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness
+                    )
+                self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1) 
+          
         
-        # RIHT  
-#         if self.Section1 == ld.Inlet:
-#             self.Section1.PrimaryBulkTemperature = SGHX.energy_balance(21, self.Section1.NodeNumber)
-#             self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1)
+            # RIHT  
+            if self.Section1 == ld.Inlet:
+                self.Section1.PrimaryBulkTemperature = SGHX.energy_balance(21, j)
+                self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1)
 
         # Deposit thickness around PHTS
         # self.Section1.DepositThickness = a.Deposition(self.Section1, self.Section1.BigParticulate, self.Section1.SmallParticulate, j)
@@ -247,72 +244,72 @@ class PHT_FAC():
 
      
 
-AverageColdLegLoading = []
-RIHT = []
-StreamOutletTemperatures = []
-
-SimulationYears = 1  # years
-SimulationHours = SimulationYears * 8760
-  
-import time
-start_time = time.time()
-
-for j in range(SimulationHours):
-    In = PHT_FAC(ld.Inlet, ld.Core, j)
-    Co = PHT_FAC(ld.Core, ld.Outlet, j)
-    Ou = PHT_FAC(ld.Outlet, ld.SteamGenerator, j)
-    Sg = PHT_FAC(ld.SteamGenerator, ld.Inlet, j)
-    
-    if j % 8759 == 0:  # yearly
-        
-        TotalLoadingSG = [x + y for x, y in zip(Sg.Section1.OuterOxThickness, Sg.Section1.InnerOxThickness)]
-        ConvertedLoading = ld.UnitConverter(
-            Sg.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, TotalLoadingSG, None, None, None
-            )
-        AverageColdLeg = sum(ConvertedLoading[11:len(ConvertedLoading)]) \
-            / (len(ConvertedLoading) - 11)
-  
-        T_x = (SGHX.energy_balance(21, j)) - 273.15
-        
-        OutletTemperatures = []
-        for Zone in ld.SGZones:
-            Temperature = Zone.PrimaryBulkTemperature[Zone.NodeNumber - 1] - 273.15
-            OutletTemperatures.append(Temperature)
-        
-        StreamOutletTemperatures.append(OutletTemperatures)
-        AverageColdLegLoading.append(AverageColdLeg)
-        RIHT.append(T_x)
-
-FACRate = sum(
-    ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
-    None, None, None, None)
-    ) / (Ou.Section1.NodeNumber)
-
-csvfile = "RIHTOutput.csv"
-with open(csvfile, "w") as output:
-    writer = csv.writer(output, lineterminator='\n')
-    writer.writerow(["average cold leg loading"])
-    writer.writerows([AverageColdLegLoading])
-
-    writer.writerow(['Outlet Streams'])
-    writer.writerows(StreamOutletTemperatures)
-    
-    writer.writerow(['RIHT'])
-    writer.writerow(RIHT) 
-    
-    writer.writerow(['Inner Oxide Layer [g/cm^2]'])
-    writer.writerow(Sg.Section1.InnerOxThickness)
-    writer.writerow(['Outer Oxide Layer [g/cm^2]'])
-    writer.writerow(Sg.Section1.OuterOxThickness)   
-
-end_time = time.time()
-delta_time = end_time - start_time
-
-hours = delta_time // 3600
-temp = delta_time - 3600 * hours
-minutes = delta_time // 60
-seconds = delta_time - 60 * minutes
-print('%d:%d:%d' % (hours, minutes, seconds))
+# AverageColdLegLoading = []
+# RIHT = []
+# StreamOutletTemperatures = []
+# 
+# SimulationYears = 1  # years
+# SimulationHours = SimulationYears * 8760
+#   
+# import time
+# start_time = time.time()
+# 
+# for j in range(SimulationHours):
+#     In = PHT_FAC(ld.Inlet, ld.Core, j)
+#     Co = PHT_FAC(ld.Core, ld.Outlet, j)
+#     Ou = PHT_FAC(ld.Outlet, ld.SteamGenerator, j)
+#     Sg = PHT_FAC(ld.SteamGenerator, ld.Inlet, j)
+#     
+#     if j % 8759 == 0:  # yearly
+#         
+#         TotalLoadingSG = [x + y for x, y in zip(Sg.Section1.OuterOxThickness, Sg.Section1.InnerOxThickness)]
+#         ConvertedLoading = ld.UnitConverter(
+#             Sg.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, TotalLoadingSG, None, None, None
+#             )
+#         AverageColdLeg = sum(ConvertedLoading[11:len(ConvertedLoading)]) \
+#             / (len(ConvertedLoading) - 11)
+#   
+#         T_x = (SGHX.energy_balance(21, j)) - 273.15
+#         
+#         OutletTemperatures = []
+#         for Zone in ld.SGZones:
+#             Temperature = Zone.PrimaryBulkTemperature[Zone.NodeNumber - 1] - 273.15
+#             OutletTemperatures.append(Temperature)
+#         
+#         StreamOutletTemperatures.append(OutletTemperatures)
+#         AverageColdLegLoading.append(AverageColdLeg)
+#         RIHT.append(T_x)
+# 
+# FACRate = sum(
+#     ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
+#     None, None, None, None)
+#     ) / (Ou.Section1.NodeNumber)
+# 
+# csvfile = "RIHTOutput.csv"
+# with open(csvfile, "w") as output:
+#     writer = csv.writer(output, lineterminator='\n')
+#     writer.writerow(["average cold leg loading"])
+#     writer.writerows([AverageColdLegLoading])
+# 
+#     writer.writerow(['Outlet Streams'])
+#     writer.writerows(StreamOutletTemperatures)
+#     
+#     writer.writerow(['RIHT'])
+#     writer.writerow(RIHT) 
+#     
+#     writer.writerow(['Inner Oxide Layer [g/cm^2]'])
+#     writer.writerow(Sg.Section1.InnerOxThickness)
+#     writer.writerow(['Outer Oxide Layer [g/cm^2]'])
+#     writer.writerow(Sg.Section1.OuterOxThickness)   
+# 
+# end_time = time.time()
+# delta_time = end_time - start_time
+# 
+# hours = delta_time // 3600
+# temp = delta_time - 3600 * hours
+# minutes = delta_time // 60
+# seconds = delta_time - 60 * minutes
+# print('%d:%d:%d' % (hours, minutes, seconds))
 
 
 

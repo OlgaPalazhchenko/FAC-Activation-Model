@@ -349,7 +349,7 @@ def temperature_profile(Section, InnerAccumulation, OuterAccumulation, m_h_leaka
     return PrimaryBulk
 
 
-def energy_balance(OutputNode, j):
+def energy_balance(SteamGeneratorOutputNode, j):
     InitialLeakage = 0.02
     YearlyRateLeakage = 0.006
     Leakage = InitialLeakage + (j / 8760) * YearlyRateLeakage
@@ -363,7 +363,7 @@ def energy_balance(OutputNode, j):
             )
         
         x = (Zone.TubeNumber / nc.TotalSGTubeNumber) * m_h_leakagecorrection \
-            * ld.Enthalpy("PHT", Zone.PrimaryBulkTemperature[OutputNode])
+            * ld.Enthalpy("PHT", Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode])
 
         Balance.append(x)
         Enthalpy = (sum(Balance) + MasssFlow_dividerplate.magnitude * ld.Enthalpy("PHT", T_PrimaryIn)) \
