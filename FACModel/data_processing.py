@@ -106,80 +106,82 @@ seconds = delta_time - 60 * minutes
 print('%d:%d:%d' % (hours, minutes, seconds))
 
 
-def concentration_log10(Section, Element):
-    BulkFeSat = [np.log10(i) for i in
-                 In.Section1.Bulk.FeSatFe3O4
-                 + Co.Section1.Bulk.FeSatFe3O4
-                 + Ou.Section1.Bulk.FeSatFe3O4
-                 + Sg.Section1.Bulk.FeSatFe3O4]
-      
-    BulkFeTotal = [np.log10(i) for i in
-                   In.Section1.Bulk.FeTotal
-                   + Co.Section1.Bulk.FeTotal
-                   + Ou.Section1.Bulk.FeTotal
-                   + Sg.Section1.Bulk.FeTotal]
-      
-    SolutionOxideFeTotal = [np.log10(i) for i in
-                            In.Section1.SolutionOxide.FeTotal
-                            + Co.Section1.SolutionOxide.FeTotal
-                            + Ou.Section1.SolutionOxide.FeTotal
-                            + Sg.Section1.SolutionOxide.FeTotal]
-      
-    SolutionOxideFeSat = [np.log10(i) for i in
-                          In.Section1.SolutionOxide.FeSatFe3O4
-                          + Co.Section1.SolutionOxide.FeSatFe3O4
-                          + Ou.Section1.SolutionOxide.FeSatFe3O4
-                          + Sg.Section1.SolutionOxide.FeSatFe3O4]
-       
-    BulkNiTotal = [np.log10(i) for i in
-                   In.Section1.Bulk.NiTotal
-                   + Co.Section1.Bulk.NiTotal
-                   + Ou.Section1.Bulk.NiTotal
-                   + Sg.Section1.Bulk.NiTotal]
-      
-    SolutionOxideNiTotal = [np.log10(i) for i in
-                            In.Section1.SolutionOxide.NiTotal
-                            + Co.Section1.SolutionOxide.NiTotal
-                            + Ou.Section1.SolutionOxide.NiTotal
-                            + Sg.Section1.SolutionOxide.NiTotal]
-     
-    SolutionOxideNiSat = [np.log10(i) for i in
-                          In.Section1.SolutionOxide.NiSatFerrite
-                          + Co.Section1.SolutionOxide.NiSatFerrite
-                          + Ou.Section1.SolutionOxide.NiSatFerrite
-                          + Sg.Section1.SolutionOxide.NiSatFerrite]
-       
-    BulkCoTotal = [np.log10(i) for i in
-                   In.Section1.Bulk.CoTotal
-                   + Co.Section1.Bulk.CoTotal
-                   + Ou.Section1.Bulk.CoTotal
-                   + Sg.Section1.Bulk.CoTotal]
-     
-    SolutionOxideCoTotal = [np.log10(i) for i in
-                            In.Section1.SolutionOxide.CoTotal
-                            + Co.Section1.SolutionOxide.CoTotal
-                            + Ou.Section1.SolutionOxide.CoTotal
-                            + Sg.Section1.SolutionOxide.CoTotal]
-      
-    SolutionOxideCoSat = [np.log10(i) for i in
-                          In.Section1.SolutionOxide.CoSatFerrite
-                          + Co.Section1.SolutionOxide.CoSatFerrite
-                          + Ou.Section1.SolutionOxide.CoSatFerrite
-                          + Sg.Section1.SolutionOxide.CoSatFerrite]
-       
-       
-    BulkCrTotal = [np.log10(i) for i in
-                   In.Section1.Bulk.CrTotal
-                   + Co.Section1.Bulk.CrTotal
-                   + Ou.Section1.Bulk.CrTotal
-                   + Sg.Section1.Bulk.CrTotal]
-       
-    SolutionOxideCrSat = [np.log10(i) for i in
-                          In.Section1.SolutionOxide.CrSat
-                          + Co.Section1.SolutionOxide.CrSat
-                          + Ou.Section1.SolutionOxide.CrSat
-                          + Sg.Section1.SolutionOxide.CrSat]
-  
+def concentration_log10(Element):
+
+    
+#     BulkFeSat = [np.log10(i) for i in
+#                  In.Section1.Bulk.FeSatFe3O4
+#                  + Co.Section1.Bulk.FeSatFe3O4
+#                  + Ou.Section1.Bulk.FeSatFe3O4
+#                  + Sg.Section1.Bulk.FeSatFe3O4]
+#       
+#     BulkFeTotal = [np.log10(i) for i in
+#                    In.Section1.Bulk.FeTotal
+#                    + Co.Section1.Bulk.FeTotal
+#                    + Ou.Section1.Bulk.FeTotal
+#                    + Sg.Section1.Bulk.FeTotal]
+#       
+#     SolutionOxideFeTotal = [np.log10(i) for i in
+#                             In.Section1.SolutionOxide.FeTotal
+#                             + Co.Section1.SolutionOxide.FeTotal
+#                             + Ou.Section1.SolutionOxide.FeTotal
+#                             + Sg.Section1.SolutionOxide.FeTotal]
+#       
+#     SolutionOxideFeSat = [np.log10(i) for i in
+#                           In.Section1.SolutionOxide.FeSatFe3O4
+#                           + Co.Section1.SolutionOxide.FeSatFe3O4
+#                           + Ou.Section1.SolutionOxide.FeSatFe3O4
+#                           + Sg.Section1.SolutionOxide.FeSatFe3O4]
+#        
+#     BulkNiTotal = [np.log10(i) for i in
+#                    In.Section1.Bulk.NiTotal
+#                    + Co.Section1.Bulk.NiTotal
+#                    + Ou.Section1.Bulk.NiTotal
+#                    + Sg.Section1.Bulk.NiTotal]
+#       
+#     SolutionOxideNiTotal = [np.log10(i) for i in
+#                             In.Section1.SolutionOxide.NiTotal
+#                             + Co.Section1.SolutionOxide.NiTotal
+#                             + Ou.Section1.SolutionOxide.NiTotal
+#                             + Sg.Section1.SolutionOxide.NiTotal]
+#      
+#     SolutionOxideNiSat = [np.log10(i) for i in
+#                           In.Section1.SolutionOxide.NiSatFerrite
+#                           + Co.Section1.SolutionOxide.NiSatFerrite
+#                           + Ou.Section1.SolutionOxide.NiSatFerrite
+#                           + Sg.Section1.SolutionOxide.NiSatFerrite]
+#        
+#     BulkCoTotal = [np.log10(i) for i in
+#                    In.Section1.Bulk.CoTotal
+#                    + Co.Section1.Bulk.CoTotal
+#                    + Ou.Section1.Bulk.CoTotal
+#                    + Sg.Section1.Bulk.CoTotal]
+#      
+#     SolutionOxideCoTotal = [np.log10(i) for i in
+#                             In.Section1.SolutionOxide.CoTotal
+#                             + Co.Section1.SolutionOxide.CoTotal
+#                             + Ou.Section1.SolutionOxide.CoTotal
+#                             + Sg.Section1.SolutionOxide.CoTotal]
+#       
+#     SolutionOxideCoSat = [np.log10(i) for i in
+#                           In.Section1.SolutionOxide.CoSatFerrite
+#                           + Co.Section1.SolutionOxide.CoSatFerrite
+#                           + Ou.Section1.SolutionOxide.CoSatFerrite
+#                           + Sg.Section1.SolutionOxide.CoSatFerrite]
+#        
+#        
+#     BulkCrTotal = [np.log10(i) for i in
+#                    In.Section1.Bulk.CrTotal
+#                    + Co.Section1.Bulk.CrTotal
+#                    + Ou.Section1.Bulk.CrTotal
+#                    + Sg.Section1.Bulk.CrTotal]
+#        
+#     SolutionOxideCrSat = [np.log10(i) for i in
+#                           In.Section1.SolutionOxide.CrSat
+#                           + Co.Section1.SolutionOxide.CrSat
+#                           + Ou.Section1.SolutionOxide.CrSat
+#                           + Sg.Section1.SolutionOxide.CrSat]
+#   
 # InnerOxide = []
 # InnerOxideThicknesses = [
 #     In.Section1.InnerOxThickness, Co.Section1.InnerOxThickness, Ou.Section1.InnerOxThickness, 
