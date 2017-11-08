@@ -46,7 +46,7 @@ for Section in ld.Sections:
         
         # Concentration/Saturation Input [mol/kg]
         Interface.FeTotal = c.iron_solubility(Section)
-        Interface.FeSatFe3O4 = [1 * i for i in c.iron_solubility(Section)]
+        Interface.FeSatFe3O4 = [1 * i for i in Interface.FeTotal]
         Interface.NiTotal = [i * 1 for i in Section.SolubilityNi]
         Interface.NiSatFerrite = [i * 1 for i in Section.SolubilityNi]
         Interface.NiSatMetallicNi = [i * 1 for i in Section.SolubilityNi]
@@ -136,14 +136,14 @@ class PHT_FAC():
 
                 # Exponential decay of bulk particulate at start of section as function of distance + removal due to 
                 # deposition and erosion source
-                self.Section1.BigParticulate[i] = rk_4.particulate(
-                    self.Section1, self.Section1.BigParticulate[0], self.Section1.Diameter[i],
-                    self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
-                    )
-                self.Section1.SmallParticulate[i] = rk_4.particulate(
-                    Section, self.Section1.SmallParticulate[0], self.Section1.Diameter[i], self.Section1.DensityH2O[i],
-                    self.Section1.Velocity[i], self.Section1.Distance[i]
-                    )
+#                 self.Section1.BigParticulate[i] = rk_4.particulate(
+#                     self.Section1, self.Section1.BigParticulate[0], self.Section1.Diameter[i],
+#                     self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
+#                     )
+#                 self.Section1.SmallParticulate[i] = rk_4.particulate(
+#                     Section, self.Section1.SmallParticulate[0], self.Section1.Diameter[i], self.Section1.DensityH2O[i],
+#                     self.Section1.Velocity[i], self.Section1.Distance[i]
+#                     )
                                 
 #                 for x,y in zip (BulkActivities, Tags):
 #                     x[i] = a.BulkActivity(self.Section1, self.Section2, x[0], self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, \
@@ -159,18 +159,18 @@ class PHT_FAC():
                             x[i] = 0.59 * x[i - 1]
                             # y[i] = 0.59*y[i-1]
                     
-                        self.Section1.SmallParticulate[i] = 0.59 * self.Section1.SmallParticulate[i - 1]
-                        self.Section1.BigParticulate[i] = 0  # 0.45 um filter removes everything over this size   
+#                         self.Section1.SmallParticulate[i] = 0.59 * self.Section1.SmallParticulate[i - 1]
+#                         self.Section1.BigParticulate[i] = 0  # 0.45 um filter removes everything over this size   
                     
-                    if i > 3:  # decay for the rest of the inlet section depends on purification system 
-                        self.Section1.BigParticulate[i] = rk_4.particulate(
-                            Section, self.Section1.BigParticulate[3], self.Section1.Diameter[i],
-                            self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
-                            )
-                        self.Section1.SmallParticulate[i] = rk_4.particulate(
-                            Section, self.Section1.SmallParticulate[3], self.Section1.Diameter[i],
-                            self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
-                            ) 
+#                     if i > 3:  # decay for the rest of the inlet section depends on purification system 
+#                         self.Section1.BigParticulate[i] = rk_4.particulate(
+#                             Section, self.Section1.BigParticulate[3], self.Section1.Diameter[i],
+#                             self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
+#                             )
+#                         self.Section1.SmallParticulate[i] = rk_4.particulate(
+#                             Section, self.Section1.SmallParticulate[3], self.Section1.Diameter[i],
+#                             self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
+#                             ) 
                         
 #                         for x,y in zip (BulkActivities, Tags):
 #                             #print (y, x[i], i, self.Section1.NodeNumber)
@@ -185,8 +185,8 @@ class PHT_FAC():
             y[0] = x[end]
             # q[0] = z[end]
         
-        self.Section2.BigParticulate[0] = self.Section1.BigParticulate[end]
-        self.Section2.SmallParticulate[0] = self.Section1.SmallParticulate[end]       
+#         self.Section2.BigParticulate[0] = self.Section1.BigParticulate[end]
+#         self.Section2.SmallParticulate[0] = self.Section1.SmallParticulate[end]       
         
         # #Stellite wear bulk input term for cobalt and chromium    
         if self.Section1 == ld.Core:
@@ -243,82 +243,6 @@ class PHT_FAC():
             )
 
      
-
-# AverageColdLegLoading = []
-# RIHT = []
-# StreamOutletTemperatures = []
-# 
-# SimulationYears = 1  # years
-# SimulationHours = SimulationYears * 8760
-#   
-# import time
-# start_time = time.time()
-# 
-# for j in range(SimulationHours):
-#     In = PHT_FAC(ld.Inlet, ld.Core, j)
-#     Co = PHT_FAC(ld.Core, ld.Outlet, j)
-#     Ou = PHT_FAC(ld.Outlet, ld.SteamGenerator, j)
-#     Sg = PHT_FAC(ld.SteamGenerator, ld.Inlet, j)
-#     
-#     if j % 8759 == 0:  # yearly
-#         
-#         TotalLoadingSG = [x + y for x, y in zip(Sg.Section1.OuterOxThickness, Sg.Section1.InnerOxThickness)]
-#         ConvertedLoading = ld.UnitConverter(
-#             Sg.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, TotalLoadingSG, None, None, None
-#             )
-#         AverageColdLeg = sum(ConvertedLoading[11:len(ConvertedLoading)]) \
-#             / (len(ConvertedLoading) - 11)
-#   
-#         T_x = (SGHX.energy_balance(21, j)) - 273.15
-#         
-#         OutletTemperatures = []
-#         for Zone in ld.SGZones:
-#             Temperature = Zone.PrimaryBulkTemperature[Zone.NodeNumber - 1] - 273.15
-#             OutletTemperatures.append(Temperature)
-#         
-#         StreamOutletTemperatures.append(OutletTemperatures)
-#         AverageColdLegLoading.append(AverageColdLeg)
-#         RIHT.append(T_x)
-# 
-# FACRate = sum(
-#     ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
-#     None, None, None, None)
-#     ) / (Ou.Section1.NodeNumber)
-# 
-# csvfile = "RIHTOutput.csv"
-# with open(csvfile, "w") as output:
-#     writer = csv.writer(output, lineterminator='\n')
-#     writer.writerow(["average cold leg loading"])
-#     writer.writerows([AverageColdLegLoading])
-# 
-#     writer.writerow(['Outlet Streams'])
-#     writer.writerows(StreamOutletTemperatures)
-#     
-#     writer.writerow(['RIHT'])
-#     writer.writerow(RIHT) 
-#     
-#     writer.writerow(['Inner Oxide Layer [g/cm^2]'])
-#     writer.writerow(Sg.Section1.InnerOxThickness)
-#     writer.writerow(['Outer Oxide Layer [g/cm^2]'])
-#     writer.writerow(Sg.Section1.OuterOxThickness)   
-# 
-# end_time = time.time()
-# delta_time = end_time - start_time
-# 
-# hours = delta_time // 3600
-# temp = delta_time - 3600 * hours
-# minutes = delta_time // 60
-# seconds = delta_time - 60 * minutes
-# print('%d:%d:%d' % (hours, minutes, seconds))
-
-
-
-
-
-
-
-
-
 
 # Corrosion= []
 # Rates = [I.Section1.CorrRate, C.Section1.CorrRate, O.Section1.CorrRate, SG.Section1.CorrRate]

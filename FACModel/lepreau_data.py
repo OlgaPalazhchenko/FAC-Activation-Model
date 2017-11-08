@@ -375,7 +375,6 @@ SteamGenerator = Section(84, 0, 22)
 SG_Zone1 = Section(84, 0, 22)
 SG_Zone2 = Section(84, 0, 22)
 SG_Zone3 = Section(84, 0, 22)
-# #
 
 # Diameter [cm]
 Inlet.Diameter = [44.3, 50, 106, 5.68, 5.68, 5.68, 5.68] 
