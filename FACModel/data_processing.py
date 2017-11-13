@@ -20,8 +20,8 @@ AverageColdLegLoading = []
 RIHT = []
 StreamOutletTemperatures = []
 
-SimulationYears = 1  # years
-SimulationHours = SimulationYears * 100
+SimulationYears = 11  # years
+SimulationHours = SimulationYears * 8760
 
 import time
 start_time = time.time()
@@ -67,7 +67,6 @@ for j in range(SimulationHours):
         AverageColdLegLoading.append(AverageColdLeg)
         RIHT.append(T_x)
             
-
 FACRate = sum(
     ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
     None, None, None, None)
@@ -88,7 +87,6 @@ with open(csvfile, "w") as output:
     # oxide profile for all sections
     # if RealTimeHeatTransfer == "yes":
         
-
 end_time = time.time()
 delta_time = end_time - start_time
 
@@ -97,7 +95,6 @@ temp = delta_time - 3600 * hours
 minutes = delta_time // 60
 seconds = delta_time - 60 * minutes
 print('%d:%d:%d' % (hours, minutes, seconds))
-
 
 
 def property_log10(Element, Interface):

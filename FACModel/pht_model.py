@@ -9,12 +9,16 @@ import iteration as it
 import sg_heattransfer as SGHX
 
 # Initial Temperatures and T-dependent parametrs in SG zones
+SecondarySidePressure = 4.593
+
 for Zone in ld.SGZones:
     Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
         Zone, Zone.InnerOxThickness, Zone.OuterOxThickness,
-        SGHX.MassFlow_h.magnitude - 0.03 * SGHX.MassFlow_h.magnitude, 0
+        SGHX.MassFlow_h.magnitude - 0.03 * SGHX.MassFlow_h.magnitude, SecondarySidePressure, 1983
         )
-    Zone.DensityH2O = [ld.Density("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
+    Zone.DensityH2O = [
+        ld.Density("water", "PHT", i, SecondarySidePressure) for i in Zone.PrimaryBulkTemperature
+        ]
     Zone.ViscosityH2O = [ld.Viscosity("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
     Zone.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Zone.PrimaryBulkTemperature]
 
@@ -23,7 +27,7 @@ for Section in ld.Sections:
     # #Temperature-dependent parameters            
     Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
     
-    Section.DensityH2O = [ld.Density("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
+    Section.DensityH2O = [ld.Density("water", "PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature]
     Section.ViscosityH2O = [ld.Viscosity("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
     
     Section.FractionFeInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe")

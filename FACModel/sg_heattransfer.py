@@ -254,23 +254,22 @@ def wall_temperature(
             ) * outer_area(Section)[i])
         # R = 1/hA --> h=A*1/R
 
-        U_h1 = conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i) * inner_area(Section)[i]
+        U_h1 = inner_area(Section)[i] * conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)
         
-        U_h2 = secondary_convection_resistance(
+        U_h2 = inner_area(Section)[i] * secondary_convection_resistance(
             Section, SecondaryT_film, T_SecondaryWall, x_in, SecondarySidePressure, i
-            ) * inner_area(Section)[i]
-        
+            )
         U_h.magnitude = 1 / (U_h1 + U_h2)  # [W/ cm^2 K]
 
-        U_c1 = conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i) * outer_area(Section)[i]
-        U_c2 = primary_convection_resistance(
+        U_c1 = outer_area(Section)[i] * conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)
+        U_c2 = outer_area(Section)[i] * primary_convection_resistance(
             Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, i
-            ) * outer_area(Section)[i]
-        
+            ) 
         U_c.magnitude = 1 / (U_c1 + U_c2)  # [W/cm^2 K]
 
         T_PrimaryWall = (T_PrimaryBulkIn * h_i.magnitude + T_SecondaryBulkIn * U_h.magnitude)\
             / (h_i.magnitude + U_h.magnitude)
+        
         T_SecondaryWall = (T_SecondaryBulkIn * h_o.magnitude + T_PrimaryBulkIn * U_c.magnitude)\
             / (h_o.magnitude + U_c.magnitude)
 
@@ -284,17 +283,16 @@ def wall_temperature(
             Initial_SHTSFouling = 0.0005 # [g/cm2] same as for PHT (~ 1 um/a)
             
             if 1983 <= calendar_year < 1987:
-                SHTSFouling = Initial_SHTSFouling + (calendar_year-1983)*0.0016
+                SHTSFouling = Initial_SHTSFouling + (calendar_year - 1983) * 0.0016
                 # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
             else:
                 # CPP installation (late 1986) reduces secondary side crud by 50% 
                 # (assumed proportional red. in deposit formation)
-                SHTSFouling = Initial_SHTSFouling + year*0.0008
+                SHTSFouling = Initial_SHTSFouling + (calendar_year - 1983) * 0.0008
                 
             R_F_secondary.magnitude = fouling_resistance(
                 [0]*Section.NodeNumber, [SHTSFouling]*Section.NodeNumber, SecondarySidePressure
                 )[i]
-            
             
             PCR = primary_convection_resistance(
                 Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, i
@@ -374,7 +372,6 @@ def temperature_profile(
                 T_PrimaryBulkOutEnd = T_PrimaryBulkIn - Q_NTU / (m_h_leakagecorrection * Cp_h)
                 T_SecondaryBulkOutEnd = T_PreheaterIn + Q_NTU / (MassFlow_c.magnitude * Cp_c)
                 T_SecondaryBulkIn = T_SecondaryBulkOutEnd
-                # print (T_PrimaryBulkOutEnd-273.15, T_SecondaryBulkOutEnd-273.15)
 
             # Guessing cold-side temperatures for remaining nodes inside preheater
             T_SecondaryBulkOut = T_SecondaryBulkOut - i
@@ -412,13 +409,16 @@ def energy_balance(SteamGeneratorOutputNode, j):
     calendar_year = year + 1983
     
     if calendar_year <1992:
+        # divider plate leakage rates estimated based on AECL work
+        InitialLeakage = 0.03 # fraction of total SG inlet mass flow
+        YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
         SecondarySidePressure = 4.593  # MPa
     else:
-        # pressure reduction in 1992
-        SecondarySidePressure = 4.593 - (125/1000) # MPa
+        # PLNGS pressure reduction in 1992 + divider plate replacement
+        InitialLeakage = 0.01 
+        YearlyRateLeakage = 0.0015
+        SecondarySidePressure = 4.593 #- (125/1000) # MPa
     
-    InitialLeakage = 0.03
-    YearlyRateLeakage = 0.0065
     Leakage = InitialLeakage + (j / 8760) * YearlyRateLeakage
     MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude * Leakage
     m_h_leakagecorrection = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude

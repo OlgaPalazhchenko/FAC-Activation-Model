@@ -430,7 +430,10 @@ Outlet.SolubilityCo = [1.44E-09] * Outlet.NodeNumber
 Outlet.SolubilityCr = [4.84E-11] * Outlet.NodeNumber
 
 # Replicate solubilities and temperatures here for now 
-SGZones = [SteamGenerator, SG_Zone1, SG_Zone2, SG_Zone3]
+SGZones = [SteamGenerator]
+Zones = list(range(1,87))
+SGZones.append(Zones)
+
 for Zone in SGZones:
     Zone.Diameter = [1.368] * Zone.NodeNumber
     Zone.Velocity = [
