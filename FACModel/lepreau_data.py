@@ -89,7 +89,7 @@ def Enthalpy(side, Temperature):
     return ratio_temperatures * Gibbs_T * R_IAPWS * Temperature  # [J/g mol]*[K] = [J/g]
 
 
-def TemperaturefromEnthalpy(side, Enthalpy):
+def TemperaturefromEnthalpy(side, Enthalpy, SecondarySidePressure):
     if side == "PHT" or side == "PHTS" or side == "phts" or side == "pht":
         p = PrimarySidePressure
     else:
@@ -108,7 +108,7 @@ def TemperaturefromEnthalpy(side, Enthalpy):
     return ratio_temmperatures * T_ref
 
     
-def Density(species, side, Temperature):
+def Density(species, side, Temperature, SecondarySidePressure):
     if side == "phts" or side == "PHTS" or side == "PHT":
         p = PrimarySidePressure
     elif side == "shts" or side == "SHTS" or side == "SHT":
@@ -133,7 +133,7 @@ def Viscosity(species, side, Temperature):
     mu_ref = ReferenceValues.mu_ref
     
     T_rel = Temperature / T_ref
-    rho_rel = Density(species, side, Temperature) / rho_ref
+    rho_rel = Density(species, side, Temperature, SecondarySidePressure) / rho_ref
     
     H_0 = [1.67752, 2.20462, 0.6366564, -0.241605]
     terms = [0, 1, 2, 3]
@@ -148,7 +148,7 @@ def Viscosity(species, side, Temperature):
     return (mu_ref * (mu_0 * mu_1 * mu_2) / 1000000) * 10  # [g/cm s]
 
 
-def HeatCapacity(side, Temperature):
+def HeatCapacity(side, Temperature, SecondarySidePressure):
     if side == "PHT" or side == "PHTS" or side == "phts" or side == "pht":
         p = PrimarySidePressure
     else:
@@ -165,7 +165,7 @@ def HeatCapacity(side, Temperature):
     return (-ratio_temperatures ** 2) * Gibbs_TT * R_IAPWS  # [kJ/kg K] ([J/g K] or *nc.H2OMolarMass for [J/mol K]
  
  
-def thermal_conductivityH2O(side, Temperature):
+def thermal_conductivityH2O(side, Temperature, SecondarySidePressure):
 #     if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
 #         p = PrimarySidePressure
 #     else:
@@ -173,7 +173,7 @@ def thermal_conductivityH2O(side, Temperature):
     T_ref = 647.096  # [K]
 #     p_ref = 22.064 #[MPa]
 
-    ratio_densities = Density("water", side, Temperature) / ReferenceValues.rho_ref
+    ratio_densities = Density("water", side, Temperature, SecondarySidePressure) / ReferenceValues.rho_ref
     ratio_temperatures = Temperature / T_ref
     # ratio_pressures = p/p_ref
 
@@ -517,7 +517,7 @@ for Section in Sections:
 
     # Temperature-dependent parameters            
     Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
-    Section.DensityH2O = [Density("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
+    Section.DensityH2O = [Density("water", "PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature]
     Section.ViscosityH2O = [Viscosity("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
 
 

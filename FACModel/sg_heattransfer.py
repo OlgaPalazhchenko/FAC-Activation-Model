@@ -54,11 +54,11 @@ EnthalpySaturatedSteam.unit = "J/g"
 TubePitch.magnitude = 2.413
 
 
-def thermal_conductivity(Twall, material):
+def thermal_conductivity(Twall, material, SecondarySidePressure):
     if material == "Alloy-800" or material == "Alloy800" or material == "A800" or material == "Alloy 800":
         return (11.450 + 0.0161 * Twall) / 100  # M.K.E thesis for Alloy-800 tubing [W/cm K]
     elif material == "water":
-        return ld.thermal_conductivityH2O("PHT", Twall)
+        return ld.thermal_conductivityH2O("PHT", Twall, SecondarySidePressure)
     elif material == "magnetite":
         return 1.4 / 100  # [W/cm K]
     else:
@@ -66,7 +66,7 @@ def thermal_conductivity(Twall, material):
         return None
 
 
-def fouling_resistance(InnerAccumulation, OuterAccumulation):
+def fouling_resistance(InnerAccumulation, OuterAccumulation, SecondarySidePressure):
     # thickness/thermal conductivity [cm]/[W/cm K] = [cm^2 K/W]
     # [g/cm^2]/[g/cm^3] = [cm]
 
@@ -74,18 +74,18 @@ def fouling_resistance(InnerAccumulation, OuterAccumulation):
     OuterThickness = [i / nc.Fe3O4Density for i in OuterAccumulation]
 
     # [cm]/ [W/cm K] =[cm^2 K/W]
-    InnerFouling = [i / 2 * thermal_conductivity(None, "magnetite") for i in InnerThickness]
-    OuterFouling = [i / thermal_conductivity(None, "magnetite") for i in OuterThickness]
+    InnerFouling = [i / 2 * thermal_conductivity(None, "magnetite", SecondarySidePressure) for i in InnerThickness]
+    OuterFouling = [i / thermal_conductivity(None, "magnetite", SecondarySidePressure) for i in OuterThickness]
     return [x + y for x, y in zip(InnerFouling, OuterFouling)]
 
 
-def conduction_resistance(Section, Twall, i):
+def conduction_resistance(Section, Twall, SecondarySidePressure, i):
     # R_conduction = L/kA (L = thickness)
     # A = area with shape factor correcrion factor for cylindrical pipe
     # R_conduction = ln(D_o/D_i)/(2pikl) [K/W]
     # l = length, k =thermal conductivity coefficient [W/cm K]
 
-    k_w = thermal_conductivity(Twall, "Alloy-800")  # [W/cm K]
+    k_w = thermal_conductivity(Twall, "Alloy-800", SecondarySidePressure)  # [W/cm K]
 
     Rcyl_numerator = np.log(Section.OuterDiameter[i] / Section.Diameter[i])
     Rcyl_denominator = 2 * np.pi * k_w * Section.Length.magnitude[i]
@@ -94,7 +94,7 @@ def conduction_resistance(Section, Twall, i):
     return R_cond
 
 
-def primary_convection_resistance(Section, correlation, T_film, T_wall, i):
+def primary_convection_resistance(Section, correlation, T_film, T_wall, SecondarySidePressure, i):
     # R_1,Convective = 1/(h_1,convectove *A)
     # A = inner area (based on inner diameter)
     # [W/cm K]/ [cm] = [W/K cm^2]
@@ -103,16 +103,18 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, i):
         x = 4
         MassFlux_h.magnitude = MassFlow_h.magnitude / (nc.TotalSGTubeNumber * (np.pi / 4) * (Section.Diameter[i] ** 2))
  
-        h_i = boiling_heat_transfer(x, "PHT", T_sat_primary, MassFlux_h.magnitude, T_wall, Section.Diameter[i], i)
+        h_i = boiling_heat_transfer(
+            x, "PHT", T_sat_primary, MassFlux_h.magnitude, T_wall, Section.Diameter[i], SecondarySidePressure, i
+            )
          
     else:
-        h_i = nusseltnumber(Section, correlation, T_film, i) * thermal_conductivity(T_film, "water") \
-        / Section.Diameter[i]
+        h_i = nusseltnumber(Section, correlation, T_film, SecondarySidePressure, i) \
+        * thermal_conductivity(T_film, "water", SecondarySidePressure) / Section.Diameter[i]
     
     return 1 / (h_i * inner_area(Section)[i])  # [K/W]
 
 
-def secondary_convection_resistance(Section, T_film, T_wall, x_in, i):
+def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySidePressure, i):
     # split into boiling and non-boiling (preheater) sections
 
     if Section.Length.label[i] == "preheater" or Section.Length.label[i] == "preheater start":  # from Silpsrikul thesis
@@ -130,10 +132,12 @@ def secondary_convection_resistance(Section, T_film, T_wall, x_in, i):
 
         # First two (raised to exponent) terms are unitless
         # [W/cm K]/[cm] = [W/cm^2 K]
-        h_o = (thermal_conductivity(T_film, "water") * 0.25 / Section.OuterDiameter[i]) \
+        h_o = (thermal_conductivity(T_film, "water", SecondarySidePressure) * 0.25 / Section.OuterDiameter[i]) \
             * ((Section.OuterDiameter[i] * G_e / ld.Viscosity("water", "SHT", T_film)) ** 0.6) \
-            * (ld.HeatCapacity("SHT", T_film)
-               * ld.Viscosity("water", "SHT", T_film) / thermal_conductivity(T_film, "water")) ** 0.33
+            * (
+                ld.HeatCapacity("SHT", T_film, SecondarySidePressure) \
+                * ld.Viscosity("water", "SHT", T_film) / thermal_conductivity(T_film, "water", SecondarySidePressure)
+                ) ** 0.33
 
     else:
         EquivalentDiameter.magnitude = 4 * \
@@ -146,13 +150,13 @@ def secondary_convection_resistance(Section, T_film, T_wall, x_in, i):
             x = 24 - (i/2)
       
         h_o = boiling_heat_transfer(
-            x, "SHT", T_sat_secondary, MassFlux_c.magnitude, T_wall, EquivalentDiameter.magnitude, i
-            )
+            x, "SHT", T_sat_secondary, MassFlux_c.magnitude, T_wall, EquivalentDiameter.magnitude, 
+            SecondarySidePressure, i)
 
     return 1 / (h_o * outer_area(Section)[i])  # K/W
 
 
-def boiling_heat_transfer(x, side, T_sat, MassFlux, T_wall, Diameter, i):
+def boiling_heat_transfer(x, side, T_sat, MassFlux, T_wall, Diameter, SecondarySidePressure, i):
     # x = steam quality in percent
       
     if side == "SHT":
@@ -162,12 +166,17 @@ def boiling_heat_transfer(x, side, T_sat, MassFlux, T_wall, Diameter, i):
     
     p_crit = 22.0640  # [MPa]
    
-    F = (1 + (x * prandtl(T_sat, i) * ((ld.Density("water", side, T_sat) / rho_v) - 1))) ** 0.35
+    F = (
+        1 + (x * prandtl(T_sat, SecondarySidePressure, i) \
+             * ((ld.Density("water", side, T_sat, SecondarySidePressure) / rho_v) - 1))
+         ) ** 0.35
+    
     Re_D = Diameter * MassFlux / ld.Viscosity("water", side, T_sat)
     
     # 4*MassFlow/((ld.Viscosity("water", "SHT", T_sat_secondary)/1000)*np.pi*Shell_ID)
-    h_l = 0.023 * ld.thermal_conductivityH2O(side, T_sat) * ((Re_D) ** 0.8) * (prandtl(T_sat, i) ** 0.4) \
-    / Diameter  # [W/cm^2 K]
+    h_l = 0.023 * ld.thermal_conductivityH2O(side, T_sat, SecondarySidePressure) \
+    * ((Re_D) ** 0.8) * (prandtl(T_sat, SecondarySidePressure, i) ** 0.4) / Diameter  # [W/cm^2 K]
+    
     Q_prime = F * h_l * (abs(T_wall - T_sat))  # [W/cm^2]
     
     S = (1 + 0.055 * (F ** 0.1) * (Re_D) ** 0.16) ** (-1)
@@ -183,7 +192,7 @@ def boiling_heat_transfer(x, side, T_sat, MassFlux, T_wall, Diameter, i):
     return HeatTransferCoefficient
 
 
-def nusseltnumber(Section, correlation, Temperature, i):
+def nusseltnumber(Section, correlation, Temperature, SecondarySidePressure, i):
     # ViscosityH2O = ld.Viscosity("water", "PHT", Temperature)
     # DensityH2O = ld.Density("water", "PHT", Temperature)
 
@@ -201,14 +210,15 @@ def nusseltnumber(Section, correlation, Temperature, i):
     C = 0.023
     m = 4 / 5
 
-    Nu = C * (Re_D[i] ** m) * ((prandtl(Temperature, i)) ** n)
+    Nu = C * (Re_D[i] ** m) * ((prandtl(Temperature, SecondarySidePressure, i)) ** n)
     return Nu
 
 
-def prandtl(Temperature, i):
+def prandtl(Temperature, SecondarySidePressure, i):
     # Need a better reference for Cp/viscosity data
     ViscosityH2O = ld.Viscosity("water", "PHT", Temperature)
-    Pr = ld.HeatCapacity("PHT", Temperature) * ViscosityH2O / ld.thermal_conductivityH2O("PHT", Temperature)
+    Pr = ld.HeatCapacity("PHT", Temperature, SecondarySidePressure) \
+    * ViscosityH2O / ld.thermal_conductivityH2O("PHT", Temperature, SecondarySidePressure)
     return Pr
 
 
@@ -220,7 +230,10 @@ def outer_area(Section):
     return [np.pi * x * y for x, y in zip(Section.OuterDiameter, Section.Length.magnitude)]
 
 
-def wall_temperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerAccumulation, OuterAccumulation, j):
+def wall_temperature(
+        Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerAccumulation, OuterAccumulation, calendar_year, 
+        SecondarySidePressure):
+    
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
     T_SecondaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
@@ -232,22 +245,28 @@ def wall_temperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, Inner
         PrimaryT_film = (T_PrimaryBulkIn + T_PrimaryWall) / 2
         SecondaryT_film = (T_SecondaryBulkIn + T_SecondaryWall) / 2
 
-        h_i.magnitude = 1 / (primary_convection_resistance(Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, i)
-                             * inner_area(Section)[i])
-        h_o.magnitude = 1 / (secondary_convection_resistance(Section, SecondaryT_film, T_SecondaryWall, x_in, i)
-                             * outer_area(Section)[i])
+        h_i.magnitude = 1 / (primary_convection_resistance(
+            Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, i
+            ) * inner_area(Section)[i])
+        
+        h_o.magnitude = 1 / (secondary_convection_resistance(
+            Section, SecondaryT_film, T_SecondaryWall, x_in, SecondarySidePressure, i
+            ) * outer_area(Section)[i])
         # R = 1/hA --> h=A*1/R
 
-        U_h1 = conduction_resistance(Section, T_PrimaryWall, i) * inner_area(Section)[i]
+        U_h1 = conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i) * inner_area(Section)[i]
+        
         U_h2 = secondary_convection_resistance(
-            Section, SecondaryT_film, T_SecondaryWall, x_in, i
+            Section, SecondaryT_film, T_SecondaryWall, x_in, SecondarySidePressure, i
             ) * inner_area(Section)[i]
+        
         U_h.magnitude = 1 / (U_h1 + U_h2)  # [W/ cm^2 K]
 
-        U_c1 = conduction_resistance(Section, T_PrimaryWall, i) * outer_area(Section)[i]
+        U_c1 = conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i) * outer_area(Section)[i]
         U_c2 = primary_convection_resistance(
-            Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, i
+            Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, i
             ) * outer_area(Section)[i]
+        
         U_c.magnitude = 1 / (U_c1 + U_c2)  # [W/cm^2 K]
 
         T_PrimaryWall = (T_PrimaryBulkIn * h_i.magnitude + T_SecondaryBulkIn * U_h.magnitude)\
@@ -259,34 +278,43 @@ def wall_temperature(Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, Inner
         RE2 = (T_SecondaryWall - WT_c)
 
         if abs(RE1) <= 0.01 and abs(RE2) <= 0.01:
-            R_F_primary.magnitude = fouling_resistance(InnerAccumulation, OuterAccumulation)[i]  # [cm^2 K/W]
+            # [cm^2 K/W]
+            R_F_primary.magnitude = fouling_resistance(InnerAccumulation, OuterAccumulation, SecondarySidePressure)[i]  
             
-            year = (j/8760) 
-            calendaryear = year + 1983
             Initial_SHTSFouling = 0.0005 # [g/cm2] same as for PHT (~ 1 um/a)
             
-            if 1983 <= calendaryear < 1987:
-                SHTSFouling = Initial_SHTSFouling + year*0.0016
+            if 1983 <= calendar_year < 1987:
+                SHTSFouling = Initial_SHTSFouling + (calendar_year-1983)*0.0016
                 # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
             else:
                 # CPP installation (late 1986) reduces secondary side crud by 50% 
                 # (assumed proportional red. in deposit formation)
                 SHTSFouling = Initial_SHTSFouling + year*0.0008
                 
-            R_F_secondary.magnitude = fouling_resistance([0]*Section.NodeNumber, [SHTSFouling]*Section.NodeNumber)[i]
+            R_F_secondary.magnitude = fouling_resistance(
+                [0]*Section.NodeNumber, [SHTSFouling]*Section.NodeNumber, SecondarySidePressure
+                )[i]
             
+            
+            PCR = primary_convection_resistance(
+                Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, i
+                )
+            SCR = secondary_convection_resistance(
+                Section, SecondaryT_film, T_SecondaryWall, x_in, SecondarySidePressure, i
+                )
+             
             # [cm^2 K/W]
-            inverseU_total = (primary_convection_resistance(Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, i)
-                              + conduction_resistance(Section, T_PrimaryWall, i)
-                              + secondary_convection_resistance(Section, SecondaryT_film, T_SecondaryWall, x_in, i)) \
-                * outer_area(Section)[i] + R_F_primary.magnitude + R_F_secondary.magnitude
+            inverseU_total = (PCR + conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i) + SCR) \
+            * outer_area(Section)[i] + R_F_primary.magnitude + R_F_secondary.magnitude
 
             U_total.magnitude = 1 / inverseU_total  # [W/ cm^2 K]
 
             return T_PrimaryWall, T_SecondaryWall, U_total.magnitude
 
 
-def temperature_profile(Section, InnerAccumulation, OuterAccumulation, m_h_leakagecorrection, j):
+def temperature_profile(
+        Section, InnerAccumulation, OuterAccumulation, m_h_leakagecorrection, SecondarySidePressure, calendar_year
+        ):
     PrimaryWall = []
     PrimaryBulk = []
     SecondaryBulk = []
@@ -299,11 +327,11 @@ def temperature_profile(Section, InnerAccumulation, OuterAccumulation, m_h_leaka
             T_SecondaryBulkIn = T_sat_secondary
             x_in = 0
 
-        Cp_h = ld.HeatCapacity("PHT", T_PrimaryBulkIn)
-        Cp_c = ld.HeatCapacity("SHT", T_SecondaryBulkIn)
+        Cp_h = ld.HeatCapacity("PHT", T_PrimaryBulkIn, SecondarySidePressure)
+        Cp_c = ld.HeatCapacity("SHT", T_SecondaryBulkIn, SecondarySidePressure)
         T_wh, T_wc, U = wall_temperature(
-            Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerAccumulation, OuterAccumulation, j
-            )
+            Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerAccumulation, OuterAccumulation, calendar_year,
+            SecondarySidePressure)
 
         if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater" and \
                 Section.Length.label[i] != "thermal plate":
@@ -380,6 +408,15 @@ def temperature_profile(Section, InnerAccumulation, OuterAccumulation, m_h_leaka
 
 
 def energy_balance(SteamGeneratorOutputNode, j):
+    year = (j/8760) 
+    calendar_year = year + 1983
+    
+    if calendar_year <1992:
+        SecondarySidePressure = 4.593  # MPa
+    else:
+        # pressure reduction in 1992
+        SecondarySidePressure = 4.593 - (125/1000) # MPa
+    
     InitialLeakage = 0.03
     YearlyRateLeakage = 0.0065
     Leakage = InitialLeakage + (j / 8760) * YearlyRateLeakage
@@ -389,8 +426,8 @@ def energy_balance(SteamGeneratorOutputNode, j):
     Balance = []
     for Zone in ld.SGZones:
         Zone.PrimaryBulkTemperature = temperature_profile(
-            Zone, ld.SGZones[0].InnerOxThickness, ld.SGZones[0].OuterOxThickness, m_h_leakagecorrection, j
-            )
+            Zone, ld.SGZones[0].InnerOxThickness, ld.SGZones[0].OuterOxThickness, m_h_leakagecorrection,
+            SecondarySidePressure, calendar_year)
         
         x = (Zone.TubeNumber / nc.TotalSGTubeNumber) * m_h_leakagecorrection \
             * ld.Enthalpy("PHT", Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode])
@@ -399,6 +436,6 @@ def energy_balance(SteamGeneratorOutputNode, j):
         Enthalpy = (sum(Balance) + MasssFlow_dividerplate.magnitude * ld.Enthalpy("PHT", T_PrimaryIn)) \
             / MassFlow_h.magnitude
 
-    RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy)
+    RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
-# print (energy_balance(21, 1)-273.15)
+print (energy_balance(21, 1)-273.15)
