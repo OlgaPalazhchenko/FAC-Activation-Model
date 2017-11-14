@@ -33,7 +33,7 @@ for i in [U_h, U_c, U_total]:
 for i in [R_F_primary, R_F_secondary]:
     i.unit = "cm^2 K/W"
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
-MassFlow_c.magnitude = 258.25 * 1000
+MassFlow_c.magnitude = 240 * 1000
 MassFlow_h.magnitude = 1900 * 1000
 
 ShellDiameter.magnitude = 2.28 * 100
@@ -110,7 +110,7 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
     else:
         h_i = nusseltnumber(Section, correlation, T_film, SecondarySidePressure, i) \
         * thermal_conductivity(T_film, "water", SecondarySidePressure) / Section.Diameter[i]
-    
+
     return 1 / (h_i * inner_area(Section)[i])  # [K/W]
 
 
@@ -145,9 +145,9 @@ def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySide
         / (np.pi * Section.OuterDiameter[i])
         
         if i <= 9:
-            x = x_in * 100
+            x = 0.5 * x_in * 100  
         else:
-            x = 24 - (i/2)
+            x = 24 - (i/1)
       
         h_o = boiling_heat_transfer(
             x, "SHT", T_sat_secondary, MassFlux_c.magnitude, T_wall, EquivalentDiameter.magnitude, 
@@ -410,7 +410,7 @@ def energy_balance(SteamGeneratorOutputNode, j):
     
     if calendar_year <1992:
         # divider plate leakage rates estimated based on AECL work
-        InitialLeakage = 0.03 # fraction of total SG inlet mass flow
+        InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
         SecondarySidePressure = 4.593  # MPa
     else:
@@ -424,7 +424,7 @@ def energy_balance(SteamGeneratorOutputNode, j):
     m_h_leakagecorrection = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude
 
     Balance = []
-    for Zone in ld.SGZones:
+    for Zone in ld.SGZones[0:87]:
         Zone.PrimaryBulkTemperature = temperature_profile(
             Zone, ld.SGZones[0].InnerOxThickness, ld.SGZones[0].OuterOxThickness, m_h_leakagecorrection,
             SecondarySidePressure, calendar_year)

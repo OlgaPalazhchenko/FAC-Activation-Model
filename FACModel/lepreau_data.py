@@ -433,33 +433,46 @@ Outlet.SolubilityCr = [4.84E-11] * Outlet.NodeNumber
 
 # inches 
 u_bend = []
-straight_u_bend_section = 9.5 * 2.54
-for i in range(87):
+straight_u_bend_section = [9.5] * 82 + [7.95] + [6.14] + [3.94] + [1.4] + [0]
+# in. to cm
+straight_u_bend_section = [i * 2.54 for i in straight_u_bend_section]
+radii = list(range(87))
+# in. # each u-bend radius is 0.475 in. shorter than the previous (slightly deviates at the end)
+radius_decrease = [0.475] * 81 + [0.17] + [0.06] + [-0.16] + [-0.32] + [0.25]
+
+for i, j in zip (radii, radius_decrease):
     if i == 0:
         x = 43.225
-        u_bend.append(x * 2.54 * np.pi + straight_u_bend_section)
-    x = x - 0.475
+        u_bend.append(x * 2.54 * np.pi)
+    x = x - j
     # convert from in. to cm 
     # 2piR = circumferance of circle, piR = half of circle
-    y = (x*2.54) * np.pi + straight_u_bend_section
+    y = (x * 2.54) * np.pi
     u_bend.append(y)
+    
+u_bend_total = [x + y for x,y in zip(u_bend, straight_u_bend_section)]
 
-leg_length = [74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96]
-print (u_bend[83])
-# Replicate solubilities and temperatures here for now 
+hot_leg_length = [74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96]
+cold_leg_length = [113.96, 113.96, 113.96, 113.96, 113.96, 74.05, 75, 74.05, 42.05, 32]
 
-for Zone, length in zip(SGZones[1:87], u_bend):
+number_tubes = [8, 11, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 26, 28, 28, 28, 29, 28, 31, 32, 33, 34, 35, 36, 35,
+                36, 37, 36, 39, 38, 39, 40, 41, 40, 36, 40, 43, 42, 43, 44, 43, 44, 45, 42, 45, 46, 45, 46, 47, 46, 47,
+                48, 47, 48, 43, 48, 48, 49, 50, 49, 50, 51, 50, 51, 50, 51, 50, 51, 52, 50, 46, 51, 50, 53, 52, 51, 52,
+                53, 52, 53, 52, 51, 50, 50, 48, 47]
+
+# not including last appended "SteamGenerator" zone
+for Zone, length, i in zip(SGZones[0:87], u_bend_total, number_tubes):
     # u-bend split into 4 nodes
-    Zone.Length.magnitude = leg_length + [length / 4] * 4 + leg_length 
-print (SGZones[83].Length.magnitude)
+    Zone.Length.magnitude = hot_leg_length + [length / 4] * 4 + cold_leg_length
+    Zone.TubeNumber = i
 
+# Replicate solubilities and temperatures here for now 
 for Zone in SGZones:
     Zone.Diameter = [1.368] * Zone.NodeNumber
     Zone.Velocity = [
         533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 498, 494, 491, 489, 487, 484, 483, 481, 480, 479, 476, 
         474
         ]
-    Zone.TubeNumber = nc.TotalSGTubeNumber / len(SGZones)
     
     Zone.SolubilityNi = [
         1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 1.96011E-09, 
@@ -543,7 +556,6 @@ for Section in Sections:
     Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
     Section.DensityH2O = [Density("water", "PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature]
     Section.ViscosityH2O = [Viscosity("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
-
 
 def ReynoldsNumber(Section, Diameter):
     # Diameter is an input due to difference in desired dimension (e.g., inner, outer, hydraulic, etc.)
