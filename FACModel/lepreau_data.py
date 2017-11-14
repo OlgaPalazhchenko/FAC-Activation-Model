@@ -368,13 +368,12 @@ class Section():  # Defining each primary heat transport section as a class
 Inlet = Section(21, 0, 7)
 Core = Section(42, 0, 12)
 Outlet = Section(63, 0, 9)
+# Representative of typical tube u-bend arc length 
 SteamGenerator = Section(84, 0, 22)
 
-# # Steam generator split into multiple sections/zones
-# Temporary 2 "zones" added 
-SG_Zone1 = Section(84, 0, 22)
-SG_Zone2 = Section(84, 0, 22)
-SG_Zone3 = Section(84, 0, 22)
+# Steam generator split into 87 zones based on the distinct tube bend arc lengths
+SGZones = [Section(84, 0, 22) for each in range(87)]
+SGZones.append(SteamGenerator)
 
 # Diameter [cm]
 Inlet.Diameter = [44.3, 50, 106, 5.68, 5.68, 5.68, 5.68] 
@@ -390,22 +389,25 @@ Outlet.Velocity = [1619, 1619, 1619, 1619, 857, 857, 857, 306, 1250]
 Inlet.Length.magnitude = [477.6, 281.8, 78.6, 350, 350, 350, 350] 
 Core.Length.magnitude = [49.5] * Core.NodeNumber 
 Outlet.Length.magnitude = [17, 3.5, 139.5, 432, 225.5, 460.3, 460.3, 400, 100]
+
+
 SteamGenerator.Length.magnitude = [
     74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96, 37.90, 37.90, 37.90, 37.90, 113.96, 113.96, 113.96,
     113.96, 113.96, 74.05, 75, 74.05, 42.05, 32
     ]
-SG_Zone1.Length.magnitude = [
-    74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96, 57.80, 57.80, 57.80, 57.80, 113.96, 113.96, 113.96, 
-    113.96, 113.96, 74.05, 75, 74.05, 42.05, 32
-    ]
-SG_Zone2.Length.magnitude = [
-    74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96, 77.2275, 77.2275, 77.2275, 77.2275, 113.96, 113.96, 
-    113.96, 113.96, 113.96, 74.05, 75, 74.05, 42.05, 32
-    ]
-SG_Zone3.Length.magnitude = [
-    74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96, 17.113, 17.113, 17.113, 17.113, 113.96, 113.96, 113.96,
-    113.96, 113.96, 74.05, 75, 74.05, 42.05, 32
-    ]
+
+# SG_Zone1.Length.magnitude = [
+#     74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96, 57.80, 57.80, 57.80, 57.80, 113.96, 113.96, 113.96, 
+#     113.96, 113.96, 74.05, 75, 74.05, 42.05, 32
+#     ]
+# SG_Zone2.Length.magnitude = [
+#     74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96, 77.2275, 77.2275, 77.2275, 77.2275, 113.96, 113.96, 
+#     113.96, 113.96, 113.96, 74.05, 75, 74.05, 42.05, 32
+#     ]
+# SG_Zone3.Length.magnitude = [
+#     74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96, 17.113, 17.113, 17.113, 17.113, 113.96, 113.96, 113.96,
+#     113.96, 113.96, 74.05, 75, 74.05, 42.05, 32
+#     ]
 
 # Solubility (mol/kg)
 Inlet.SolubilityNi = [2.71098E-09] * Inlet.NodeNumber
@@ -429,10 +431,27 @@ Outlet.SolubilityNi = [1.54584E-09] * Outlet.NodeNumber
 Outlet.SolubilityCo = [1.44E-09] * Outlet.NodeNumber
 Outlet.SolubilityCr = [4.84E-11] * Outlet.NodeNumber
 
+# inches 
+u_bend = []
+straight_u_bend_section = 9.5 * 2.54
+for i in range(87):
+    if i == 0:
+        x = 43.225
+        u_bend.append(x * 2.54 * np.pi + straight_u_bend_section)
+    x = x - 0.475
+    # convert from in. to cm 
+    # 2piR = circumferance of circle, piR = half of circle
+    y = (x*2.54) * np.pi + straight_u_bend_section
+    u_bend.append(y)
+
+leg_length = [74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96]
+print (u_bend[83])
 # Replicate solubilities and temperatures here for now 
-SGZones = [SteamGenerator]
-Zones = list(range(1,87))
-SGZones.append(Zones)
+
+for Zone, length in zip(SGZones[1:87], u_bend):
+    # u-bend split into 4 nodes
+    Zone.Length.magnitude = leg_length + [length / 4] * 4 + leg_length 
+print (SGZones[83].Length.magnitude)
 
 for Zone in SGZones:
     Zone.Diameter = [1.368] * Zone.NodeNumber
@@ -482,10 +501,12 @@ Outlet.PrimaryBulkTemperature = UnitConverter(
     Inlet, "Celsius", "Kelvin", None, None, None, None, None, [310] * Outlet.NodeNumber
     )
 
+# Combines PHT sections and SG Zones (in the event each zone will be tracked for oxide growth/heat transfer)
+Sections = [Inlet, Core, Outlet]
+for i in SGZones:
+    Sections.append(i)
 
-Sections = [Inlet, Core, Outlet, SteamGenerator, SG_Zone1, SG_Zone2, SG_Zone3]
 for Section in Sections:
-
     # Particulate #[mg/kg] (ppm)
     Section.SmallParticulate = [0] * Section.NodeNumber
     Section.BigParticulate = [0] * Section.NodeNumber
