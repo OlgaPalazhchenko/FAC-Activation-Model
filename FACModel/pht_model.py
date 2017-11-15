@@ -11,18 +11,18 @@ import sg_heattransfer as SGHX
 # Initial Temperatures and T-dependent parametrs in SG zones
 SecondarySidePressure = 4.593
 
-for Zone in ld.SGZones:
-    Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
-        Zone, Zone.InnerOxThickness, Zone.OuterOxThickness,
-        SGHX.MassFlow_h.magnitude - 0.03 * SGHX.MassFlow_h.magnitude, SecondarySidePressure, 1983
-        )
-    Zone.DensityH2O = [
-        ld.Density("water", "PHT", i, SecondarySidePressure) for i in Zone.PrimaryBulkTemperature
-        ]
-    Zone.ViscosityH2O = [ld.Viscosity("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
-    Zone.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Zone.PrimaryBulkTemperature]
+# for Zone in ld.SGZones:
+#     Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
+#         Zone, Zone.InnerOxThickness, Zone.OuterOxThickness,
+#         SGHX.MassFlow_h.magnitude - 0.03 * SGHX.MassFlow_h.magnitude, SecondarySidePressure, 1983
+#         )
+#     Zone.DensityH2O = [
+#         ld.Density("water", "PHT", i, SecondarySidePressure) for i in Zone.PrimaryBulkTemperature
+#         ]
+#     Zone.ViscosityH2O = [ld.Viscosity("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
+#     Zone.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Zone.PrimaryBulkTemperature]
 
-# #Initial Concentrations
+# Initial concentrations
 for Section in ld.Sections:    
     # #Temperature-dependent parameters            
     Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
@@ -58,7 +58,7 @@ for Section in ld.Sections:
         
         # Initial RIHT temperature 
         if Section == ld.Inlet:
-            Section.PrimaryBulkTemperature = [SGHX.energy_balance(ld.SteamGenerator.NodeNumber - 1, 0)]\
+            Section.PrimaryBulkTemperature = [SGHX.energy_balance(ld.SGZones[0].NodeNumber - 1, 0)]\
             * Section.NodeNumber
         
         if Section != ld.Outlet:

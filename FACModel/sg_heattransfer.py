@@ -2,7 +2,7 @@ import lepreau_data as ld
 import numpy as np
 import constants as nc
 
-T_sat_secondary = 260.1 + 273.15
+# T_sat_secondary = 260.1 + 273.15
 T_sat_primary = 310 + 273.15
 T_PreheaterIn = 186.7 + 273.15
 T_PrimaryIn = 310 + 273.15
@@ -100,7 +100,7 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
     # [W/cm K]/ [cm] = [W/K cm^2]
     
     if Section.Length.label[i] == "PHT boiling":
-        x = 4
+        x = 4.4
         MassFlux_h.magnitude = MassFlow_h.magnitude / (nc.TotalSGTubeNumber * (np.pi / 4) * (Section.Diameter[i] ** 2))
  
         h_i = boiling_heat_transfer(
@@ -115,8 +115,12 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
 
 
 def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySidePressure, i):
+    if SecondarySidePressure == 4.593: 
+        T_sat_secondary = 260.1 + 273.15
+    elif SecondarySidePressure < 4.593:
+        T_sat_secondary = 258.1 + 273.15  
+    
     # split into boiling and non-boiling (preheater) sections
-
     if Section.Length.label[i] == "preheater" or Section.Length.label[i] == "preheater start":  # from Silpsrikul thesis
         # Based on PLGS data and Silpsrikul calculations
         f_b = 0.2119  # fraction of cross-sectional area of shell occupied by a baffle window
@@ -313,6 +317,11 @@ def wall_temperature(
 def temperature_profile(
         Section, InnerAccumulation, OuterAccumulation, m_h_leakagecorrection, SecondarySidePressure, calendar_year
         ):
+    if SecondarySidePressure == 4.593: 
+        T_sat_secondary = 260.1 + 273.15
+    elif SecondarySidePressure < 4.593:
+        T_sat_secondary = 258.1 + 273.15  
+    
     PrimaryWall = []
     PrimaryBulk = []
     SecondaryBulk = []
@@ -334,9 +343,8 @@ def temperature_profile(
         if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater" and \
                 Section.Length.label[i] != "thermal plate":
 
-            T_PrimaryBulkOut = T_PrimaryBulkIn\
-                             - (U * (T_PrimaryBulkIn - T_SecondaryBulkIn) * outer_area(Section)[i] * nc.TotalSGTubeNumber)\
-                             / (Cp_h * m_h_leakagecorrection)
+            T_PrimaryBulkOut = T_PrimaryBulkIn - (U * (T_PrimaryBulkIn - T_SecondaryBulkIn) * outer_area(Section)[i] \
+                                                  * nc.TotalSGTubeNumber) / (Cp_h * m_h_leakagecorrection)
             # Ti = Ti+1 = Tsat
             T_SecondaryBulkOut = T_sat_secondary
 
@@ -405,37 +413,38 @@ def temperature_profile(
 
 
 def energy_balance(SteamGeneratorOutputNode, j):
-    year = (j/8760) 
+    year = (j / 8760) 
     calendar_year = year + 1983
     
-    if calendar_year <1992:
+    if calendar_year <= 1992:
         # divider plate leakage rates estimated based on AECL work
         InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
         SecondarySidePressure = 4.593  # MPa
     else:
         # PLNGS pressure reduction in 1992 + divider plate replacement
-        InitialLeakage = 0.01 
-        YearlyRateLeakage = 0.0015
-        SecondarySidePressure = 4.593 #- (125/1000) # MPa
+        InitialLeakage = 0.02 
+        YearlyRateLeakage = 0
+        SecondarySidePressure = 4.593 - (125/1000) # MPa
     
     Leakage = InitialLeakage + (j / 8760) * YearlyRateLeakage
     MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude * Leakage
     m_h_leakagecorrection = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude
 
     Balance = []
-    for Zone in ld.SGZones[0:87]:
+    for Zone in ld.SGZones:
         Zone.PrimaryBulkTemperature = temperature_profile(
-            Zone, ld.SGZones[0].InnerOxThickness, ld.SGZones[0].OuterOxThickness, m_h_leakagecorrection,
+            Zone, ld.SGZones[58].InnerOxThickness, ld.SGZones[58].OuterOxThickness, m_h_leakagecorrection,
             SecondarySidePressure, calendar_year)
         
         x = (Zone.TubeNumber / nc.TotalSGTubeNumber) * m_h_leakagecorrection \
-            * ld.Enthalpy("PHT", Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode])
+            * ld.Enthalpy("PHT", Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode], SecondarySidePressure)
 
         Balance.append(x)
-        Enthalpy = (sum(Balance) + MasssFlow_dividerplate.magnitude * ld.Enthalpy("PHT", T_PrimaryIn)) \
-            / MassFlow_h.magnitude
+        Enthalpy = (
+            sum(Balance) + MasssFlow_dividerplate.magnitude * ld.Enthalpy("PHT", T_PrimaryIn, SecondarySidePressure)
+            ) / MassFlow_h.magnitude
 
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
-print (energy_balance(21, 1)-273.15)
+# print (energy_balance(21, 1)-273.15)

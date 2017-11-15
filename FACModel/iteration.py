@@ -6,7 +6,7 @@ import electrochemistry as e
 
 def Diffusion(Section, Element):
     # Inner oxide density is determined as a weighted average of the densities of the 2 comprising oxides 
-    if Section in ld.SGZones: 
+    if Section in ld.SGZones:
         AlloyDensity = nc.Alloy800Density
         OxideDensity = (c.fraction_chromite(Section) * nc.FeCr2O4Density
         + (1 - c.fraction_chromite(Section)) * nc.NiFe2O4Density)

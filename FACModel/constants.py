@@ -47,44 +47,6 @@ FeDiffusivity = 0.00041
 NiDiffusivity = 0.00041
 CoDiffusivity = 0.00041
 
-# Molecular weights of specific isotopes [g/mol]
-MolarMassFe59 = 58.9348755
-MolarMassFe55 = 54.9382934
-MolarMassCo58 = 57.9357528
-MolarMassNi63 = 62.9296694
-MolarMassMn54 = 53.9403589
-MolarMassCr51 = 50.9447674
-MolarMassCo60 = 59.9338171
-
-# Abundances (as fractions) [unitless]
-AbundanceFe58 = 0.00282
-AbundanceFe54 = 0.0584
-AbundanceNi58 = 0.681
-AbundanceNi62 = 0.0363
-AbundanceCr50 = 0.0435
-AbundanceCo59 = 1
-
-# Decay constants [h^-1]
-LambdaFe59 = 0.000650476
-LambdaFe55 = 0.0000288782
-LambdaCo58 = 0.00040735
-LambdaNi63 = 0.000000790473
-LambdaMn54 = 0.0000924788
-LambdaCr51 = 0.00104264
-LambdaCo60 = 0.000015011
-
-# Cross Sections [cm^2]
-CrossSectionFe58 = 1.14E-24
-CrossSectionFe54 = 2.5E-24
-CrossSectionNi58 = 1.46E-25
-CrossSectionNi62 = 1.46E-23
-CrossSectionCr50 = 1.59E-23
-CrossSectionCo59 = 3.7E-23
-
-# General nuclear constants
-NeutronFlux = 50000000000000  # [neutrons/cm^2 s]
-Avagadro = 6.022E+23  # [atoms/mol]
-CoreSurfaceArea = 2430  # [cm^2]
 
 # Kinetic precipitation/dissolution constants [cm/s]
 KpFe3O4 = 0.018

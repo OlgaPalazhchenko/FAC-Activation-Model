@@ -4,7 +4,46 @@ import numpy as np
 import constants as nc
 import rk_4
     
- 
+# Molecular weights of specific isotopes [g/mol]
+MOLARMASSFe59 = 58.9348755
+MOLARMASSFe55 = 54.9382934
+MOLARMASSCo58 = 57.9357528
+MOLARMASSNi63 = 62.9296694
+MOLARMASSMn54 = 53.9403589
+MOLARMASSCr51 = 50.9447674
+MOLARMASSCo60 = 59.9338171
+
+# Abundances (as fractions) [unitless]
+ABUNDANCEFe58 = 0.00282
+ABUNDANCEFe54 = 0.0584
+ABUNDANCENi58 = 0.681
+ABUNDANCENi62 = 0.0363
+ABUNDANCECr50 = 0.0435
+ABUNDANCECo59 = 1
+
+# Decay constants [h^-1]
+LambdaFe59 = 0.000650476
+LambdaFe55 = 0.0000288782
+LambdaCo58 = 0.00040735
+LambdaNi63 = 0.000000790473
+LambdaMn54 = 0.0000924788
+LambdaCr51 = 0.00104264
+LambdaCo60 = 0.000015011
+
+# Cross Sections [cm^2]
+CrossSectionFe58 = 1.14E-24
+CrossSectionFe54 = 2.5E-24
+CrossSectionNi58 = 1.46E-25
+CrossSectionNi62 = 1.46E-23
+CrossSectionCr50 = 1.59E-23
+CrossSectionCo59 = 3.7E-23
+
+# General nuclear constants
+NeutronFlux = 50000000000000  # [neutrons/cm^2 s]
+Avagadro = 6.022E+23  # [atoms/mol]
+CoreSurfaceArea = 2430  # [cm^2]
+
+
 def Eta(Section,CorrosionRate,FeSatFe3O4,InnerOxThickness):
     
     DeltaMassInnerOxide = [x*y/z for x,y,z in zip([it.Diffusion(Section, "Fe")]*Section.NodeNumber, CorrosionRate, [Section.FractionFeInnerOxide]*Section.NodeNumber)]
@@ -16,13 +55,13 @@ def Eta(Section,CorrosionRate,FeSatFe3O4,InnerOxThickness):
         DeltaTemperature_Length = [x/y for x,y in zip(DeltaTemperature,Section.Length.magnitude)]        
         
         DeltaSolubility = ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", [abs(x-y) for x,y in zip(FeSatFe3O4[1:],FeSatFe3O4)], \
-                                            None, None, None, nc.FeMolarMass, None)
+                                            None, None, None,  FeMolarMass, None)
         DeltaSolubility.insert(0,1e-12) #One less Eta than total number of nodes --> deltas = 21, so add small diff b/w first node and last node outlet
      
 
         DeltaSolubility_Temp = [x/y for x,y in zip(DeltaSolubility,DeltaTemperature)]
          
-        CRYST_o = [x/(y*z*t*u*v) for x,y,z,t,u,v in zip(ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", FeSatFe3O4, None, None, None, nc.FeMolarMass, None),     \
+        CRYST_o = [x/(y*z*t*u*v) for x,y,z,t,u,v in zip(ld.UnitConverter(Section, "Mol per Kg", "Grams per Cm Cubed", FeSatFe3O4, None, None, None,  FeMolarMass, None),     \
                                                  [0.18]*Section.NodeNumber, Section.Diameter, Section.Velocity, DeltaSolubility_Temp, DeltaTemperature_Length)]
      
     DIFF_i = [i/(2*nc.Fe3O4Density*nc.FeDiffusivity*nc.Fe3O4Porosity_inner*(1-nc.Fe3O4Porosity_inner)) for i in InnerOxThickness]
@@ -59,19 +98,19 @@ def SurfaceActivity(Section, CorrosionRate, FeSatFe3O4, InnerOxThickness, BulkAc
     t = [j]*Section.NodeNumber   
     
     if Isotope == "Co60":
-        Lambda = nc.LambdaCo60
+        Lambda =  LambdaCo60
     elif Isotope == "Co58":
-        Lambda = nc.LambdaCo58  
+        Lambda =  LambdaCo58  
     elif Isotope == "Fe55":
-        Lambda = nc.LambdaFe55
+        Lambda =  LambdaFe55
     elif Isotope == "Fe59":
-        Lambda = nc.LambdaFe59
+        Lambda =  LambdaFe59
     elif Isotope == "Mn54":
-        Lambda = nc.LambdaMn54
+        Lambda =  LambdaMn54
     elif Isotope == "Cr51":
-        Lambda = nc.LambdaCr51
+        Lambda =  LambdaCr51
     elif Isotope == "Ni63":
-        Lambda = nc.LambdaNi63
+        Lambda =  LambdaNi63
     else:
         print ("Wrong isotope input")
             
@@ -127,7 +166,7 @@ def InCoreActiveDeposit(Section1, Section2, InnerOxThickness, OuterOxThickness, 
     
     CoreDepositThickness = Deposition(Section1, BigParticulate, SmallParticulate, j)
       
-    ActiveDeposit = [(DecayConstant/3600)*(nc.Avagadro*(i/MolarMass)*nc.NeutronFlux*CrossSection*ElementComposition*ParentAbundance/ \
+    ActiveDeposit = [(DecayConstant/3600)*(nc.Avagadro*(i/MolarMass)* NeutronFlux*CrossSection*ElementComposition*ParentAbundance/ \
     ((DecayConstant/3600)+nc.Krelease))*(1-np.exp(-j*(nc.TimeIncrement/3600)* (DecayConstant + nc.Krelease*3600))) for i in CoreDepositThickness]
     
     return ActiveDeposit
@@ -176,52 +215,52 @@ def BulkActivity(Section1, Section2, BulkConcentration_o, CorrosionRate, FeSatFe
     
     #[s^-1], Converts from h^-1 to s^-1
     if Isotope == "Co60":
-        Lambda = nc.LambdaCo60
-        MolarMass = nc.MolarMassCo60
-        ParentAbundance = nc.AbundanceCo59
-        CrossSection = nc.CrossSectionCo59
+        Lambda =  LambdaCo60
+        MolarMass =  MOLARMASSCo60
+        ParentAbundance =  ABUNDANCECo59
+        CrossSection =  CrossSectionCo59
         Element = "Co"
         
     if Isotope == "Co58":
-        Lambda = nc.LambdaCo58
-        MolarMass = nc.MolarMassCo58
-        ParentAbundance = nc.AbundanceNi58
-        CrossSection = nc.CrossSectionNi58 
+        Lambda =  LambdaCo58
+        MolarMass =  MOLARMASSCo58
+        ParentAbundance =  ABUNDANCENi58
+        CrossSection =  CrossSectionNi58 
         Element = "Ni"
         
     if Isotope == "Fe55":
-        Lambda = nc.LambdaFe55
-        MolarMass = nc.MolarMassFe55
-        ParentAbundance = nc.AbundanceFe54
-        CrossSection = nc.CrossSectionFe54
+        Lambda =  LambdaFe55
+        MolarMass =  MOLARMASSFe55
+        ParentAbundance =  ABUNDANCEFe54
+        CrossSection =  CrossSectionFe54
         Element = "Fe"
         
     if Isotope == "Fe59":
-        Lambda = nc.LambdaFe59
-        MolarMass = nc.MolarMassFe59
-        ParentAbundance = nc.AbundanceFe58
-        CrossSection = nc.CrossSectionFe58
+        Lambda =  LambdaFe59
+        MolarMass =  MOLARMASSFe59
+        ParentAbundance =  ABUNDANCEFe58
+        CrossSection =  CrossSectionFe58
         Element = "Fe"
         
     if Isotope == "Mn54":
-        Lambda = nc.LambdaMn54
-        MolarMass = nc.MolarMassMn54
-        ParentAbundance = nc.AbundanceFe54
-        CrossSection = nc.CrossSectionFe54
+        Lambda =  LambdaMn54
+        MolarMass =  MOLARMASSMn54
+        ParentAbundance =  ABUNDANCEFe54
+        CrossSection =  CrossSectionFe54
         Element = "Fe"
         
     if Isotope == "Cr51":
-        Lambda = nc.LambdaCr51
-        MolarMass = nc.MolarMassCr51
-        ParentAbundance = nc.AbundanceCr50
-        CrossSection = nc.CrossSectionCr50
+        Lambda =  LambdaCr51
+        MolarMass =  MOLARMASSCr51
+        ParentAbundance =  ABUNDANCECr50
+        CrossSection =  CrossSectionCr50
         Element = "Cr"
         
     if Isotope == "Ni63":
-        Lambda = nc.LambdaNi63
-        MolarMass = nc.MolarMassNi63
-        ParentAbundance = nc.AbundanceNi62
-        CrossSection = nc.CrossSectionNi62
+        Lambda =  LambdaNi63
+        MolarMass =  MOLARMASSNi63
+        ParentAbundance =  ABUNDANCENi62
+        CrossSection =  CrossSectionNi62
         Element = "Ni"
     
     if Section1 == ld.Core: #Section2 = Outlet

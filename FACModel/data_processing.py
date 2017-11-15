@@ -20,8 +20,8 @@ AverageColdLegLoading = []
 RIHT = []
 StreamOutletTemperatures = []
 
-SimulationYears = 11  # years
-SimulationHours = SimulationYears * 8760
+SimulationYears = 1  # years
+SimulationHours = SimulationYears * 50
 
 import time
 start_time = time.time()
@@ -29,25 +29,28 @@ start_time = time.time()
 for j in range(SimulationHours):
     In = pht_model.PHT_FAC(ld.Inlet, ld.Core, RealTimeHeatTransfer, j)
     Co = pht_model.PHT_FAC(ld.Core, ld.Outlet, RealTimeHeatTransfer, j)
-    Ou = pht_model.PHT_FAC(ld.Outlet, ld.SteamGenerator, RealTimeHeatTransfer, j)
-    Sg = pht_model.PHT_FAC(ld.SteamGenerator, ld.Inlet, RealTimeHeatTransfer, j)
-        
+    # SGZones[58] = tube with typical u-bend arc length --> 1.5 m
+    Ou = pht_model.PHT_FAC(ld.Outlet, ld.SGZones[58], RealTimeHeatTransfer, j)
+    Sg = pht_model.PHT_FAC(ld.SGZones[58], ld.Inlet, RealTimeHeatTransfer, j)
+    
+#     if RealTimeHeatTransfer == "no":
+#         Sg = pht_model.PHT_FAC(ld.SGZones[58], ld.Inlet, RealTimeHeatTransfer, j)
+            
     if RealTimeHeatTransfer =="yes":
         #Set input concentrations for all SG zones to be same as input of first (Outlet output)
-        for Zone in ld.SGZones[1:len(ld.SGZones)]:
-            BulkOutletOutput= [
+        BulkOutletOutput= [
                 Ou.Section1.Bulk.FeTotal, Ou.Section1.Bulk.NiTotal, Ou.Section1.Bulk.CoTotal, Ou.Section1.Bulk.CrTotal
                 ]
+        SgZones = []
+        for Zone in ld.SGZones:
             BulkSGInput = [Zone.Bulk.FeTotal, Zone.Bulk.NiTotal, Zone.Bulk.CoTotal, Zone.Bulk.CrTotal]
-            for x,y in zip(BulkSGInput,BulkOutletOutput):
-                x[0] = y[Ou.Section1.NodeNumber-1]
-                
-        Sg = pht_model.PHT_FAC(ld.SteamGenerator, ld.Inlet, j)
-        Sg1 = pht_model.PHT_FAC(ld.SG_Zone1, ld.Inlet, j)
-        Sg2 = pht_model.PHT_FAC(ld.SG_Zone2, ld.Inlet, j)
-        Sg3 = pht_model.PHT_FAC(ld.SG_Zone3, ld.Inlet, j)
+            for x, y in zip(BulkSGInput, BulkOutletOutput):
+                x[0] = y[Ou.Section1.NodeNumber - 1]
+            
+            x = pht_model.PHT_FAC(Zone, ld.Inlet, j)   
+            SgZones.append(x)
 
-    if j % 8759 == 0:  # yearly
+    if j % 10 == 0:  # yearly
          
         TotalLoadingSG = [x + y for x, y in zip(Sg.Section1.OuterOxThickness, Sg.Section1.InnerOxThickness)]
         ConvertedLoading = ld.UnitConverter(
@@ -56,7 +59,7 @@ for j in range(SimulationHours):
         AverageColdLeg = sum(ConvertedLoading[11:len(ConvertedLoading)]) \
             / (len(ConvertedLoading) - 11)
   
-        T_x = (SGHX.energy_balance(21, j)) - 273.15
+        T_RIH = (SGHX.energy_balance(21, j)) - 273.15
         
         OutletTemperatures = []
         for Zone in ld.SGZones:
@@ -65,7 +68,7 @@ for j in range(SimulationHours):
         
         StreamOutletTemperatures.append(OutletTemperatures)
         AverageColdLegLoading.append(AverageColdLeg)
-        RIHT.append(T_x)
+        RIHT.append(T_RIH)
             
 FACRate = sum(
     ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
@@ -102,7 +105,7 @@ def property_log10(Element, Interface):
     Bulk = []
     SolutionOxide = []
     # only in main 4 PHTS sections, not counting SG Zones
-    for Section in ld.Sections[0:4]:
+    for Section in [In.Section1, Co.Section1, Ou.Section1, Sg.Section1]:
         if Element == "Fe":
             Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.Bulk.FeTotal, Section.SolutionOxide.FeTotal]
         elif Element == "Ni":

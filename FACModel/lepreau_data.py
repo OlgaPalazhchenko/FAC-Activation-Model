@@ -73,7 +73,7 @@ class ThermoDimensionlessInput():
 ReferenceValues = ThermoDimensionlessInput()
 
 
-def Enthalpy(side, Temperature):
+def Enthalpy(side, Temperature, SecondarySidePressure):
     if side == "PHT" or side == "PHTS" or side == "phts" or side == "pht":
         p = PrimarySidePressure  # MPa
     else:
@@ -282,23 +282,6 @@ class Interface():
         self.EqmPotentialFe3O4 = None
 
 
-class Concentration():
-    def __init__(self, species):
-        self.species = species
-
-        # self.Molality = None
-        if self.species == "iron": 
-            self.Element = "Fe"
-        elif self.species == "nickel":
-            self.Element = "Ni"
-        elif self.species == "cobalt":
-            self.Element = "Co"
-        elif self.species == "chromium":
-            self.Element = "Cr"
-        else:
-            print ("Error: incorrect species")
-
-
 class Section():  # Defining each primary heat transport section as a class 
     def __init__(self, j, RowStart, RowEnd): 
         self.RowStart = RowStart
@@ -368,12 +351,8 @@ class Section():  # Defining each primary heat transport section as a class
 Inlet = Section(21, 0, 7)
 Core = Section(42, 0, 12)
 Outlet = Section(63, 0, 9)
-# Representative of typical tube u-bend arc length 
-SteamGenerator = Section(84, 0, 22)
-
 # Steam generator split into 87 zones based on the distinct tube bend arc lengths
 SGZones = [Section(84, 0, 22) for each in range(87)]
-SGZones.append(SteamGenerator)
 
 # Diameter [cm]
 Inlet.Diameter = [44.3, 50, 106, 5.68, 5.68, 5.68, 5.68] 
@@ -389,25 +368,6 @@ Outlet.Velocity = [1619, 1619, 1619, 1619, 857, 857, 857, 306, 1250]
 Inlet.Length.magnitude = [477.6, 281.8, 78.6, 350, 350, 350, 350] 
 Core.Length.magnitude = [49.5] * Core.NodeNumber 
 Outlet.Length.magnitude = [17, 3.5, 139.5, 432, 225.5, 460.3, 460.3, 400, 100]
-
-
-SteamGenerator.Length.magnitude = [
-    74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96, 37.90, 37.90, 37.90, 37.90, 113.96, 113.96, 113.96,
-    113.96, 113.96, 74.05, 75, 74.05, 42.05, 32
-    ]
-
-# SG_Zone1.Length.magnitude = [
-#     74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96, 57.80, 57.80, 57.80, 57.80, 113.96, 113.96, 113.96, 
-#     113.96, 113.96, 74.05, 75, 74.05, 42.05, 32
-#     ]
-# SG_Zone2.Length.magnitude = [
-#     74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96, 77.2275, 77.2275, 77.2275, 77.2275, 113.96, 113.96, 
-#     113.96, 113.96, 113.96, 74.05, 75, 74.05, 42.05, 32
-#     ]
-# SG_Zone3.Length.magnitude = [
-#     74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96, 17.113, 17.113, 17.113, 17.113, 113.96, 113.96, 113.96,
-#     113.96, 113.96, 74.05, 75, 74.05, 42.05, 32
-#     ]
 
 # Solubility (mol/kg)
 Inlet.SolubilityNi = [2.71098E-09] * Inlet.NodeNumber
@@ -430,27 +390,25 @@ Core.SolubilityCr = [
 Outlet.SolubilityNi = [1.54584E-09] * Outlet.NodeNumber
 Outlet.SolubilityCo = [1.44E-09] * Outlet.NodeNumber
 Outlet.SolubilityCr = [4.84E-11] * Outlet.NodeNumber
-
-# inches 
+ 
 u_bend = []
-straight_u_bend_section = [9.5] * 82 + [7.95] + [6.14] + [3.94] + [1.4] + [0]
-# in. to cm
-straight_u_bend_section = [i * 2.54 for i in straight_u_bend_section]
-radii = list(range(87))
-# in. # each u-bend radius is 0.475 in. shorter than the previous (slightly deviates at the end)
+straight_u_bend_section = [9.5] * 82 + [7.95] + [6.14] + [3.94] + [1.4] + [0] # in.
+straight_u_bend_section = [i * 2.54 for i in straight_u_bend_section] # in. to cm
 radius_decrease = [0.475] * 81 + [0.17] + [0.06] + [-0.16] + [-0.32] + [0.25]
+radii = list(range(87))
 
 for i, j in zip (radii, radius_decrease):
     if i == 0:
+        # convert from in. to cm 
+        # 2piR = circumferance of circle, piR = half of circle
         x = 43.225
         u_bend.append(x * 2.54 * np.pi)
+    # in. # each u-bend radius is 0.475 in. shorter than the previous (slightly deviates at the end)
     x = x - j
-    # convert from in. to cm 
-    # 2piR = circumferance of circle, piR = half of circle
     y = (x * 2.54) * np.pi
     u_bend.append(y)
     
-u_bend_total = [x + y for x,y in zip(u_bend, straight_u_bend_section)]
+u_bend_total = [x + y for x, y in zip(u_bend, straight_u_bend_section)]
 
 hot_leg_length = [74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96]
 cold_leg_length = [113.96, 113.96, 113.96, 113.96, 113.96, 74.05, 75, 74.05, 42.05, 32]
@@ -461,13 +419,11 @@ number_tubes = [8, 11, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 26, 28, 28, 2
                 53, 52, 53, 52, 51, 50, 50, 48, 47]
 
 # not including last appended "SteamGenerator" zone
-for Zone, length, i in zip(SGZones[0:87], u_bend_total, number_tubes):
+for Zone, length, i in zip(SGZones, u_bend_total, number_tubes):
     # u-bend split into 4 nodes
     Zone.Length.magnitude = hot_leg_length + [length / 4] * 4 + cold_leg_length
     Zone.TubeNumber = i
-
-# Replicate solubilities and temperatures here for now 
-for Zone in SGZones:
+    
     Zone.Diameter = [1.368] * Zone.NodeNumber
     Zone.Velocity = [
         533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 498, 494, 491, 489, 487, 484, 483, 481, 480, 479, 476, 
@@ -550,12 +506,11 @@ for Section in Sections:
 
     # Distance
     Section.Distance = np.cumsum(Section.Length.magnitude)
-
-
     # Temperature-dependent parameters            
     Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
     Section.DensityH2O = [Density("water", "PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature]
     Section.ViscosityH2O = [Viscosity("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
+
 
 def ReynoldsNumber(Section, Diameter):
     # Diameter is an input due to difference in desired dimension (e.g., inner, outer, hydraulic, etc.)
