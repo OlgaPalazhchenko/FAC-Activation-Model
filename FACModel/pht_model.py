@@ -1,4 +1,3 @@
-import numpy as np
 import constants as nc
 import lepreau_data as ld
 import composition as c
