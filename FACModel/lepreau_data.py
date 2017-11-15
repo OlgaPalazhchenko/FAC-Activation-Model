@@ -471,9 +471,8 @@ Outlet.PrimaryBulkTemperature = UnitConverter(
     )
 
 # Combines PHT sections and SG Zones (in the event each zone will be tracked for oxide growth/heat transfer)
-Sections = [Inlet, Core, Outlet]
-for i in SGZones:
-    Sections.append(i)
+Sections = [Inlet, Core, Outlet] + SGZones
+
 
 for Section in Sections:
     # Particulate #[mg/kg] (ppm)
