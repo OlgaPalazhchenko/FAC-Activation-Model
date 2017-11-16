@@ -234,11 +234,11 @@ class PHT_FAC():
         # self.Section1.DepositThickness = a.Deposition(self.Section1, self.Section1.BigParticulate, self.Section1.SmallParticulate, j)
                         
         # #rk_4 oxide thickness calculation (no spalling)
-        rk_4.oxidegrowth(self.Section1, Saturations, BulkConcentrations)
+        rk_4.oxidegrowth(self.Section1, Saturations, BulkConcentrations, ElementTracking = "no")
         
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.Spall(
-            self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime
+            self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking= "no"
             )
 
      
