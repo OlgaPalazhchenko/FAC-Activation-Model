@@ -13,7 +13,7 @@ from matplotlib import rc
 rc('mathtext', default='regular')
 
 RealTimeHeatTransfer = "no"
-Activation ="no"
+Activation = "no"
 PlotOutput = "yes"
 
 AverageColdLegLoading = []
@@ -29,15 +29,15 @@ start_time = time.time()
 for j in range(SimulationHours):
     In = pht_model.PHT_FAC(ld.Inlet, ld.Core, RealTimeHeatTransfer, j)
     Co = pht_model.PHT_FAC(ld.Core, ld.Outlet, RealTimeHeatTransfer, j)
-    # SGZones[58] = tube with typical u-bend arc length --> 1.5 m
     Ou = pht_model.PHT_FAC(ld.Outlet, ld.SGZones[58], RealTimeHeatTransfer, j)
     
     if RealTimeHeatTransfer == "no":
+        # SGZones[58] = tube with typical u-bend arc length --> 1.5 m
         Sg = pht_model.PHT_FAC(ld.SGZones[58], ld.Inlet, RealTimeHeatTransfer, j)
             
-    if RealTimeHeatTransfer =="yes":
-        #Set input concentrations for all SG zones to be same as input of first (Outlet output)
-        BulkOutletOutput= [
+    if RealTimeHeatTransfer == "yes":
+        # Set input concentrations for all SG zones to be same as input of first (Outlet output)
+        BulkOutletOutput = [
                 Ou.Section1.Bulk.FeTotal, Ou.Section1.Bulk.NiTotal, Ou.Section1.Bulk.CoTotal, Ou.Section1.Bulk.CrTotal
                 ]
         SgZones = []
@@ -91,7 +91,7 @@ with open(csvfile, "w") as output:
         
 end_time = time.time()
 delta_time = end_time - start_time
-
+ 
 hours = delta_time // 3600
 temp = delta_time - 3600 * hours
 minutes = delta_time // 60
@@ -100,11 +100,11 @@ print('%d:%d:%d' % (hours, minutes, seconds))
 
 
 def property_log10(Element, Interface):
-    Sat = []
-    Bulk = []
-    SolutionOxide = []
+    Sat = []  # x
+    Bulk = []  # y
+    SolutionOxide = []  # z
     
-    # only in main 4 PHTS sections, not counting SG Zones
+    # only in main 4 PHTS sections, not counting SG Zones, can be changed to include all, if needed 
     for Section in [In.Section1, Co.Section1, Ou.Section1, Sg.Section1]:
         if Element == "Fe":
             Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.Bulk.FeTotal, Section.SolutionOxide.FeTotal]
@@ -116,6 +116,8 @@ def property_log10(Element, Interface):
             Concentrations = [
                 Section.SolutionOxide.CoSatFerrite, Section.Bulk.CoTotal, Section.SolutionOxide.CoTotal
                 ]
+        else:
+            None
             
         x = np.log10(Concentrations[0])
         y = np.log10(Concentrations[1])
@@ -131,51 +133,34 @@ def property_log10(Element, Interface):
      
     if Interface == "Sat":
         return Sat
-    elif Interface =="Bulk":
+    elif Interface == "Bulk":
         return Bulk
     elif Interface == "SO":
         return SolutionOxide
     else:
         return None
 
-# print (property_log10('Fe'))
-def oxide_loading():
+
+def oxide_loading(Layer):
     Oxide = []
-    
-   
-InnerOxide = []
-InnerOxideThicknesses = [
-    In.Section1.InnerOxThickness, Co.Section1.InnerOxThickness, Ou.Section1.InnerOxThickness, 
-    Sg.Section1.InnerOxThickness
-    ]
-for Thickness, Sect in zip (InnerOxideThicknesses, ld.Sections):
-    z = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
-    InnerOxide.append(z)
-InnerOxideThickness = InnerOxide[0] + InnerOxide[1] + InnerOxide[2] + InnerOxide[3]
-  
-OuterOxide = []
-OuterOxideThicknesses = [
-    In.Section1.OuterOxThickness, Co.Section1.OuterOxThickness, Ou.Section1.OuterOxThickness, 
-    Sg.Section1.OuterOxThickness
-    ]
-for Thickness, Sect in zip (OuterOxideThicknesses, ld.Sections):
-    q = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
-    OuterOxide.append(q)
-OuterOxideThickness = OuterOxide[0] + OuterOxide[1] + OuterOxide[2] + OuterOxide[3]
-  
-Cobalt = []
-CoThicknesses = [In.Section1.CoThickness, Co.Section1.CoThickness, Ou.Section1.CoThickness, Sg.Section1.CoThickness]
-for Thickness, Sect in zip (CoThicknesses, ld.Sections):
-    c = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
-    Cobalt.append(c)
-CobaltThickness = Cobalt[0] + Cobalt[1] + Cobalt[2] + Cobalt[3]
-  
-Nickel = []
-NiThicknesses = [In.Section1.NiThickness, Co.Section1.NiThickness, Ou.Section1.NiThickness, Sg.Section1.NiThickness]
-for Thickness, Sect in zip (NiThicknesses, ld.Sections):
-    n = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
-    Nickel.append(n)
-NickelThickness = Nickel[0] + Nickel[1] + Nickel[2] + Nickel[3]
+    for Section in [In.Section1, Co.Section1, Ou.Section1, Sg.Section1]:
+        if Layer == "Inner":
+            x = Section.InnerOxThickness
+        elif Layer == "Outer":
+            x = Section.OuterOxThickness
+        elif Layer == "Cobalt":
+            x = Section.CoThickness
+        elif Layer == "Nickel":
+            x = Section.NiThickness
+        else:
+            None 
+        Oxide.append(x)
+    Oxide = [j for i in Oxide for j in i]
+    # unpacks 4 separate lists into one list of oxide thickness down entire PHT
+    ConvertedOxide = ld.UnitConverter(
+        Section, "Grams per Cm Squared", "Grams per M Squared", None, None, Oxide, None, None, None
+        )
+    return ConvertedOxide        
 
 
 def plot_output():
@@ -224,24 +209,23 @@ def plot_output():
     
     fig2, ax1 = plt.subplots()
     # ax1 = fig2.add_subplot(221)
-    ax1.plot(TotalLoopDistance, InnerOxideThickness, linestyle=None, marker='o', color='0.50', label='Inner Oxide')
-    ax1.plot(TotalLoopDistance, OuterOxideThickness, linestyle=None, marker='o', color='k', label='Outer Oxide')
+    ax1.plot(TotalLoopDistance, oxide_loading("Inner"), linestyle=None, marker='o', color='0.50', label='Inner Oxide')
+    ax1.plot(TotalLoopDistance, oxide_loading("Outer"), linestyle=None, marker='o', color='k', label='Outer Oxide')
     # ax1.axis([51,69, 0, 30])
     ax1.set_xlabel('Distance (m)')
     ax1.set_ylabel('Oxide Layer Loadings (${g/m^2}$)')
                   
     ax2 = ax1.twinx()
-    ax2.plot(TotalLoopDistance, NickelThickness, linestyle=None, marker='o', color='c', label='Nickel')
-    ax2.plot(TotalLoopDistance, CobaltThickness, linestyle=None, marker='o', color='m', label='Cobalt')
+    ax2.plot(TotalLoopDistance, oxide_loading("Nickel"), linestyle=None, marker='o', color='c', label='Nickel')
+    ax2.plot(TotalLoopDistance, oxide_loading("Cobalt"), linestyle=None, marker='o', color='m', label='Cobalt')
     ax2.set_ylabel('Ni, Co, and Cr Loadings (${g/m^2}$)', rotation=270, labelpad=20)
     lines, labels = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax2.legend(lines + lines2, labels + labels2, loc=0)        
-    # plt.axis([51, 69, 0, 30])
+    plt.axis([4, 69, 0, 0.01])
     plt.tight_layout()
     plt.show()
     
-
 if PlotOutput == "yes":
     plot_output()
     

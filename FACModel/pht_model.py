@@ -22,7 +22,7 @@ SecondarySidePressure = 4.593
 #     Zone.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Zone.PrimaryBulkTemperature]
 
 # Initial concentrations
-for Section in ld.Sections:    
+for Section in [ld.Inlet, ld.Core, ld.Outlet, ld.SGZones[58]]:    
     # #Temperature-dependent parameters            
     Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
     
@@ -234,78 +234,11 @@ class PHT_FAC():
         # self.Section1.DepositThickness = a.Deposition(self.Section1, self.Section1.BigParticulate, self.Section1.SmallParticulate, j)
                         
         # #rk_4 oxide thickness calculation (no spalling)
-        rk_4.oxidegrowth(self.Section1, Saturations, BulkConcentrations, ElementTracking = "no")
+        rk_4.oxidegrowth(self.Section1, Saturations, BulkConcentrations, ElementTracking = "yes")
         
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.Spall(
-            self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking= "no"
+            self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking= "yes"
             )
-
-     
-# InnerOxide = []
-# InnerOxideThicknesses = [I.Section1.InnerOxThickness, C.Section1.InnerOxThickness, O.Section1.InnerOxThickness, SG.Section1.InnerOxThickness]
-# for Thickness, Sect in zip (InnerOxideThicknesses, ld.Sections):
-#     z = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
-#     InnerOxide.append(z)
-# InnerOxideThickness = InnerOxide[0] + InnerOxide[1] + InnerOxide[2] + InnerOxide[3]
-# 
-# OuterOxide = []
-# OuterOxideThicknesses = [I.Section1.OuterOxThickness, C.Section1.OuterOxThickness, O.Section1.OuterOxThickness, SG.Section1.OuterOxThickness]
-# for Thickness, Sect in zip (OuterOxideThicknesses, ld.Sections):
-#     q = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
-#     OuterOxide.append(q)
-# OuterOxideThickness = OuterOxide[0] + OuterOxide[1] + OuterOxide[2] + OuterOxide[3]
-# 
-# Cobalt = []
-# CoThicknesses = [I.Section1.CoThickness, C.Section1.CoThickness, O.Section1.CoThickness, SG.Section1.CoThickness]
-# for Thickness, Sect in zip (CoThicknesses, ld.Sections):
-#     c = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
-#     Cobalt.append(c)
-# CobaltThickness = Cobalt[0] + Cobalt[1] + Cobalt[2] + Cobalt[3]
-# 
-# Nickel = []
-# NiThicknesses = [I.Section1.NiThickness, C.Section1.NiThickness, O.Section1.NiThickness, SG.Section1.NiThickness]
-# for Thickness, Sect in zip (NiThicknesses, ld.Sections):
-#     n = ld.UnitConverter(Sect, "Grams per Cm Squared", "Grams per M Squared", None, None, Thickness, None, None, None)
-#     Nickel.append(n)
-# NickelThickness = Nickel[0] + Nickel[1] + Nickel[2] + Nickel[3]
-# 
-
-# 
-# fig2, ax1 = plt.subplots()
-# # ax1 = fig2.add_subplot(221)
-# ax1.plot(TotalLoopDistance, InnerOxideThickness, linestyle=None, marker='o', color='0.50', label='Inner Oxide')
-# ax1.plot(TotalLoopDistance, OuterOxideThickness, linestyle=None, marker='o', color='k', label='Outer Oxide')
-# # ax1.axis([51,69, 0, 30])
-# ax1.set_xlabel('Distance (m)')
-# ax1.set_ylabel('Oxide Layer Loadings (${g/m^2}$)')
-#            
-# ax2 = ax1.twinx()
-# ax2.plot(TotalLoopDistance, NickelThickness, linestyle=None, marker='o', color='c', label='Nickel')
-# ax2.plot(TotalLoopDistance, CobaltThickness, linestyle=None, marker='o', color='m', label='Cobalt')
-# ax2.set_ylabel('Ni, Co, and Cr Loadings (${g/m^2}$)', rotation=270, labelpad=20)
-# lines, labels = ax1.get_legend_handles_labels()
-# lines2, labels2 = ax2.get_legend_handles_labels()
-# ax2.legend(lines + lines2, labels + labels2, loc=0)        
-# # plt.axis([51, 69, 0, 30])
-# plt.tight_layout()
-# plt.show()
-
-# fig3, ax1 = plt.subplots()
-# #ax1 = fig2.add_subplot(221)
-# ax1.plot(ActivityTime, Co60SGActivity, linestyle ="-", marker='o', color='0.50', label='Co-60')
-# ax1.plot(ActivityTime, Co58SGActivity, linestyle ="-", marker='o', color='b', label='Co-58')
-# ax1.plot(ActivityTime, Fe59SGActivity, linestyle ="-", marker='o', color='r', label='Fe-59')
-# ax1.plot(ActivityTime, Fe55SGActivity, linestyle ="-", marker='o', color='g', label='Fe-55')
-# ax1.plot(ActivityTime, Mn54SGActivity, linestyle ="-", marker='o', color='m', label='Mn-54')
-# ax1.plot(ActivityTime, Cr51SGActivity, linestyle ="-", marker='o', color='y', label='Cr-51')
-# ax1.plot(ActivityTime, Ni63SGActivity, linestyle ="-", marker='o', color='k', label='Ni-63')
-#  
-# #ax1.axis([51,69, 0, 30])
-# ax1.set_xlabel('EFPY')
-# ax1.set_ylabel('Surface Activity (${mCi/m^2}$)')
-#             
-# plt.tight_layout()
-# plt.show()
 
 

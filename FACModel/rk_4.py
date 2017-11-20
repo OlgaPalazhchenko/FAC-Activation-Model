@@ -272,10 +272,10 @@ def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
     Layers = [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Section.CoThickness, Section.NiThickness]
     # 4 different layers at each node. If any thicknesses are negative due to dissolution of respective layer, 
     # thickness = 0
-    for i in range(4):
-        for x in range(Section.NodeNumber):
-            if Layers[i][x] < 0:
-                Layers[i][x] = 0
+#     for i in range(4):
+#         for x in range(Section.NodeNumber):
+#             if Layers[i][x] < 0:
+#                 Layers[i][x] = 0
     return None
 
 

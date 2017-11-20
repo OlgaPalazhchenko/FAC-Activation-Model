@@ -425,7 +425,7 @@ def energy_balance(SteamGeneratorOutputNode, j):
         # PLNGS pressure reduction in 1992 + divider plate replacement
         InitialLeakage = 0.02 
         YearlyRateLeakage = 0
-        SecondarySidePressure = 4.593 - (125/1000) # MPa
+        SecondarySidePressure = 4.593 - (125 / 1000) # MPa
     
     Leakage = InitialLeakage + (j / 8760) * YearlyRateLeakage
     MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude * Leakage
