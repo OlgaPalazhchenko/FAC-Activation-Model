@@ -235,18 +235,19 @@ def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, Ox
     # ([g/cm^2 s] / [g/cm^3] *[10000 um/cm]) = ([cm/s] * [3600 s/h] * [24 h/d] * [365 d/yr]) = [um/yr]
         if Section == Inlet or Section == Outlet:
             return [i * ((1 / nc.FeDensity) * 3600 * 24 * 365 * 10000) for i in Rate]
-        elif Section == SteamGenerator:
+        elif Section in SGZones:
             return [x * y for x, y in zip(Rate, [(1 / nc.Alloy800Density) * 3600 * 24 * 365 * 10000] 
                                           * Section.NodeNumber)]
         else:
-            return [0] * Section.NodeNumber
-
+            return None
+    
     # Converts from oxide mass per surface area to oxide thickness [g/cm^2] to [um]
     # assuming uniform distribution on surface   
     elif UnitInput == "Oxide Thickness Grams" and UnitOutput == "Oxide Thickness Micrometers":
         return [x * 10000 / y for x, y in zip(Oxide, OxideDensity)]
 
-    else: print ("Error: incorrect unit input/output combination")
+    else:
+        None
 
 
 class Interface():
