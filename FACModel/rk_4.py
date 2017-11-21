@@ -21,11 +21,11 @@ def particulate(Section, BulkCrud_0, Diameter, DensityH2O, Velocity, Distance):
     return ParticulateConcentration
 
 
-def OxideComposition(
+def oxide_composition(
         Section, Element, OxideType, Outer, OuterFe3O4Thickness, NiThickness, CoThickness, InnerIronOxThickness
         ):
     # Note: this function does not take list input
-    # print (Outer, OxideType, CoThickness)
+   
     if Outer == "yes":  # for determining outer layer only composition
         # Outer Fe3O4 layer
         if OxideType > 0:  # For the total oxide value in each node
@@ -41,7 +41,7 @@ def OxideComposition(
                 # Cr assumed to be 100% retained in inner layer
                 return 0
             else:
-                print ("Error: incorrect element in OxideComposition function")
+                None
         else:
             return 0  # composition within outer layer only
 

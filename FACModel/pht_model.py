@@ -10,19 +10,19 @@ import sg_heattransfer as SGHX
 # Initial Temperatures and T-dependent parametrs in SG zones
 SecondarySidePressure = 4.593
 
-# for Zone in ld.SGZones:
-#     Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
-#         Zone, Zone.InnerOxThickness, Zone.OuterOxThickness,
-#         SGHX.MassFlow_h.magnitude - 0.03 * SGHX.MassFlow_h.magnitude, SecondarySidePressure, 1983
-#         )
-#     Zone.DensityH2O = [
-#         ld.Density("water", "PHT", i, SecondarySidePressure) for i in Zone.PrimaryBulkTemperature
-#         ]
-#     Zone.ViscosityH2O = [ld.Viscosity("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
-#     Zone.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Zone.PrimaryBulkTemperature]
+for Zone in ld.SGZones:
+    Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
+        Zone, Zone.InnerOxThickness, Zone.OuterOxThickness,
+        SGHX.MassFlow_h.magnitude - 0.03 * SGHX.MassFlow_h.magnitude, SecondarySidePressure, 1983
+        )
+    Zone.DensityH2O = [
+        ld.Density("water", "PHT", i, SecondarySidePressure) for i in Zone.PrimaryBulkTemperature
+        ]
+    Zone.ViscosityH2O = [ld.Viscosity("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
+    Zone.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Zone.PrimaryBulkTemperature]
 
 # Initial concentrations
-for Section in [ld.Inlet, ld.Core, ld.Outlet, ld.SGZones[58]]:    
+for Section in ld.Sections:    
     # #Temperature-dependent parameters            
     Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
     
@@ -95,18 +95,25 @@ class PHT_FAC():
     def __init__(self, ActiveSection, OutgoingSection, RealTimeHeatTransfer, j):  # j = overall time step
         self.Section1 = ActiveSection
         self.Section2 = OutgoingSection
-            
-        # BulkActivities = [self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55, \
-        #                  self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63]
         
-        # BulkActivities2 = [self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59, self.Section2.Bulk.Fe55, \
-        #                  self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51, self.Section2.Bulk.Ni63]
-        
-        # SurfaceActivities = [self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55, \
-        #                  self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63]
-        
-        # Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
-        
+#         if Activation == "yes":    
+#             BulkActivities = [
+#                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
+#                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
+#                 ]
+#               
+#             BulkActivities2 = [
+#                 self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59, self.Section2.Bulk.Fe55,
+#                 self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51, self.Section2.Bulk.Ni63
+#                 ]
+#               
+#             SurfaceActivities = [
+#                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
+#                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
+#                 ]
+#               
+#             Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
+#         
         BulkConcentrations = [
             self.Section1.Bulk.FeTotal, self.Section1.Bulk.NiTotal, self.Section1.Bulk.CoTotal,
             self.Section1.Bulk.CrTotal
@@ -127,18 +134,18 @@ class PHT_FAC():
         
         for i in range(self.Section1.NodeNumber):
             if i > 0: 
-                for r, q in zip (BulkConcentrations, SolutionOxideConcentrations):
-                    r[i] = rk_4.Spatial(
-                        q[i - 1], r[i - 1], ld.MassTransfer(self.Section1)[i - 1], self.Section1.Diameter[i - 1],
+                for x, y in zip (BulkConcentrations, SolutionOxideConcentrations):
+                    x[i] = rk_4.Spatial(
+                        y[i - 1], x[i - 1], ld.MassTransfer(self.Section1)[i - 1], self.Section1.Diameter[i - 1],
                         self.Section1.Velocity[i - 1], self.Section1.Length.magnitude[i - 1]
                         )
 
                 # Exponential decay of bulk particulate at start of section as function of distance + removal due to 
                 # deposition and erosion source
-#                 self.Section1.BigParticulate[i] = rk_4.particulate(
-#                     self.Section1, self.Section1.BigParticulate[0], self.Section1.Diameter[i],
-#                     self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
-#                     )
+                self.Section1.BigParticulate[i] = rk_4.particulate(
+                    self.Section1, self.Section1.BigParticulate[0], self.Section1.Diameter[i],
+                    self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
+                    )
 #                 self.Section1.SmallParticulate[i] = rk_4.particulate(
 #                     Section, self.Section1.SmallParticulate[0], self.Section1.Diameter[i], self.Section1.DensityH2O[i],
 #                     self.Section1.Velocity[i], self.Section1.Distance[i]
@@ -234,11 +241,11 @@ class PHT_FAC():
         # self.Section1.DepositThickness = a.Deposition(self.Section1, self.Section1.BigParticulate, self.Section1.SmallParticulate, j)
                         
         # #rk_4 oxide thickness calculation (no spalling)
-        rk_4.oxidegrowth(self.Section1, Saturations, BulkConcentrations, ElementTracking = "yes")
+        rk_4.oxidegrowth(self.Section1, Saturations, BulkConcentrations, ElementTracking = "no")
         
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.Spall(
-            self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking= "yes"
+            self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking= "no"
             )
 
 

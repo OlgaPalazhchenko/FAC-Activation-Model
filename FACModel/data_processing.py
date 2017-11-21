@@ -15,13 +15,14 @@ rc('mathtext', default='regular')
 RealTimeHeatTransfer = "no"
 Activation = "no"
 PlotOutput = "yes"
+OutputLogging = "no"
 
 AverageColdLegLoading = []
 RIHT = []
 StreamOutletTemperatures = []
 
 SimulationYears = 1  # years
-SimulationHours = SimulationYears * 12
+SimulationHours = SimulationYears * 50
 
 import time
 start_time = time.time()
@@ -49,25 +50,28 @@ for j in range(SimulationHours):
             x = pht_model.PHT_FAC(Zone, ld.Inlet, j)   
             SgZones.append(x)
 
-    if j % 10 == 0:  # yearly
-         
-        TotalLoadingSG = [x + y for x, y in zip(Sg.Section1.OuterOxThickness, Sg.Section1.InnerOxThickness)]
-        ConvertedLoading = ld.UnitConverter(
-            Sg.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, TotalLoadingSG, None, None, None
-            )
-        AverageColdLeg = sum(ConvertedLoading[11:len(ConvertedLoading)]) \
-            / (len(ConvertedLoading) - 11)
-  
-        T_RIH = (SGHX.energy_balance(21, j)) - 273.15
-        
-        OutletTemperatures = []
-        for Zone in ld.SGZones:
-            Temperature = Zone.PrimaryBulkTemperature[Zone.NodeNumber - 1] - 273.15
-            OutletTemperatures.append(Temperature)
-        
-        StreamOutletTemperatures.append(OutletTemperatures)
-        AverageColdLegLoading.append(AverageColdLeg)
-        RIHT.append(T_RIH)
+    if OutputLogging == "yes":
+        if j % 8759 == 0:  # yearly
+             
+            TotalLoadingSG = [x + y for x, y in zip(Sg.Section1.OuterOxThickness, Sg.Section1.InnerOxThickness)]
+            ConvertedLoading = ld.UnitConverter(
+                Sg.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, TotalLoadingSG, None, None, None
+                )
+            AverageColdLeg = sum(ConvertedLoading[11:len(ConvertedLoading)]) \
+                / (len(ConvertedLoading) - 11)
+      
+            T_RIH = (SGHX.energy_balance(21, j)) - 273.15
+            
+            OutletTemperatures = []
+            for Zone in ld.SGZones:
+                Temperature = Zone.PrimaryBulkTemperature[Zone.NodeNumber - 1] - 273.15
+                OutletTemperatures.append(Temperature)
+            
+            StreamOutletTemperatures.append(OutletTemperatures)
+            AverageColdLegLoading.append(AverageColdLeg)
+            RIHT.append(T_RIH)
+    else:
+        None
             
 FACRate = sum(
     ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
