@@ -7,19 +7,13 @@ import electrochemistry as e
 import iteration as it
 import sg_heattransfer as SGHX
 
-# Initial Temperatures and T-dependent parametrs in SG zones
-SecondarySidePressure = 4.593
+# Initial temperatures in SG zones
+[SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(1983)
 
 for Zone in ld.SGZones:
     Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
-        Zone, Zone.InnerOxThickness, Zone.OuterOxThickness,
-        SGHX.MassFlow_h.magnitude - 0.03 * SGHX.MassFlow_h.magnitude, SecondarySidePressure, 1983
+        Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
         )
-    Zone.DensityH2O = [
-        ld.Density("water", "PHT", i, SecondarySidePressure) for i in Zone.PrimaryBulkTemperature
-        ]
-    Zone.ViscosityH2O = [ld.Viscosity("water", "PHT", i) for i in Zone.PrimaryBulkTemperature]
-    Zone.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Zone.PrimaryBulkTemperature]
 
 # Initial concentrations
 for Section in ld.Sections:    
@@ -84,7 +78,8 @@ for Section in ld.Sections:
     [
         Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
         Section.MetalOxide.ConcentrationH
-        ] = e.ElectrochemicalAdjustment(
+        ] \
+        = e.ElectrochemicalAdjustment(
         Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
         Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
         Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
@@ -101,19 +96,22 @@ class PHT_FAC():
 #                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
 #                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
 #                 ]
-#               
+#                
 #             BulkActivities2 = [
 #                 self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59, self.Section2.Bulk.Fe55,
 #                 self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51, self.Section2.Bulk.Ni63
 #                 ]
-#               
-#             SurfaceActivities = [
-#                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
-#                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
-#                 ]
-#               
+#                
+# #             SurfaceActivities = [
+# #                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
+# #                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
+# #                 ]
+#                
 #             Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
-#         
+#             
+#             for x, y in zip (BulkActivities, Tags):
+#                 x = a.BulkActivity(self.Section1, x[0], y, j)
+         
         BulkConcentrations = [
             self.Section1.Bulk.FeTotal, self.Section1.Bulk.NiTotal, self.Section1.Bulk.CoTotal,
             self.Section1.Bulk.CrTotal
@@ -150,12 +148,7 @@ class PHT_FAC():
 #                     Section, self.Section1.SmallParticulate[0], self.Section1.Diameter[i], self.Section1.DensityH2O[i],
 #                     self.Section1.Velocity[i], self.Section1.Distance[i]
 #                     )
-                                
-#                 for x,y in zip (BulkActivities, Tags):
-#                     x[i] = a.BulkActivity(self.Section1, self.Section2, x[0], self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, \
-#                                 self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.OuterFe3O4Thickness, \
-#                                 self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, \
-#                                 y, self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
+
                     
                 # Inlet header purification system
                 if self.Section1 == ld.Inlet:      
@@ -176,14 +169,9 @@ class PHT_FAC():
 #                         self.Section1.SmallParticulate[i] = rk_4.particulate(
 #                             Section, self.Section1.SmallParticulate[3], self.Section1.Diameter[i],
 #                             self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
-#                             ) 
-                        
+#                             )
 #                         for x,y in zip (BulkActivities, Tags):
-#                             #print (y, x[i], i, self.Section1.NodeNumber)
-#                             x[i] = a.BulkActivity(self.Section1, self.Section2, x[3], self.Section1.CorrRate, self.Section1.Bulk.FeSatFe3O4, \
-#                                     self.Section1.InnerOxThickness, self.Section1.OuterOxThickness, self.Section1.OuterFe3O4Thickness, \
-#                                     self.Section1.NiThickness, self.Section1.CoThickness, self.Section1.InnerIronOxThickness, y, \
-#                                     self.Section1.BigParticulate, self.Section1.SmallParticulate, j, i)
+#                             x = a.BulkActivity(self.Section1, x[3], y, j)
                                         
         end = self.Section1.NodeNumber - 1
         for x, y in zip(BulkConcentrations, BulkConcentrations2):

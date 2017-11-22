@@ -47,17 +47,11 @@ FeDiffusivity = 0.00041
 NiDiffusivity = 0.00041
 CoDiffusivity = 0.00041
 
-
 # Kinetic precipitation/dissolution constants [cm/s]
 KpFe3O4 = 0.018
 KdFe3O4 = 0.012
 # KpFe_Ferrite = 0.014 #same as magnetite precipitation
 # KdFe_Ferrite  = 0.044 'same as magnetite dissolution
-
-# Kinetic deposition/release constants [kg_coolant/m^2 s] (All from Burrill paper)
-Kdeposition_OutCore = 0.0045
-Kdeposition_InCore = 0.01
-Krelease = 0.0000018  # [s^-1]
 
 FracNi_NiFe2O4 = 0.25
 FracFe_Fe3O4 = 0.723
@@ -110,9 +104,8 @@ InletOuterSpallConstant = 1.00E+18  # Different units for inlet versus outlet (d
 InletInnerSpallConstant = 1.00E+5
 ErosionConstant = 2.4e-11  # [g/cm^2 s]
 
-# In-core deposition constants
-KVap = 0.1
-Enrichment = 1
+OUTCORE_DEPOSITION = 0.0045
+INCORE_DEPOSITION = 0.01
 
 NumberPluggedTubes = 10
 TotalSGTubeNumber = 3542 - NumberPluggedTubes

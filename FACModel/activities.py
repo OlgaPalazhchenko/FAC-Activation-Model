@@ -3,6 +3,7 @@ import iteration as it
 import numpy as np
 import constants as nc
 import rk_4
+from constants import OUTCORE_DEPOSITION
     
 # Molecular weights of specific isotopes [g/mol]
 MOLARMASSFe59 = 58.9348755
@@ -41,8 +42,13 @@ CROSS_SECTIONCo59 = 3.7E-23
 # General nuclear constants
 NEUTRON_FLUX = 50000000000000  # [neutrons/cm^2 s]
 AVOGADRO = 6.022E+23  # [atoms/mol]
-CoreSurfaceArea = 2430  # [cm^2]
 
+# Kinetic deposition/release constants [kg_coolant/m^2 s] (All from Burrill paper)
+PARTICULATE_DISSOLUTION = 0.0000018  # [s^-1]
+
+# In-core deposition constants
+VAPORIZATION_COEFFICIENT = 0.1
+ENRICHMENT = 1
 
 def eta(Section):
     
@@ -97,9 +103,9 @@ def eta(Section):
 def particulate(Section, BulkCrud):
     if Section == ld.Core:  # Section based, not node-specific 
         # Same deposition constant down length of core (assumes no temperature dependence) 
-        DepositionConstant = [nc.Kdeposition_InCore] * Section.NodeNumber
+        DepositionConstant = [nc.INCORE_DEPOSITION] * Section.NodeNumber
     else:  # isothermal (with exception of SG)
-        DepositionConstant = [nc.Kdeposition_OutCore] * Section.NodeNumber
+        DepositionConstant = [nc.OUTCORE_DEPOSITION] * Section.NodeNumber
     
     # Deposition constant converted from kg_coolant units to cm/s by dividing by density coolant(in kg/m^3) and converting to cm
     # [kg_coolant/m^2 s]/[kg_coolant/m^3] = [m/s]*[100 cm/m] = [cm/s]*[1/cm] = [s^-1]    
@@ -156,9 +162,11 @@ def core_active_deposit(Section, j, Element, ParentAbundance, DecayConstant, Cro
     # Section1 = Core, Section2 = Outlet
     # Only outlet is used for averaging the composition of the crud (majority of spalling here due to high velocity)
     Section2 = ld.Outlet
-    
     Composition = []
     
+    # Checks which oxide layer is uppermost (i.e., if outer layer removed due to spalling)
+    # calculates elemental composition, adds that node's composition   
+    # to the list below until all nodes in outlet are computed
     for i in range(Section2.NodeNumber): 
         if Section2.OuterOxThickness[i] > 0:
             Outer = "yes"
@@ -168,89 +176,77 @@ def core_active_deposit(Section, j, Element, ParentAbundance, DecayConstant, Cro
             if Section2.InnerIronOxThickness[i] > 0:
                 OxideType = Section2.InnerIronOxThickness[i]
         
-        if Element == "Fe":
-            x = rk_4.oxide_composition(
-                Section2, "Fe", OxideType, Outer, Section2.OuterFe3O4Thickness[i], Section2.NiThickness[i],
-                Section2.CoThickness[i], Section2.InnerIronOxThickness[i]
-                )
-        elif Element == "Ni":
-            x = rk_4.oxide_composition(
-                Section2, "Ni", OxideType, Outer, Section2.OuterFe3O4Thickness[i], Section2.NiThickness[i],
-                Section2.CoThickness[i], Section2.InnerIronOxThickness[i]
-                )
-        elif Element == "Co":
-            x = rk_4.oxide_composition(
-                Section2, "Co", OxideType, Outer, Section2.OuterFe3O4Thickness[i], Section2.NiThickness[i],
-                Section2.CoThickness[i], Section2.InnerIronOxThickness[i]
-                )
-        elif Element == "Cr":
-            x = rk_4.oxide_composition(
-                Section2, "Cr", OxideType, Outer, Section2.OuterFe3O4Thickness[i], Section2.NiThickness[i],
-                Section2.CoThickness[i], Section2.InnerIronOxThickness[i]
-                )
-        else:
-            None
-        
-        # Checks which oxide layer is uppermost (i.e., if outer layer removed due to spalling)
-        # calculates elemental composition, adds that node's composition   
-        # to the list below until all nodes in outlet are computed
+        x = rk_4.oxide_composition(
+            Section2, Element, OxideType, Outer, Section2.OuterFe3O4Thickness[i], Section2.NiThickness[i],
+            Section2.CoThickness[i], Section2.InnerIronOxThickness[i]
+            )
         Composition.append(x)
     
-
-    # Average composition of each element in the outlet feeder oxide    
+    # Average composition element in the outlet feeder oxide    
     ElementComposition = sum(Composition) / Section2.NodeNumber
     
-    CoreDepositThickness = deposition(Section, Section.BigParticulate, Section.SmallParticulate, j)
-      
-    ActiveDeposit = [(DecayConstant / 3600) * (AVOGADRO * (i / MolarMass) * NEUTRON_FLUX * CrossSection * ElementComposition * ParentAbundance / \
-    ((DecayConstant / 3600) + nc.Krelease)) * (1 - np.exp(-j * (nc.TimeIncrement / 3600) * (DecayConstant + nc.Krelease * 3600))) for i in CoreDepositThickness]
+    CoreDepositThickness = deposition(Section, j)
+    # DecayConstant = [s^-1]
+    PreExponentialConstant = DecayConstant * AVOGADRO * NEUTRON_FLUX * ElementComposition * ParentAbundance \
+    / MolarMass * (DecayConstant + PARTICULATE_DISSOLUTION)
     
+    ActiveDeposit = [
+        PreExponentialConstant * i * (1 - np.exp(-j * (DecayConstant + PARTICULATE_DISSOLUTION) * 3600)) for i in
+        CoreDepositThickness
+        ]
+    # Activity of specific element in the in-core deposit [Bq/cm^2]
     return ActiveDeposit
-    
-    
-def deposition(Section, BigParticulate, SmallParticulate, j):
+
+ 
+def deposition(Section, j):
     # Can also be manually set to desired steady-state value, e.g., ~1 ppb    
-    TotalParticulate = [x + y for x, y in zip(BigParticulate, SmallParticulate)]
-   
-    if Section == ld.Core:
-        DepositionConstant = nc.Kdeposition_InCore
-        incr = nc.TimeIncrement / 3600 
-         
-        for i in range(Section.NodeNumber):
-            # 10th node in-core is where coolant temperature > saturation = boiling 
-            if i >= 10:
-                if i == 10:
-                    HeatFlux = 0.0762  # [kJ/cm^2 s]
-                    Enthalpy = 1415.8  # [kJ/kg]
-                if i == 11:
-                    HeatFlux = 0.05692  
-                    Enthalpy = 1430.4  
-                if i == 12:
-                    HeatFlux = 0.02487  
-                    Enthalpy = 1437.3  
+    TotalParticulate = [x + y for x, y in zip(Section.BigParticulate, Section.SmallParticulate)]
+    
+    incr = nc.TimeIncrement / 3600
+    Time_sec = j * 3600 # s
+    DepositThickness = []
+
+    # 10th node in-core is where coolant temperature > saturation = boiling 
+    # Enthalpy and heat flux vary in the boiling region  
+    for i in range(Section.NodeNumber):
+        if Section == ld.Core and i >= 10:
+            if i == 10:
+                HeatFlux = 0.0762  # [kJ/cm^2 s]
+                Enthalpy = 1415.8  # [kJ/kg]
+            elif i == 11:
+                HeatFlux = 0.05692  
+                Enthalpy = 1430.4  
+            elif i == 12:
+                HeatFlux = 0.02487  
+                Enthalpy = 1437.3
+            else:
+                None 
+            # Only time dependence (not positional)
+            BoilingDeposition = VAPORIZATION_COEFFICIENT * ENRICHMENT * HeatFlux / Enthalpy 
+            PreExponentiaDepositionTerm = BoilingDeposition * TotalParticulate[i] / PARTICULATE_DISSOLUTION # [g/cm^2]
         
-        # Only time dependence (not positional)
-        BoilingDeposition = [
-            nc.KVap * nc.Enrichment * HeatFlux * x / (Enthalpy * nc.Krelease) for x in TotalParticulate
-            ]
-        Time_sec = j * 3600 # s
+    
+        # all in-core nodes set to 0 deposition (fuel bundle average residence time of ~1 year) 
+        elif Section == ld.Core and (j + 1) % (7000 / incr) == 0:
+            x = 0
+        else: # all other PHT sections or in-core, but in a non-boiling region 
+            
+            # dW_deposit/dt = DepositionConstant*C_particulate (total) - PARTICULATE_DISSOLUTION*W_deposit
+            if Section == ld.Core:
+                # [kg_coolant/m^2 s]*[1m^2/(100cm^2)] = [kg/cm^2 s]
+                DepositionConstant = INCORE_DEPOSITION / (100**2)
+            else:
+                DepositionConstant = OUTCORE_DEPOSITION / (100**2)
+            # [kg_coolant/cm^2 s]*[g/kg_coolant]/[s^-1] = [g/cm^2]
+            PreExponentiaDepositionTerm = DepositionConstant * TotalParticulate[i] / PARTICULATE_DISSOLUTION
         
-        DepositThickness = [x * (1 - np.exp(-nc.Krelease * Time_sec )) for x in BoilingDeposition]  # [g/cm^2]    
-        # Fuel bundle average residence time of ~1 year 
-        if (j + 1) % (7000 / incr) == 0:
-            DepositThickness = 0
-                    
-    else:
-        # dW_deposit/dt = DepositionConstant*C_particulate (total) - Krelease*W_deposit
-        # [kg_coolant/m^2 s]*[g/kg_coolant]/[s^-1]*[1m^2/(100cm^2)] = [g/cm^2]
-        DepositionConstant = nc.Kdeposition_OutCore
-        DepositThickness = [((DepositionConstant * i) / nc.Krelease) * (1 - np.exp(-nc.Krelease * (j * 3600 * (nc.TimeIncrement / 3600)))) * (1 / (100 ** 2)) \
-                for i in TotalParticulate]  # [g/cm^2]
+        x = PreExponentiaDepositionTerm * (1 - np.exp(-PARTICULATE_DISSOLUTION * Time_sec ))
+        DepositThickness.append(x) # [g/cm^2]
     
     return DepositThickness
     
 
-def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
+def bulk_activity(Section, BulkConcentration_o, Isotope, j):
     
     # [s^-1], Converts from h^-1 to s^-1
     if Isotope == "Co60":
@@ -302,54 +298,27 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
         CrossSection = CROSS_SECTIONNi62
         Element = "Ni"
     
-    Lambda_sec = Lambda / 3600 # s ^-1
+    Lambda_sec = Lambda / 3600 # [s ^-1]
     if Section == ld.Core:  
-        CoreDeposit = core_active_deposit(Section, j, Element, ParentAbundance, Lambda, CrossSection, MolarMass)
+        ActiveCoreDeposit = core_active_deposit(
+            Section, j, Element, ParentAbundance, Lambda_sec, CrossSection, MolarMass
+            )
+        # variation with time and distance
+        ExponentialTerm = [np.exp(-Lambda_sec * x / y) for x, y in zip(Section.Distance, Section.Velocity)]
+        PreExponentialReleaseTerm = [
+            4 * PARTICULATE_DISSOLUTION * x / (Lambda_sec * y) for x, y in zip (ActiveCoreDeposit, Section.Diameter)
+            ]
         
-        # print (CoreDeposit)
-        Activity = (4 / (Section.Diameter[i] * Lambda_sec)) * nc.Krelease * CoreDeposit[i] * \
-                    (1 - np.exp(-Lambda_sec * Section.Distance[i] / Section.Velocity[i])) + \
-                    BulkConcentration_o * np.exp(-Lambda_sec * Section.Distance[i] / Section.Velocity[i]) 
-                    
+        Activity = [BulkConcentration_o * x + y * (1 - x) for x, y in zip(ExponentialTerm, PreExponentialReleaseTerm)]
+    # out-of-core activity                
     else:
         EtaTerm = eta(Section)
+        ExponentialTerm = [np.exp((-Lambda_sec * x / y) - (4 * x * z / (q * y))) for x, y, z, q in
+                           zip(Section.Distance, Section.Velocity, EtaTerm, Section.Diameter)]
+        # Distance is not for full PHT, just from start of current PHT section (decay from BulkConcentration_o
+        # of that section's first node)
         
-        Activity = BulkConcentration_o * np.exp(
-            (-Section.Distance[i] * Lambda_sec / Section.Velocity[i])
-            - (4 * Section.Distance[i] * EtaTerm[i] / (Section.Diameter[i] * Section.Velocity[i]))
-            ) 
+        BulkActivity = [BulkConcentration_o * x for x in ExponentialTerm]
     
-    return Activity
+    return BulkActivity # [Bq/cm^2]
 
-
-#     t = [j]*Section1.NodeNumber   
-#     #Array of decay constants for all isotopes 
-#     LAMBDA = [nc.LAMBDACo60, nc.LAMBDACo58, nc.LAMBDAFe55, nc.LAMBDAFe59, nc.LAMBDAMn54, nc.LAMBDACr51, nc.LAMBDANi63]
-#     #Takes each constant in the above array and turns that into an array based on number of nodes in Section
-#     #e.g., Inlet: [[Co60, Co60,Co60,Co60,Co60,Co60,Co60], [Co58,Co58,Co58,Co58,Co58,Co58,Co58],...] - array of arrays (matrix)
-#     LAMBDA_array = np.array([[i]*Section1.NodeNumber for i in LAMBDA])
-#     LAMBDA_sec = LAMBDA_array/3600 #[s^-1], Converts from h^-1 to s^-1
-#     #Bulk concentration in first node of respective PHTS section 
-#     BulkConcentration_o_array = np.array([[i]*Section1.NodeNumber for i in BulkConcentration_o])
-#     Diameter_Velocity = [x*y for x,y in zip(Section1.Diameter,Section1.Velocity)]
-    
-#     if Section1 == ld.Core:
-#         None
-#     else:
-#         EtaTerm = np.array(Eta(Section1, CorrosionRate, FeSatFe3O4, InnerOxThickness)) #Don't want this to be called from the core
-#         return BulkConcentration_o_array*np.exp(-(Section1.Distance*LAMBDA_sec)/Section1.Velocity)-(4*Section1.Distance*EtaTerm/(Diameter_Velocity))#[Bq/cm^3]
-# #         if Section1 == ld.Core:
-#             [Fe,Ni,Co,Cr] =InCoreActiveDeposit(Section1, Section2, InnerOxThickness, OuterOxThickness, OuterFe3O4Thickness,OuterNiThickness,OuterCoThickness,InnerIronOxThickness,j)
-#             
-#             return (4/(Section1.Diameter*LAMBDA_sec))*nc.Krelease  
-#       
-# f =[1,2,3]
-# g =np.array([[1,1,1],[2,2,2],[3,3,3]])
-# q = np.array([2,2,2])
-#    
-# h = g*f
-# print (h)
-# hh = h*(1000)
-# print (hh)
-
-    

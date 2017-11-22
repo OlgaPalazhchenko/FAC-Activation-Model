@@ -505,10 +505,6 @@ for Section in Sections:
 
     # Distance
     Section.Distance = np.cumsum(Section.Length.magnitude)
-    # Temperature-dependent parameters            
-    Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
-    Section.DensityH2O = [Density("water", "PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature]
-    Section.ViscosityH2O = [Viscosity("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
 
 
 def ReynoldsNumber(Section, Diameter):

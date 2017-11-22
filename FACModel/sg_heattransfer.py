@@ -412,32 +412,38 @@ def temperature_profile(
     return PrimaryBulk
 
 
-def energy_balance(SteamGeneratorOutputNode, j):
-    year = (j / 8760) 
-    calendar_year = year + 1983
-    
+def station_events(calendar_year):
     if calendar_year <= 1992:
         # divider plate leakage rates estimated based on AECL work
         InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-        SecondarySidePressure = 4.593  # MPa
+        SHTPressure = 4.593  # MPa
     else:
         # PLNGS pressure reduction in 1992 + divider plate replacement
         InitialLeakage = 0.02 
         YearlyRateLeakage = 0
-        SecondarySidePressure = 4.593 - (125 / 1000) # MPa
+        SHTPressure = 4.593 - (125 / 1000) # MPa
     
-    Leakage = InitialLeakage + (j / 8760) * YearlyRateLeakage
-    MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude * Leakage
-    m_h_leakagecorrection = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude
+    Leakage = InitialLeakage + ((calendar_year - 1983) / 8760) * YearlyRateLeakage
+    DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
+    m_h_leakagecorrection = MassFlow_h.magnitude - DividerPlateMassFlow
+    
+    return SHTPressure, m_h_leakagecorrection, DividerPlateMassFlow
+
+
+def energy_balance(SteamGeneratorOutputNode, j):
+    year = (j / 8760) 
+    calendar_year = year + 1983
+    
+    [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(calendar_year)
 
     Balance = []
     for Zone in ld.SGZones:
         Zone.PrimaryBulkTemperature = temperature_profile(
-            Zone, ld.SGZones[58].InnerOxThickness, ld.SGZones[58].OuterOxThickness, m_h_leakagecorrection,
+            Zone, ld.SGZones[58].InnerOxThickness, ld.SGZones[58].OuterOxThickness, RemainingPHTMassFlow,
             SecondarySidePressure, calendar_year)
         
-        x = (Zone.TubeNumber / nc.TotalSGTubeNumber) * m_h_leakagecorrection \
+        x = (Zone.TubeNumber / nc.TotalSGTubeNumber) * RemainingPHTMassFlow \
             * ld.Enthalpy("PHT", Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode], SecondarySidePressure)
 
         Balance.append(x)
@@ -448,3 +454,4 @@ def energy_balance(SteamGeneratorOutputNode, j):
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
 # print (energy_balance(21, 1)-273.15)
+

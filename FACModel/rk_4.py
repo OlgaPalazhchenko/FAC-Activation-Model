@@ -9,9 +9,9 @@ import random
 
 def particulate(Section, BulkCrud_0, Diameter, DensityH2O, Velocity, Distance):
     if Section == ld.Core:
-        DepositionConstant = nc.Kdeposition_InCore
+        DepositionConstant = nc.INCORE_DEPOSITION
     else:
-        DepositionConstant = nc.Kdeposition_OutCore
+        DepositionConstant = nc.OUTCORE_DEPOSITION
 
     Deposition = DepositionConstant * (4 / Diameter) * 100 / (DensityH2O * 1000)
 

@@ -36,7 +36,7 @@ for j in range(SimulationHours):
         # SGZones[58] = tube with typical u-bend arc length --> 1.5 m
         Sg = pht_model.PHT_FAC(ld.SGZones[58], ld.Inlet, RealTimeHeatTransfer, j)
             
-    if RealTimeHeatTransfer == "yes":
+    else:
         # Set input concentrations for all SG zones to be same as input of first (Outlet output)
         BulkOutletOutput = [
                 Ou.Section1.Bulk.FeTotal, Ou.Section1.Bulk.NiTotal, Ou.Section1.Bulk.CoTotal, Ou.Section1.Bulk.CrTotal
