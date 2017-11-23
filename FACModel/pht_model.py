@@ -2,7 +2,7 @@ import constants as nc
 import lepreau_data as ld
 import composition as c
 import rk_4
-#import activities as a
+import activities as a
 import electrochemistry as e
 import iteration as it
 import sg_heattransfer as SGHX
@@ -16,8 +16,8 @@ for Zone in ld.SGZones:
         )
 
 # Initial concentrations
-for Section in ld.Sections:    
-    # #Temperature-dependent parameters            
+for Section in ld.Sections:
+    # Temperature-dependent parameters            
     Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
     
     Section.DensityH2O = [ld.Density("water", "PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature]
@@ -85,33 +85,51 @@ for Section in ld.Sections:
         Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
         )
 
+Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
 
 class PHT_FAC():
-    def __init__(self, ActiveSection, OutgoingSection, RealTimeHeatTransfer, j):  # j = overall time step
+    def __init__(self, ActiveSection, OutgoingSection, RealTimeHeatTransfer, Activation, j):  # j = overall time step
         self.Section1 = ActiveSection
         self.Section2 = OutgoingSection
-        
-#         if Activation == "yes":    
-#             BulkActivities = [
+
+        if Activation == "yes":    
+            BulkActivities = [
+                self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
+                self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
+                ]
+                
+            BulkActivities2 = [
+                self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59, self.Section2.Bulk.Fe55,
+                self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51, self.Section2.Bulk.Ni63
+                ]
+                
+#             SurfaceActivities = [
 #                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
 #                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
 #                 ]
-#                
-#             BulkActivities2 = [
-#                 self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59, self.Section2.Bulk.Fe55,
-#                 self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51, self.Section2.Bulk.Ni63
-#                 ]
-#                
-# #             SurfaceActivities = [
-# #                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
-# #                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
-# #                 ]
-#                
-#             Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
-#             
-#             for x, y in zip (BulkActivities, Tags):
-#                 x = a.BulkActivity(self.Section1, x[0], y, j)
-         
+            # solves for bulk volumetric activities and connects activity concentrations b/w PHT sections
+            AA = []
+            for x, y in zip (BulkActivities, Tags):
+                x = a.bulk_activity(self.Section1, x[0], y, j)
+                AA.append(x)
+            BulkActivities = AA
+            print (AA)
+#             for x, y in zip(BulkActivities, BulkActivities2):
+#                 y[0] = x[self.Section1.NodeNumber - 1]
+            
+            # Deposit thickness around PHTS
+            self.Section1.DepositThickness = a.deposition(self.Section1, j)
+            
+            # Exponential decay of bulk particulate at start of section as function of distance + removal due to 
+            # deposition and erosion source
+            self.Section1.BigParticulate = a.particulate(self.Section1, self.Section1.BigParticulate[0])
+            self.Section1.SmallParticulate = a.particulate(self.Section1, self.Section1.SmallParticulate[0])
+            
+            # self.Section1.NodeNumber - 1 = last node of section
+            self.Section2.BigParticulate[0] = self.Section1.BigParticulate[self.Section1.NodeNumber - 1]
+            self.Section2.SmallParticulate[0] = self.Section1.SmallParticulate[self.Section1.NodeNumber - 1]
+            
+        
         BulkConcentrations = [
             self.Section1.Bulk.FeTotal, self.Section1.Bulk.NiTotal, self.Section1.Bulk.CoTotal,
             self.Section1.Bulk.CrTotal
@@ -131,61 +149,38 @@ class PHT_FAC():
             ]
         
         for i in range(self.Section1.NodeNumber):
-            if i > 0: 
-                for x, y in zip (BulkConcentrations, SolutionOxideConcentrations):
-                    x[i] = rk_4.Spatial(
-                        y[i - 1], x[i - 1], ld.MassTransfer(self.Section1)[i - 1], self.Section1.Diameter[i - 1],
+            for x, y in zip (BulkConcentrations, SolutionOxideConcentrations):
+                if i > 0: 
+                    x[i] = rk_4.spatial(
+                        y[i - 1], x[i - 1], ld.MassTransfer(self.Section1)[i], self.Section1.Diameter[i - 1],
                         self.Section1.Velocity[i - 1], self.Section1.Length.magnitude[i - 1]
                         )
-
-                # Exponential decay of bulk particulate at start of section as function of distance + removal due to 
-                # deposition and erosion source
-                self.Section1.BigParticulate[i] = rk_4.particulate(
-                    self.Section1, self.Section1.BigParticulate[0], self.Section1.Diameter[i],
-                    self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
-                    )
-#                 self.Section1.SmallParticulate[i] = rk_4.particulate(
-#                     Section, self.Section1.SmallParticulate[0], self.Section1.Diameter[i], self.Section1.DensityH2O[i],
-#                     self.Section1.Velocity[i], self.Section1.Distance[i]
-#                     )
-
+                
+            # Inlet header purification system
+            if self.Section1 == ld.Inlet and i == 3:      
+                for x in BulkConcentrations: 
+                    x[i] = 0.59 * x[i - 1]
+                if Activation == "yes":
+                    for y in BulkActivities:
+                        y[i] = 0.59 * y[i-1]
+            
+            elif self.Section1 == ld.Inlet and i > 3:
+                if Activation == "yes":
+                    self.Section1.BigParticulate = a.particulate(self.Section1, self.Section1.BigParticulate[3])
+                    self.Section1.SmallParticulate = a.particulate(self.Section1, self.Section1.SmallParticulate[3])
                     
-                # Inlet header purification system
-                if self.Section1 == ld.Inlet:      
-                    if i == 3:
-                        # for x,y in zip(BulkConcentrations, BulkActivities):
-                        for x in BulkConcentrations: 
-                            x[i] = 0.59 * x[i - 1]
-                            # y[i] = 0.59*y[i-1]
-                    
-#                         self.Section1.SmallParticulate[i] = 0.59 * self.Section1.SmallParticulate[i - 1]
-#                         self.Section1.BigParticulate[i] = 0  # 0.45 um filter removes everything over this size   
-                    
-#                     if i > 3:  # decay for the rest of the inlet section depends on purification system 
-#                         self.Section1.BigParticulate[i] = rk_4.particulate(
-#                             Section, self.Section1.BigParticulate[3], self.Section1.Diameter[i],
-#                             self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
-#                             )
-#                         self.Section1.SmallParticulate[i] = rk_4.particulate(
-#                             Section, self.Section1.SmallParticulate[3], self.Section1.Diameter[i],
-#                             self.Section1.DensityH2O[i], self.Section1.Velocity[i], self.Section1.Distance[i]
-#                             )
-#                         for x,y in zip (BulkActivities, Tags):
-#                             x = a.BulkActivity(self.Section1, x[3], y, j)
-                                        
-        end = self.Section1.NodeNumber - 1
-        for x, y in zip(BulkConcentrations, BulkConcentrations2):
-        # for x,y,z,q in zip(BulkConcentrations,BulkConcentrations2, BulkActivities, BulkActivities2):
-            y[0] = x[end]
-            # q[0] = z[end]
-        
-#         self.Section2.BigParticulate[0] = self.Section1.BigParticulate[end]
-#         self.Section2.SmallParticulate[0] = self.Section1.SmallParticulate[end]       
-        
-        # #Stellite wear bulk input term for cobalt and chromium    
+                    for x,y in zip (BulkActivities, Tags):
+                        x = a.bulk_activity(self.Section1, x[3], y, j)
+            else:
+                None
+        # Connects output of one PHT section to input of subsequent section 
+        for x, y, in zip(BulkConcentrations, BulkConcentrations2):
+            y[0] = x[self.Section1.NodeNumber - 1]
+            
+        # Stellite wear bulk input term for cobalt and chromium    
         if self.Section1 == ld.Core:
-            self.Section2.Bulk.CoTotal[0] = self.Section1.Bulk.CoTotal[end] + nc.CobaltWear
-            self.Section2.Bulk.CrTotal[0] = (self.Section1.Bulk.CrTotal[end]
+            self.Section2.Bulk.CoTotal[0] = self.Section1.Bulk.CoTotal[self.Section1.NodeNumber - 1] + nc.CobaltWear
+            self.Section2.Bulk.CrTotal[0] = (self.Section1.Bulk.CrTotal[self.Section1.NodeNumber - 1]
                                              + nc.CobaltWear * (nc.FractionCr_Stellite / nc.FractionCo_Stellite))
    
 #         else:
@@ -218,22 +213,18 @@ class PHT_FAC():
                     self.Section1, self.Section1.InnerOxThickness, self.Section1.OuterOxThickness
                     )
                 self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1) 
-          
         
             # RIHT  
-            if self.Section1 == ld.Inlet:
+            elif self.Section1 == ld.Inlet:
                 self.Section1.PrimaryBulkTemperature = SGHX.energy_balance(21, j)
                 self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1)
-
-        # Deposit thickness around PHTS
-        # self.Section1.DepositThickness = a.Deposition(self.Section1, self.Section1.BigParticulate, self.Section1.SmallParticulate, j)
-                        
-        # #rk_4 oxide thickness calculation (no spalling)
+            else:
+                None
+               
+        # RK4 oxide thickness calculation (no spalling)
         rk_4.oxidegrowth(self.Section1, Saturations, BulkConcentrations, ElementTracking = "no")
         
         # Spalling    
-        self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.Spall(
+        self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
             self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking= "no"
             )
-
-

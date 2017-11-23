@@ -56,6 +56,12 @@ def eta(Section):
         [it.Diffusion(Section, "Fe")] * Section.NodeNumber, Section.CorrRate, [Section.FractionFeInnerOxide] *\
         Section.NodeNumber
         )]
+    
+    ConvertedSaturation = ld.UnitConverter(
+            Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeSatFe3O4, None, None, None,
+            nc.FeMolarMass, None
+            ) 
+    
     if Section in ld.SGZones:  # SG (this function not called for core)    
     
         DeltaTemperature = [abs(x - y) for x, y in zip(
@@ -70,17 +76,14 @@ def eta(Section):
             Section.SolutionOxide.FeSatFe3O4[1:], Section.SolutionOxide.FeSatFe3O4
             )]
         ConvertedDeltaSolubility = ld.UnitConverter(
-            Section, "Mol per Kg", "Grams per Cm Cubed", DeltaSolubility, None, None, None, FeMolarMass, None
+            Section, "Mol per Kg", "Grams per Cm Cubed", DeltaSolubility, None, None, None, nc.FeMolarMass, None
             )
         # One less Eta than total number of nodes --> deltas = 21, so add small diff b/w first node and last node outlet
         DeltaSolubility.insert(0, 1e-12)  
      
         DeltaSolubility_Temp = [x / y for x, y in zip(ConvertedDeltaSolubility, DeltaTemperature)]
         
-        ConvertedSaturation = ld.UnitConverter(
-            Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeSatFe3O4, None, None, None,
-            FeMolarMass, None
-            ) 
+        
         CRYST_o = [x / (y * z * t * u * v) for x, y, z, t, u, v in zip(
             ConvertedSaturation, [0.18] * Section.NodeNumber, Section.Diameter, Section.Velocity, DeltaSolubility_Temp,
             DeltaTemperature_Length)]
@@ -100,25 +103,28 @@ def eta(Section):
     return ActivationCoefficient
 
 
-def particulate(Section, BulkCrud):
+def particulate(Section, BulkCrud_0):
     if Section == ld.Core:  # Section based, not node-specific 
         # Same deposition constant down length of core (assumes no temperature dependence) 
-        DepositionConstant = [nc.INCORE_DEPOSITION] * Section.NodeNumber
+        DepositionConstant = nc.INCORE_DEPOSITION 
     else:  # isothermal (with exception of SG)
-        DepositionConstant = [nc.OUTCORE_DEPOSITION] * Section.NodeNumber
+        DepositionConstant = nc.OUTCORE_DEPOSITION 
     
-    # Deposition constant converted from kg_coolant units to cm/s by dividing by density coolant(in kg/m^3) and converting to cm
-    # [kg_coolant/m^2 s]/[kg_coolant/m^3] = [m/s]*[100 cm/m] = [cm/s]*[1/cm] = [s^-1]    
-    Deposition = [100 * x * (4 / y) / (1000 * z) for x, y, z in
-                  zip(DepositionConstant, Section.Diameter, Section.DensityH2O)]
+    # Deposition constant converted from kg_coolant to cm/s by dividing by density coolant (kg/m^3) and converting to cm
+    # [kg_coolant/m^2 s]/[kg_coolant/m^3] = [m/s]*[100 cm/m] * [1/cm] = [s^-1]    
+    Deposition_sec = [100 * DepositionConstant * (4 / y) / (1000 * z) for y, z in
+                  zip(Section.Diameter, Section.DensityH2O)]
     
-    # Erosion constant: [g/cm^2 s] --> [g/m^2 s]/[kg_coolant/m^2 s]
+    # Erosion constant: [g/cm^2 s] --> [g/m^2 s]
     Erosion = nc.ErosionConstant * (100 ** 2)
     
-    Concentration = [(Erosion / x) * (1 - np.exp(-y * z / u)) + q * (np.exp(-y * z / u)) for x, y, z, u, q in
-                     zip(DepositionConstant, Deposition, Section.Distance, Section.Velocity, BulkCrud)]
+    # [s^-1] * [cm] / [cm/s] = [unitless] 
+    ExponentialTerm = [np.exp(-x * y / z) for x, y, z in zip(Deposition_sec, Section.Distance, Section.Velocity)]
     
-    return Concentration
+    # [g/m^2 s] / [kg_coolant/m^2 s] = [g / kg_coolant]
+    Concentration = [(Erosion / DepositionConstant) * (1 - x) + BulkCrud_0 * x for x in ExponentialTerm]
+    
+    return Concentration # [g / kg_coolant]
                     
 
 def surface_activity(Section, BulkActivity, j, Isotope):
@@ -200,7 +206,7 @@ def core_active_deposit(Section, j, Element, ParentAbundance, DecayConstant, Cro
  
 def deposition(Section, j):
     # Can also be manually set to desired steady-state value, e.g., ~1 ppb    
-    TotalParticulate = [x + y for x, y in zip(Section.BigParticulate, Section.SmallParticulate)]
+    TotalParticulate = [x + y for x, y in zip(Section.BigParticulate, Section.SmallParticulate)] # [g / kg_coolant]
     
     incr = nc.TimeIncrement / 3600
     Time_sec = j * 3600 # s
@@ -222,7 +228,9 @@ def deposition(Section, j):
             else:
                 None 
             # Only time dependence (not positional)
+            # [kJ / cm^2 s] / [kJ / kg] = [kg/ cm^2 s]
             BoilingDeposition = VAPORIZATION_COEFFICIENT * ENRICHMENT * HeatFlux / Enthalpy 
+            # [kg/ cm^2 s] * [g/kg_coolant] / [s^-1] = [g/cm^2]
             PreExponentiaDepositionTerm = BoilingDeposition * TotalParticulate[i] / PARTICULATE_DISSOLUTION # [g/cm^2]
         
     
@@ -234,9 +242,9 @@ def deposition(Section, j):
             # dW_deposit/dt = DepositionConstant*C_particulate (total) - PARTICULATE_DISSOLUTION*W_deposit
             if Section == ld.Core:
                 # [kg_coolant/m^2 s]*[1m^2/(100cm^2)] = [kg/cm^2 s]
-                DepositionConstant = INCORE_DEPOSITION / (100**2)
+                DepositionConstant = nc.INCORE_DEPOSITION / (100**2)
             else:
-                DepositionConstant = OUTCORE_DEPOSITION / (100**2)
+                DepositionConstant = nc.OUTCORE_DEPOSITION / (100**2)
             # [kg_coolant/cm^2 s]*[g/kg_coolant]/[s^-1] = [g/cm^2]
             PreExponentiaDepositionTerm = DepositionConstant * TotalParticulate[i] / PARTICULATE_DISSOLUTION
         
@@ -256,47 +264,49 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j):
         CrossSection = CROSS_SECTIONCo59
         Element = "Co"
         
-    if Isotope == "Co58":
+    elif Isotope == "Co58":
         Lambda = LAMBDACo58
         MolarMass = MOLARMASSCo58
         ParentAbundance = ABUNDANCENi58
         CrossSection = CROSS_SECTIONNi58 
         Element = "Ni"
         
-    if Isotope == "Fe55":
+    elif Isotope == "Fe55":
         Lambda = LAMBDAFe55
         MolarMass = MOLARMASSFe55
         ParentAbundance = ABUNDANCEFe54
         CrossSection = CROSS_SECTIONFe54
         Element = "Fe"
         
-    if Isotope == "Fe59":
+    elif Isotope == "Fe59":
         Lambda = LAMBDAFe59
         MolarMass = MOLARMASSFe59
         ParentAbundance = ABUNDANCEFe58
         CrossSection = CROSS_SECTIONFe58
         Element = "Fe"
         
-    if Isotope == "Mn54":
+    elif Isotope == "Mn54":
         Lambda = LAMBDAMn54
         MolarMass = MOLARMASSMn54
         ParentAbundance = ABUNDANCEFe54
         CrossSection = CROSS_SECTIONFe54
         Element = "Fe"
         
-    if Isotope == "Cr51":
+    elif Isotope == "Cr51":
         Lambda = LAMBDACr51
         MolarMass = MOLARMASSCr51
         ParentAbundance = ABUNDANCECr50
         CrossSection = CROSS_SECTIONCr50
         Element = "Cr"
         
-    if Isotope == "Ni63":
+    elif Isotope == "Ni63":
         Lambda = LAMBDANi63
         MolarMass = MOLARMASSNi63
         ParentAbundance = ABUNDANCENi62
         CrossSection = CROSS_SECTIONNi62
         Element = "Ni"
+    else:
+        None
     
     Lambda_sec = Lambda / 3600 # [s ^-1]
     if Section == ld.Core:  
@@ -309,7 +319,7 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j):
             4 * PARTICULATE_DISSOLUTION * x / (Lambda_sec * y) for x, y in zip (ActiveCoreDeposit, Section.Diameter)
             ]
         
-        Activity = [BulkConcentration_o * x + y * (1 - x) for x, y in zip(ExponentialTerm, PreExponentialReleaseTerm)]
+        BulkActivity = [BulkConcentration_o * x + y * (1 - x) for x, y in zip(ExponentialTerm, PreExponentialReleaseTerm)]
     # out-of-core activity                
     else:
         EtaTerm = eta(Section)

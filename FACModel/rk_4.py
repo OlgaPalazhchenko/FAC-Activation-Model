@@ -7,20 +7,6 @@ import electrochemistry as e
 import random
 
 
-def particulate(Section, BulkCrud_0, Diameter, DensityH2O, Velocity, Distance):
-    if Section == ld.Core:
-        DepositionConstant = nc.INCORE_DEPOSITION
-    else:
-        DepositionConstant = nc.OUTCORE_DEPOSITION
-
-    Deposition = DepositionConstant * (4 / Diameter) * 100 / (DensityH2O * 1000)
-
-    ParticulateConcentration = ((nc.ErosionConstant * 100 * 100) / DepositionConstant) \
-        * (1 - np.exp((-Deposition / Velocity) * Distance)) + BulkCrud_0 * np.exp((-Deposition / Velocity) * Distance)
-
-    return ParticulateConcentration
-
-
 def oxide_composition(
         Section, Element, OxideType, Outer, OuterFe3O4Thickness, NiThickness, CoThickness, InnerIronOxThickness
         ):
@@ -71,7 +57,7 @@ def oxide_composition(
             return None
 
 
-def Spatial(Solution, Bulk, km, Diameter, Velocity, Length):
+def spatial(Solution, Bulk, km, Diameter, Velocity, Length):
     # Cylindrical pipe: Surface Area / Volume = Pi*Diameter*Length/(Pi*(Diameter^2)/4) = 4/Diameter
     # Allows conversion between amount/area (assuming uniform distribution across the area) to amount/volume
     Solution_Bulk = Solution - Bulk
@@ -145,7 +131,8 @@ def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
         [
             Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
             Section.MetalOxide.ConcentrationH
-            ] = e.ElectrochemicalAdjustment(
+            ] = \
+            e.ElectrochemicalAdjustment(
             Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
             Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
             Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
@@ -295,7 +282,7 @@ def RK4(Section, InitialThickness, GrowthFunction, approximation):
     return thickness, x
 
 
-def ParticleSize():
+def particle_size():
     r = random.random()
     if 0 < r < 0.005:
         Size = 0.15
@@ -343,7 +330,7 @@ def ParticleSize():
     return Size * 0.0001 * nc.Fe3O4Density  # [um to cm to g/cm^2]
 
 
-def SpallingTime(
+def spalling_time(
         Section, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4electrochem, OuterOxThickness, Velocity
         ):
 
@@ -376,7 +363,7 @@ def oxide(Layer, TotalOxideThickness, Spalling):
         return Ox
 
 
-def Spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
+def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
     # Current time step's RK4 input from oxidegrowth function for each of InnerOx, InnerIronOx, OuterFe3O4, Co, and 
     # Ni at each node of current section 
 
@@ -411,14 +398,14 @@ def Spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
 
         if j == 0:
             # First time step call generate particle sizes and calc spalling times, respectively
-            x = ParticleSize()
+            x = particle_size()
             # Amount of time it will take each node's particle to spall 
-            y = SpallingTime(
+            y = spalling_time(
                 Section, x, FeSat[i], FeTotal[i], Section.KdFe3O4electrochem[i], Section.OuterFe3O4Thickness[i],
                 Section.Velocity[i]
                 )
             
-            # list of random particle sizes based on input distribution in ParticleSize function
+            # list of random particle sizes based on input distribution in particle_size function
             Section.Particle.append(x)
             SpallTime.append(y)
 
@@ -463,10 +450,10 @@ def Spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
                         Section.InnerOxThickness[i], Section.InnerOxThickness[i], Section.Particle[i]
                         )  # new total inner ox
 
-                Section.Particle[i] = ParticleSize()
+                Section.Particle[i] = particle_size()
                 # once particle spalled off, another size (just at that node) is randomly generated w/i distribution
 
-                SpallTime[i] = SpallingTime(
+                SpallTime[i] = spalling_time(
                     Section, Section.Particle[i], FeSat[i], FeTotal[i], Section.KdFe3O4electrochem[i],
                     Section.OuterFe3O4Thickness[i], Section.Velocity[i]
                     )

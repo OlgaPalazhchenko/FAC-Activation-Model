@@ -13,7 +13,7 @@ from matplotlib import rc
 rc('mathtext', default='regular')
 
 RealTimeHeatTransfer = "no"
-Activation = "no"
+Activation = "yes"
 PlotOutput = "yes"
 OutputLogging = "no"
 
@@ -28,13 +28,13 @@ import time
 start_time = time.time()
 
 for j in range(SimulationHours):
-    In = pht_model.PHT_FAC(ld.Inlet, ld.Core, RealTimeHeatTransfer, j)
-    Co = pht_model.PHT_FAC(ld.Core, ld.Outlet, RealTimeHeatTransfer, j)
-    Ou = pht_model.PHT_FAC(ld.Outlet, ld.SGZones[58], RealTimeHeatTransfer, j)
+    In = pht_model.PHT_FAC(ld.Inlet, ld.Core, RealTimeHeatTransfer, Activation, j)
+    Co = pht_model.PHT_FAC(ld.Core, ld.Outlet, RealTimeHeatTransfer, Activation, j)
+    Ou = pht_model.PHT_FAC(ld.Outlet, ld.SGZones[58], RealTimeHeatTransfer, Activation, j)
     
     if RealTimeHeatTransfer == "no":
         # SGZones[58] = tube with typical u-bend arc length --> 1.5 m
-        Sg = pht_model.PHT_FAC(ld.SGZones[58], ld.Inlet, RealTimeHeatTransfer, j)
+        Sg = pht_model.PHT_FAC(ld.SGZones[58], ld.Inlet, RealTimeHeatTransfer, Activation, j)
             
     else:
         # Set input concentrations for all SG zones to be same as input of first (Outlet output)
@@ -102,6 +102,7 @@ minutes = delta_time // 60
 seconds = delta_time - 60 * minutes
 print('%d:%d:%d' % (hours, minutes, seconds))
 
+print (In.Section1.BigParticulate, In.Section1.SmallParticulate)
 
 def property_log10(Element, Interface):
     Sat = []  # x
