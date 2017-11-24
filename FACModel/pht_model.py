@@ -7,16 +7,18 @@ import electrochemistry as e
 import iteration as it
 import sg_heattransfer as SGHX
 
+from operator import itemgetter
+
 # Initial temperatures in SG zones
 [SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(1983)
 
-for Zone in ld.SGZones:
-    Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
-        Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
-        )
+# for Zone in ld.SGZones:
+#     Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
+#         Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
+#         )
 
 # Initial concentrations
-for Section in ld.Sections:
+for Section in [ld.Inlet, ld.Core, ld.Outlet, ld.SGZones[58]]:
     # Temperature-dependent parameters            
     Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
     
@@ -97,7 +99,9 @@ class PHT_FAC():
                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
                 ]
-                
+            # List of first node values of each isotope per PHT section 
+            BulkActivities_0 = [item[0] for item in BulkActivities]
+              
             BulkActivities2 = [
                 self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59, self.Section2.Bulk.Fe55,
                 self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51, self.Section2.Bulk.Ni63
@@ -110,12 +114,15 @@ class PHT_FAC():
             # solves for bulk volumetric activities and connects activity concentrations b/w PHT sections
             AA = []
             for x, y in zip (BulkActivities, Tags):
-                x = a.bulk_activity(self.Section1, x[0], y, j)
+                x = a.bulk_activity(self.Section1, itemgetter(0)(x), y, j)
                 AA.append(x)
             BulkActivities = AA
-            print (AA)
-#             for x, y in zip(BulkActivities, BulkActivities2):
-#                 y[0] = x[self.Section1.NodeNumber - 1]
+            
+            print (BulkActivities[0])
+            print (len(BulkActivities[0]))
+            
+            for x, y in zip(BulkActivities, BulkActivities2):
+                y[0] = itemgetter(self.Section1.NodeNumber-2)(x)
             
             # Deposit thickness around PHTS
             self.Section1.DepositThickness = a.deposition(self.Section1, j)

@@ -319,7 +319,8 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j):
             4 * PARTICULATE_DISSOLUTION * x / (Lambda_sec * y) for x, y in zip (ActiveCoreDeposit, Section.Diameter)
             ]
         
-        BulkActivity = [BulkConcentration_o * x + y * (1 - x) for x, y in zip(ExponentialTerm, PreExponentialReleaseTerm)]
+        BulkActivity = [BulkConcentration_o * x + y * (1 - x) for x, y in
+                        zip(ExponentialTerm, PreExponentialReleaseTerm)]
     # out-of-core activity                
     else:
         EtaTerm = eta(Section)

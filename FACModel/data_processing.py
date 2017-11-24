@@ -22,7 +22,7 @@ RIHT = []
 StreamOutletTemperatures = []
 
 SimulationYears = 1  # years
-SimulationHours = SimulationYears * 50
+SimulationHours = SimulationYears * 10
 
 import time
 start_time = time.time()
