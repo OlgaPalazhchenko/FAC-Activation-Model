@@ -31,7 +31,7 @@ for Section in [ld.Inlet, ld.Core, ld.Outlet, ld.SGZones[58]]:
     [
         Section.Bulk.Co60, Section.Bulk.Co58, Section.Bulk.Fe55, Section.Bulk.Fe59, Section.Bulk.Mn54,
         Section.Bulk.Cr51, Section.Bulk.Ni63
-        ] = [[1e-10] * Section.NodeNumber] * 7
+        ] = [[0] * Section.NodeNumber] * 7
     
     Interfaces = [Section.MetalOxide, Section.SolutionOxide, Section.Bulk]
     for Interface in Interfaces:
@@ -89,40 +89,45 @@ for Section in [ld.Inlet, ld.Core, ld.Outlet, ld.SGZones[58]]:
 
 Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
 
+
 class PHT_FAC():
     def __init__(self, ActiveSection, OutgoingSection, RealTimeHeatTransfer, Activation, j):  # j = overall time step
         self.Section1 = ActiveSection
         self.Section2 = OutgoingSection
-
+        
+        
         if Activation == "yes":    
             BulkActivities = [
                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
                 ]
             # List of first node values of each isotope per PHT section 
-            BulkActivities_0 = [item[0] for item in BulkActivities]
-              
+    
             BulkActivities2 = [
-                self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59, self.Section2.Bulk.Fe55,
-                self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51, self.Section2.Bulk.Ni63
+                self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59,
+                self.Section2.Bulk.Fe55, self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51,
+                self.Section2.Bulk.Ni63
                 ]
-                
+             
 #             SurfaceActivities = [
 #                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
 #                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
 #                 ]
             # solves for bulk volumetric activities and connects activity concentrations b/w PHT sections
+            
             AA = []
-            for x, y in zip (BulkActivities, Tags):
-                x = a.bulk_activity(self.Section1, itemgetter(0)(x), y, j)
-                AA.append(x)
-            BulkActivities = AA
+            for i in range(self.Section1.NodeNumber-1):
+                for x, y in zip (BulkActivities, Tags):
+                    x[i] = a.bulk_activity(self.Section1, itemgetter(0)(x), y, j, i)
+                    
             
-            print (BulkActivities[0])
-            print (len(BulkActivities[0]))
-            
-            for x, y in zip(BulkActivities, BulkActivities2):
-                y[0] = itemgetter(self.Section1.NodeNumber-2)(x)
+#                     AA.append(z)
+#                 BulkActivities = AA   
+#             [
+#                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
+#                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
+#                 ] = AA
+        
             
             # Deposit thickness around PHTS
             self.Section1.DepositThickness = a.deposition(self.Section1, j)
@@ -155,6 +160,8 @@ class PHT_FAC():
             self.Section1.SolutionOxide.CoSatFerrite
             ]
         
+#         print (BulkActivities, j, self.Section1.NodeNumber)
+        
         for i in range(self.Section1.NodeNumber):
             for x, y in zip (BulkConcentrations, SolutionOxideConcentrations):
                 if i > 0: 
@@ -167,23 +174,26 @@ class PHT_FAC():
             if self.Section1 == ld.Inlet and i == 3:      
                 for x in BulkConcentrations: 
                     x[i] = 0.59 * x[i - 1]
-                if Activation == "yes":
-                    for y in BulkActivities:
-                        y[i] = 0.59 * y[i-1]
+#                 if Activation == "yes":
+#                     for y in BulkActivities:
+#                         y[i] = 0.59 * y[i-1]
             
             elif self.Section1 == ld.Inlet and i > 3:
                 if Activation == "yes":
                     self.Section1.BigParticulate = a.particulate(self.Section1, self.Section1.BigParticulate[3])
                     self.Section1.SmallParticulate = a.particulate(self.Section1, self.Section1.SmallParticulate[3])
                     
-                    for x,y in zip (BulkActivities, Tags):
-                        x = a.bulk_activity(self.Section1, x[3], y, j)
+#                     for x,y in zip (BulkActivities, Tags):
+#                         x = a.bulk_activity(self.Section1, x[3], y, j)
             else:
                 None
         # Connects output of one PHT section to input of subsequent section 
         for x, y, in zip(BulkConcentrations, BulkConcentrations2):
             y[0] = x[self.Section1.NodeNumber - 1]
-            
+        
+        for x, y, in zip(BulkActivities, BulkActivities2):
+            y[0] = x[self.Section1.NodeNumber - 1]
+           
         # Stellite wear bulk input term for cobalt and chromium    
         if self.Section1 == ld.Core:
             self.Section2.Bulk.CoTotal[0] = self.Section1.Bulk.CoTotal[self.Section1.NodeNumber - 1] + nc.CobaltWear

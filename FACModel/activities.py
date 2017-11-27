@@ -51,38 +51,39 @@ VAPORIZATION_COEFFICIENT = 0.1
 ENRICHMENT = 1
 
 def eta(Section):
-    
-    DeltaMassInnerOxide = [x * y / z for x, y, z in zip(
-        [it.Diffusion(Section, "Fe")] * Section.NodeNumber, Section.CorrRate, [Section.FractionFeInnerOxide] *\
-        Section.NodeNumber
-        )]
+    # eta term is for out-of-core activation only
+    Diffusion_innerox = it.Diffusion(Section, "Fe")
+    MassInnerOxide = [Diffusion_innerox * x / Section.FractionFeInnerOxide for x in Section.CorrRate]
     
     ConvertedSaturation = ld.UnitConverter(
             Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeSatFe3O4, None, None, None,
             nc.FeMolarMass, None
             ) 
     
-    if Section in ld.SGZones:  # SG (this function not called for core)    
+    if Section in ld.SGZones: 
     
         DeltaTemperature = [abs(x - y) for x, y in zip(
             Section.PrimaryBulkTemperature[1:], Section.PrimaryBulkTemperature
             )]
+       
         # One less Eta than total number of nodes --> deltas = 21, so add small diff b/w first node and last node outlet
-        DeltaTemperature.insert(0, 0.0001)  
-        
+        # Last two nodes (preheater plate) are isothermal, same addition as above
+        DeltaTemperature.insert(0, 0.1)
+        DeltaTemperature[Section.NodeNumber - 1] = 0.1 
+    
         DeltaTemperature_Length = [x / y for x, y in zip(DeltaTemperature, Section.Length.magnitude)]        
-        
+       
         DeltaSolubility = [abs(x - y) for x, y in zip(
             Section.SolutionOxide.FeSatFe3O4[1:], Section.SolutionOxide.FeSatFe3O4
             )]
+        
+        # One less Eta than total number of nodes --> deltas = 21, so add small diff b/w first node and last node outlet
+        DeltaSolubility.insert(0, 1e-9)
         ConvertedDeltaSolubility = ld.UnitConverter(
             Section, "Mol per Kg", "Grams per Cm Cubed", DeltaSolubility, None, None, None, nc.FeMolarMass, None
             )
-        # One less Eta than total number of nodes --> deltas = 21, so add small diff b/w first node and last node outlet
-        DeltaSolubility.insert(0, 1e-12)  
-     
-        DeltaSolubility_Temp = [x / y for x, y in zip(ConvertedDeltaSolubility, DeltaTemperature)]
         
+        DeltaSolubility_Temp = [x / y for x, y in zip(ConvertedDeltaSolubility, DeltaTemperature)]
         
         CRYST_o = [x / (y * z * t * u * v) for x, y, z, t, u, v in zip(
             ConvertedSaturation, [0.18] * Section.NodeNumber, Section.Diameter, Section.Velocity, DeltaSolubility_Temp,
@@ -93,7 +94,7 @@ def eta(Section):
         Section.InnerOxThickness
         ]
           
-    CRYST_i = [x / (y * z) for x, y, z in zip(ConvertedSaturation, [0.35] * Section.NodeNumber, DeltaMassInnerOxide)]
+    CRYST_i = [x / (y * z) for x, y, z in zip(ConvertedSaturation, [0.35] * Section.NodeNumber, MassInnerOxide)]
     
     if Section == ld.Inlet or Section == ld.Outlet:
         CRYST_o = CRYST_i
@@ -254,7 +255,7 @@ def deposition(Section, j):
     return DepositThickness
     
 
-def bulk_activity(Section, BulkConcentration_o, Isotope, j):
+def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
     
     # [s^-1], Converts from h^-1 to s^-1
     if Isotope == "Co60":
@@ -320,16 +321,19 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j):
             ]
         
         BulkActivity = [BulkConcentration_o * x + y * (1 - x) for x, y in
-                        zip(ExponentialTerm, PreExponentialReleaseTerm)]
+                        zip(ExponentialTerm, PreExponentialReleaseTerm)][i]
+    
     # out-of-core activity                
     else:
         EtaTerm = eta(Section)
         ExponentialTerm = [np.exp((-Lambda_sec * x / y) - (4 * x * z / (q * y))) for x, y, z, q in
                            zip(Section.Distance, Section.Velocity, EtaTerm, Section.Diameter)]
+        
+
         # Distance is not for full PHT, just from start of current PHT section (decay from BulkConcentration_o
         # of that section's first node)
         
-        BulkActivity = [BulkConcentration_o * x for x in ExponentialTerm]
-    
+        BulkActivity = [BulkConcentration_o * x for x in ExponentialTerm][i]
+    print (BulkActivity, Section.NodeNumber, Isotope, j)
     return BulkActivity # [Bq/cm^2]
 
