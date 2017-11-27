@@ -31,7 +31,7 @@ for Section in [ld.Inlet, ld.Core, ld.Outlet, ld.SGZones[58]]:
     [
         Section.Bulk.Co60, Section.Bulk.Co58, Section.Bulk.Fe55, Section.Bulk.Fe59, Section.Bulk.Mn54,
         Section.Bulk.Cr51, Section.Bulk.Ni63
-        ] = [[0] * Section.NodeNumber] * 7
+        ] = [[1e-13] * Section.NodeNumber] * 7
     
     Interfaces = [Section.MetalOxide, Section.SolutionOxide, Section.Bulk]
     for Interface in Interfaces:
@@ -115,19 +115,16 @@ class PHT_FAC():
 #                 ]
             # solves for bulk volumetric activities and connects activity concentrations b/w PHT sections
             
-            AA = []
-            for i in range(self.Section1.NodeNumber-1):
-                for x, y in zip (BulkActivities, Tags):
-                    x[i] = a.bulk_activity(self.Section1, itemgetter(0)(x), y, j, i)
-                    
+       
+            for x, y in zip (BulkActivities, Tags):
+                x = a.bulk_activity(self.Section1, itemgetter(0)(x), y, j)
+                AA.append(z)
+            BulkActivities = AA   
+            [
+                self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
+                self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
+                ] = AA
             
-#                     AA.append(z)
-#                 BulkActivities = AA   
-#             [
-#                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
-#                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
-#                 ] = AA
-        
             
             # Deposit thickness around PHTS
             self.Section1.DepositThickness = a.deposition(self.Section1, j)

@@ -255,7 +255,7 @@ def deposition(Section, j):
     return DepositThickness
     
 
-def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
+def bulk_activity(Section, BulkConcentration_o, Isotope, j):
     
     # [s^-1], Converts from h^-1 to s^-1
     if Isotope == "Co60":
@@ -321,7 +321,7 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
             ]
         
         BulkActivity = [BulkConcentration_o * x + y * (1 - x) for x, y in
-                        zip(ExponentialTerm, PreExponentialReleaseTerm)][i]
+                        zip(ExponentialTerm, PreExponentialReleaseTerm)]
     
     # out-of-core activity                
     else:
@@ -333,7 +333,7 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
         # Distance is not for full PHT, just from start of current PHT section (decay from BulkConcentration_o
         # of that section's first node)
         
-        BulkActivity = [BulkConcentration_o * x for x in ExponentialTerm][i]
-    print (BulkActivity, Section.NodeNumber, Isotope, j)
+        BulkActivity = [BulkConcentration_o * x for x in ExponentialTerm]
+#     print (BulkActivity, Section.NodeNumber, Isotope, j)
     return BulkActivity # [Bq/cm^2]
 
