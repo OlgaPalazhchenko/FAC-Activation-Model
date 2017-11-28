@@ -115,16 +115,10 @@ class PHT_FAC():
 #                 ]
             # solves for bulk volumetric activities and connects activity concentrations b/w PHT sections
             
-       
-            for x, y in zip (BulkActivities, Tags):
-                x = a.bulk_activity(self.Section1, itemgetter(0)(x), y, j)
-                AA.append(z)
-            BulkActivities = AA   
-            [
-                self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
-                self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
-                ] = AA
-            
+            for i in range(self.Section1.NodeNumber):
+                for x, y in zip (BulkActivities, Tags):
+                    x[i] = a.bulk_activity(self.Section1, itemgetter(0)(x), y, j,i)
+#
             
             # Deposit thickness around PHTS
             self.Section1.DepositThickness = a.deposition(self.Section1, j)
@@ -156,9 +150,7 @@ class PHT_FAC():
             self.Section1.SolutionOxide.FeSatFe3O4, self.Section1.SolutionOxide.NiSatFerrite,
             self.Section1.SolutionOxide.CoSatFerrite
             ]
-        
-#         print (BulkActivities, j, self.Section1.NodeNumber)
-        
+                
         for i in range(self.Section1.NodeNumber):
             for x, y in zip (BulkConcentrations, SolutionOxideConcentrations):
                 if i > 0: 
@@ -171,19 +163,21 @@ class PHT_FAC():
             if self.Section1 == ld.Inlet and i == 3:      
                 for x in BulkConcentrations: 
                     x[i] = 0.59 * x[i - 1]
-#                 if Activation == "yes":
-#                     for y in BulkActivities:
-#                         y[i] = 0.59 * y[i-1]
+                if Activation == "yes":
+                    for y in BulkActivities:
+                        y[i] = 0.59 * y[i-1]
             
             elif self.Section1 == ld.Inlet and i > 3:
+               
                 if Activation == "yes":
                     self.Section1.BigParticulate = a.particulate(self.Section1, self.Section1.BigParticulate[3])
                     self.Section1.SmallParticulate = a.particulate(self.Section1, self.Section1.SmallParticulate[3])
                     
-#                     for x,y in zip (BulkActivities, Tags):
-#                         x = a.bulk_activity(self.Section1, x[3], y, j)
+                    for x,y in zip (BulkActivities, Tags):
+                        x[i] = a.bulk_activity(self.Section1, itemgetter(3)(x), y, j, i)
             else:
                 None
+            
         # Connects output of one PHT section to input of subsequent section 
         for x, y, in zip(BulkConcentrations, BulkConcentrations2):
             y[0] = x[self.Section1.NodeNumber - 1]

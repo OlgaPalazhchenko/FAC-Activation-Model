@@ -3,7 +3,6 @@ import iteration as it
 import numpy as np
 import constants as nc
 import rk_4
-from constants import OUTCORE_DEPOSITION
     
 # Molecular weights of specific isotopes [g/mol]
 MOLARMASSFe59 = 58.9348755
@@ -255,7 +254,7 @@ def deposition(Section, j):
     return DepositThickness
     
 
-def bulk_activity(Section, BulkConcentration_o, Isotope, j):
+def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
     
     # [s^-1], Converts from h^-1 to s^-1
     if Isotope == "Co60":
@@ -315,25 +314,32 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j):
             Section, j, Element, ParentAbundance, Lambda_sec, CrossSection, MolarMass
             )
         # variation with time and distance
-        ExponentialTerm = [np.exp(-Lambda_sec * x / y) for x, y in zip(Section.Distance, Section.Velocity)]
-        PreExponentialReleaseTerm = [
-            4 * PARTICULATE_DISSOLUTION * x / (Lambda_sec * y) for x, y in zip (ActiveCoreDeposit, Section.Diameter)
-            ]
+        ExponentialTerm = np.exp(-Lambda_sec * Section.Distance[i] / Section.Velocity[i])
+#         ExponentialTerm = [np.exp(-Lambda_sec * x / y) for x, y in zip(Section.Distance, Section.Velocity)]
         
-        BulkActivity = [BulkConcentration_o * x + y * (1 - x) for x, y in
-                        zip(ExponentialTerm, PreExponentialReleaseTerm)]
+        PreExponentialReleaseTerm = 4 * PARTICULATE_DISSOLUTION * ActiveCoreDeposit[i] / (Lambda_sec * Section.Diameter[i])
+#         PreExponentialReleaseTerm = [
+#             4 * PARTICULATE_DISSOLUTION * x / (Lambda_sec * y) for x, y in zip (ActiveCoreDeposit, Section.Diameter)
+#             ]
+        BulkActivity = BulkConcentration_o * ExponentialTerm + PreExponentialReleaseTerm * (1 - ExponentialTerm)
+#         BulkActivity = [BulkConcentration_o * x + y * (1 - x) for x, y in
+#                         zip(ExponentialTerm, PreExponentialReleaseTerm)]
     
     # out-of-core activity                
     else:
         EtaTerm = eta(Section)
-        ExponentialTerm = [np.exp((-Lambda_sec * x / y) - (4 * x * z / (q * y))) for x, y, z, q in
-                           zip(Section.Distance, Section.Velocity, EtaTerm, Section.Diameter)]
+        ExponentialTerm = np.exp(
+            (-Lambda_sec * Section.Distance[i] / Section.Velocity[i])
+                                 - (4 * Section.Distance[i] * EtaTerm[i] / (Section.Diameter[i] * Section.Velocity[i]))
+                                 )
+#         ExponentialTerm = [np.exp((-Lambda_sec * x / y) - (4 * x * z / (q * y))) for x, y, z, q in
+#                            zip(Section.Distance, Section.Velocity, EtaTerm, Section.Diameter)]
         
 
         # Distance is not for full PHT, just from start of current PHT section (decay from BulkConcentration_o
         # of that section's first node)
-        
-        BulkActivity = [BulkConcentration_o * x for x in ExponentialTerm]
-#     print (BulkActivity, Section.NodeNumber, Isotope, j)
+        BulkActivity = BulkConcentration_o * ExponentialTerm
+#         BulkActivity = [BulkConcentration_o * x for x in ExponentialTerm]
+    
     return BulkActivity # [Bq/cm^2]
 
