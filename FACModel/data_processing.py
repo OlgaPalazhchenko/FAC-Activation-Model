@@ -102,7 +102,6 @@ minutes = delta_time // 60
 seconds = delta_time - 60 * minutes
 print('%d:%d:%d' % (hours, minutes, seconds))
 
-print (In.Section1.BigParticulate, In.Section1.SmallParticulate)
 
 def property_log10(Element, Interface):
     Sat = []  # x

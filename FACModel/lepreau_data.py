@@ -2,16 +2,6 @@ import numpy as np
 import csv 
 import constants as nc
 
-a = [[1, 2, 3], [4,4,4]]
-b = [[2, 2, 2], [7,7,7]]
-
-
-for x, y in zip(a, b):
-    a[1] = 77
-
-b[0] = a[1]
-
-print (a,b)
 
 class SGParameters():
     def __init__(self):

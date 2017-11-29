@@ -9,13 +9,14 @@ import sg_heattransfer as SGHX
 
 from operator import itemgetter
 
+
 # Initial temperatures in SG zones
 [SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(1983)
 
-# for Zone in ld.SGZones:
-#     Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
-#         Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
-#         )
+for Zone in ld.SGZones:
+    Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
+        Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
+        )
 
 # Initial concentrations
 for Section in ld.Sections:
