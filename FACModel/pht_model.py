@@ -18,7 +18,7 @@ from operator import itemgetter
 #         )
 
 # Initial concentrations
-for Section in [ld.Inlet, ld.Core, ld.Outlet, ld.SGZones[58]]:
+for Section in ld.Sections:
     # Temperature-dependent parameters            
     Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
     
@@ -31,7 +31,7 @@ for Section in [ld.Inlet, ld.Core, ld.Outlet, ld.SGZones[58]]:
     [
         Section.Bulk.Co60, Section.Bulk.Co58, Section.Bulk.Fe55, Section.Bulk.Fe59, Section.Bulk.Mn54,
         Section.Bulk.Cr51, Section.Bulk.Ni63
-        ] = [[1e-13] * Section.NodeNumber] * 7
+        ] = [[0] * Section.NodeNumber] * 7
     
     Interfaces = [Section.MetalOxide, Section.SolutionOxide, Section.Bulk]
     for Interface in Interfaces:
@@ -95,13 +95,11 @@ class PHT_FAC():
         self.Section1 = ActiveSection
         self.Section2 = OutgoingSection
         
-        
         if Activation == "yes":    
             BulkActivities = [
                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
                 ]
-            # List of first node values of each isotope per PHT section 
     
             BulkActivities2 = [
                 self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59,
@@ -112,14 +110,8 @@ class PHT_FAC():
 #             SurfaceActivities = [
 #                 self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
 #                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
-#                 ]
-            # solves for bulk volumetric activities and connects activity concentrations b/w PHT sections
-            
-            for i in range(self.Section1.NodeNumber):
-                for x, y in zip (BulkActivities, Tags):
-                    x[i] = a.bulk_activity(self.Section1, itemgetter(0)(x), y, j,i)
-#
-            
+#                 ]            
+ 
             # Deposit thickness around PHTS
             self.Section1.DepositThickness = a.deposition(self.Section1, j)
             
@@ -152,6 +144,11 @@ class PHT_FAC():
             ]
                 
         for i in range(self.Section1.NodeNumber):
+            # solves for bulk volumetric activities and connects activity concentrations b/w PHT sections
+            if Activation == "yes":
+                for x, y in zip (BulkActivities, Tags):
+                    x[i] = a.bulk_activity(self.Section1, itemgetter(0)(x), y, j,i)
+                    
             for x, y in zip (BulkConcentrations, SolutionOxideConcentrations):
                 if i > 0: 
                     x[i] = rk_4.spatial(
@@ -161,14 +158,12 @@ class PHT_FAC():
                 
             # Inlet header purification system
             if self.Section1 == ld.Inlet and i == 3:      
-                for x in BulkConcentrations: 
+                for x, y in zip (BulkConcentrations, BulkActivities): 
                     x[i] = 0.59 * x[i - 1]
-                if Activation == "yes":
-                    for y in BulkActivities:
-                        y[i] = 0.59 * y[i-1]
+                    if Activation == "yes":
+                        y[i] = 0.59 * y[i - 1]
             
             elif self.Section1 == ld.Inlet and i > 3:
-               
                 if Activation == "yes":
                     self.Section1.BigParticulate = a.particulate(self.Section1, self.Section1.BigParticulate[3])
                     self.Section1.SmallParticulate = a.particulate(self.Section1, self.Section1.SmallParticulate[3])
@@ -177,13 +172,11 @@ class PHT_FAC():
                         x[i] = a.bulk_activity(self.Section1, itemgetter(3)(x), y, j, i)
             else:
                 None
-            
+  
         # Connects output of one PHT section to input of subsequent section 
-        for x, y, in zip(BulkConcentrations, BulkConcentrations2):
+        for x, y, z, q in zip(BulkConcentrations, BulkConcentrations2, BulkActivities, BulkActivities2):
             y[0] = x[self.Section1.NodeNumber - 1]
-        
-        for x, y, in zip(BulkActivities, BulkActivities2):
-            y[0] = x[self.Section1.NodeNumber - 1]
+            q[0] = z[self.Section1.NodeNumber - 1]
            
         # Stellite wear bulk input term for cobalt and chromium    
         if self.Section1 == ld.Core:
