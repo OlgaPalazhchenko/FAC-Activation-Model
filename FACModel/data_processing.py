@@ -13,16 +13,16 @@ from matplotlib import rc
 rc('mathtext', default='regular')
 
 RealTimeHeatTransfer = "no"
-Activation = "yes"
+Activation = "no"
 PlotOutput = "yes"
-OutputLogging = "no"
+OutputLogging = "yes"
 
 AverageColdLegLoading = []
 RIHT = []
 StreamOutletTemperatures = []
 
-SimulationYears = 1  # years
-SimulationHours = SimulationYears * 20
+SimulationYears = 9  # years
+SimulationHours = SimulationYears * 8760
 
 import time
 start_time = time.time()

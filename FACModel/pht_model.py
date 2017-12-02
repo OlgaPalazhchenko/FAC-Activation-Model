@@ -159,9 +159,10 @@ class PHT_FAC():
                 
             # Inlet header purification system
             if self.Section1 == ld.Inlet and i == 3:      
-                for x, y in zip (BulkConcentrations, BulkActivities): 
+                for x in BulkConcentrations: 
                     x[i] = 0.59 * x[i - 1]
-                    if Activation == "yes":
+                if Activation == "yes":
+                    for y in BulkActivities:
                         y[i] = 0.59 * y[i - 1]
             
             elif self.Section1 == ld.Inlet and i > 3:
@@ -175,9 +176,11 @@ class PHT_FAC():
                 None
   
         # Connects output of one PHT section to input of subsequent section 
-        for x, y, z, q in zip(BulkConcentrations, BulkConcentrations2, BulkActivities, BulkActivities2):
+        for x, y in zip(BulkConcentrations, BulkConcentrations2):
             y[0] = x[self.Section1.NodeNumber - 1]
-            q[0] = z[self.Section1.NodeNumber - 1]
+        if Activation == "yes":
+            for q, z in zip(BulkActivities, BulkActivities2):
+                z[0] = q[self.Section1.NodeNumber - 1]
            
         # Stellite wear bulk input term for cobalt and chromium    
         if self.Section1 == ld.Core:
