@@ -424,7 +424,7 @@ def station_events(calendar_year):
         YearlyRateLeakage = 0
         SHTPressure = 4.593 - (125 / 1000) # MPa
     
-    Leakage = InitialLeakage + ((calendar_year - 1983) / 8760) * YearlyRateLeakage
+    Leakage = InitialLeakage + (calendar_year - 1983) * YearlyRateLeakage
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
     m_h_leakagecorrection = MassFlow_h.magnitude - DividerPlateMassFlow
     
