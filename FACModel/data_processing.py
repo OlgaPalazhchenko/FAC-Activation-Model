@@ -27,14 +27,17 @@ SimulationHours = SimulationYears * 8760
 import time
 start_time = time.time()
 
+
 for j in range(SimulationHours):
+    
     In = pht_model.PHT_FAC(ld.Inlet, ld.Core, RealTimeHeatTransfer, Activation, j)
     Co = pht_model.PHT_FAC(ld.Core, ld.Outlet, RealTimeHeatTransfer, Activation, j)
     Ou = pht_model.PHT_FAC(ld.Outlet, ld.SGZones[58], RealTimeHeatTransfer, Activation, j)
     
     if RealTimeHeatTransfer == "no":
         # SGZones[58] = tube with typical u-bend arc length --> 1.5 m
-        Sg = pht_model.PHT_FAC(ld.SGZones[58], ld.Inlet, RealTimeHeatTransfer, Activation, j)
+        Sg = pht_model.PHT_FAC(ld.SGZones[58], ld.Inlet_2, RealTimeHeatTransfer, Activation, j)
+    
             
     else:
         # Set input concentrations for all SG zones to be same as input of first (Outlet output)
@@ -49,7 +52,9 @@ for j in range(SimulationHours):
             
             x = pht_model.PHT_FAC(Zone, ld.Inlet, j)   
             SgZones.append(x)
-
+            
+    In_2 = pht_model.PHT_FAC(ld.Inlet_2, ld.Core, RealTimeHeatTransfer, Activation, j)
+    
     if OutputLogging == "yes":
         if j % 8759 == 0:  # yearly
              

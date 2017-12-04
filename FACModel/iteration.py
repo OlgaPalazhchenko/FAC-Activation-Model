@@ -12,13 +12,13 @@ def Diffusion(Section, Element):
         + (1 - c.fraction_chromite(Section)) * nc.NiFe2O4Density)
         FractionCo = nc.FractionCo_Alloy800
     
-    if Section == ld.Inlet or Section == ld.Outlet:
+    if Section in ld.InletSections or Section in ld.OutletSections:
         AlloyDensity = nc.FeDensity
         OxideDensity = (c.fraction_chromite(Section) * nc.FeCr2O4Density
                         + (1 - c.fraction_chromite(Section)) * nc.Fe3O4Density)
         FractionCo = nc.FractionCo_CS
         
-    if Section != ld.Core :
+    if Section not in ld.FuelChannels :
         if Element == "Fe":
             MetalRetainedInsideInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe") \
             * (OxideDensity / AlloyDensity) * (1 - nc.Fe3O4Porosity_inner)  # [gFe/g CSlost] 
@@ -41,7 +41,7 @@ def MetalOxideInterfaceConcentration(
     if Section in ld.SGZones:
         OxideDensity = nc.NiFe2O4Density
     
-    if Section == ld.Inlet or Section == ld.Outlet:
+    if Section in ld.InletSections or Section in ld.OutletSections:
         OxideDensity = nc.Fe3O4Density
         
     if Element == "Fe":
@@ -100,11 +100,13 @@ def SolutionOxide(
         ):
     
     km = ld.MassTransfer(Section)
-    if Section == ld.Core:
+    
+    if Section in ld.FuelChannels:
         Diff = [0] * Section.NodeNumber
     else:
         Diff = [i * Diffusion(Section, Element) for i in Section.CorrRate]
-        if Section == ld.Inlet or Section == ld.Outlet:
+        
+        if Section in ld.InletSections or Section in ld.OutletSections:
             if Element == "Ni": 
                 Diff = [0] * Section.NodeNumber
     
@@ -198,7 +200,7 @@ def CorrosionRate(Section):
             Section.DensityH2O[i], Section.NernstConstant[i], "aqueous"
             )
         
-        if Section == ld.Inlet or Section == ld.Outlet:
+        if Section in ld.InletSections or Section in ld.OutletSections:
             w = e.exchangecurrentdensity(
                 Section, nc.ActivationEnergyH2onFe, Section.MetalOxide.ConcentrationH[i], x, Section.DensityH2O[i],
                 Section.PrimaryBulkTemperature[i], "Acceptor"
@@ -240,13 +242,13 @@ def CorrosionRate(Section):
                               + (nc.NiMolarMass * 0.33 / nc.n)
                               + (0.21 * nc.CrMolarMass / 3))] * Section.NodeNumber
         
-    elif Section == ld.Outlet or Section == ld.Inlet:
+    elif Section in ld.OutletSections or Section in ld.InletSections:
         Constant = [nc.FeMolarMass / (nc.n * nc.F)] * Section.NodeNumber
     else:
         Constant = 0
         
     rate = [x * y for x, y in zip(CorrosionCurrent, Constant)]  # [g/cm^2*s] 
-    if Section == ld.Core:
+    if Section in ld.FuelChannels:
         rate = [0] * Section.NodeNumber
     # preset desired FAC rate
     if Section == ld.Outlet:

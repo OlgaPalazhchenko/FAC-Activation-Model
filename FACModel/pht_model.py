@@ -53,27 +53,27 @@ for Section in ld.Sections:
         Interface.CrSat = [i * 1 for i in Section.SolubilityCr]
         
         # Initial RIHT temperature 
-        if Section == ld.Inlet:
+        if Section in ld.InletSections:
             Section.PrimaryBulkTemperature = [SGHX.energy_balance(ld.SGZones[0].NodeNumber - 1, 0)]\
             * Section.NodeNumber
         
-        if Section != ld.Outlet:
+        if Section not in ld.OutletSections:
             if Interface == Section.SolutionOxide:
                 Interface.FeTotal = [i * 0.8 for i in c.iron_solubility(Section)]
         
-        if Section == ld.Core and Interface == Section.MetalOxide:
+        if Section in ld.FuelChannels and Interface == Section.MetalOxide:
             Interface.FeTotal = [0] * Section.NodeNumber
         
-        if Section == ld.Outlet and Interface == Section.MetalOxide:
+        if Section in ld.OutletSections and Interface == Section.MetalOxide:
             # From Cook's thesis - experimental corrosion rate measurements and calcs
             Interface.FeTotal = [0.00000026] * Section.NodeNumber 
         
-        if Section == ld.Inlet or Section == ld.Outlet or Section == ld.Core:
+        if Section not in ld.SGZones:
             Interface.NiTotal = [0] * Section.NodeNumber
         
     Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = e.ECP(Section)
     
-    if Section == ld.Core:
+    if Section in ld.FuelChannels:
         Section.CorrRate = [0] * Section.NodeNumber
     else:
         Section.CorrRate, Section.MetalOxide.MixedPotential = it.CorrosionRate(Section)
@@ -158,14 +158,14 @@ class PHT_FAC():
                         )
                 
             # Inlet header purification system
-            if self.Section1 == ld.Inlet and i == 3:      
+            if self.Section1 in ld.InletSections and i == 3:      
                 for x in BulkConcentrations: 
                     x[i] = 0.59 * x[i - 1]
                 if Activation == "yes":
                     for y in BulkActivities:
                         y[i] = 0.59 * y[i - 1]
             
-            elif self.Section1 == ld.Inlet and i > 3:
+            elif self.Section1 in ld.InletSections and i > 3:
                 if Activation == "yes":
                     self.Section1.BigParticulate = a.particulate(self.Section1, self.Section1.BigParticulate[3])
                     self.Section1.SmallParticulate = a.particulate(self.Section1, self.Section1.SmallParticulate[3])
@@ -183,7 +183,7 @@ class PHT_FAC():
                 z[0] = q[self.Section1.NodeNumber - 1]
            
         # Stellite wear bulk input term for cobalt and chromium    
-        if self.Section1 == ld.Core:
+        if self.Section1 in ld.FuelChannels:
             self.Section2.Bulk.CoTotal[0] = self.Section1.Bulk.CoTotal[self.Section1.NodeNumber - 1] + nc.CobaltWear
             self.Section2.Bulk.CrTotal[0] = (self.Section1.Bulk.CrTotal[self.Section1.NodeNumber - 1]
                                              + nc.CobaltWear * (nc.FractionCr_Stellite / nc.FractionCo_Stellite))
@@ -220,7 +220,7 @@ class PHT_FAC():
                 self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1) 
         
             # RIHT  
-            elif self.Section1 == ld.Inlet:
+            elif self.Section1 in ld.InletSections:
                 self.Section1.PrimaryBulkTemperature = SGHX.energy_balance(21, j)
                 self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1)
             else:

@@ -350,48 +350,63 @@ class Section():  # Defining each primary heat transport section as a class
  
 # Creates the 4 PHTS sections and their methods based on the Sections class template/blueprint
 Inlet = Section(21, 0, 7)
+Inlet_2 = Section(21, 0, 7)
+
 Core = Section(42, 0, 12)
+Core_2 = Section(42, 0, 12)
+
 Outlet = Section(63, 0, 9)
+Outlet_2 = Section(63, 0, 9)
+
 # Steam generator split into 87 zones based on the distinct tube bend arc lengths
 SGZones = [Section(84, 0, 22) for each in range(87)]
+SGZones_2 = [Section(84, 0, 22) for each in range(87)]
 
-# Diameter [cm]
-Inlet.Diameter = [44.3, 50, 106, 5.68, 5.68, 5.68, 5.68] 
-Core.Diameter = [1.3] * Core.NodeNumber 
-Outlet.Diameter = [6.4, 6.4, 6.4, 6.4, 8.9, 8.9, 8.9, 116, 40.8] 
+InletSections = [Inlet, Inlet_2]
+OutletSections = [Outlet, Outlet_2]
+FuelChannels = [Core, Core_2]
 
-# Velocity [cm/s]
-Inlet.Velocity = [1530, 1200, 270, 985, 985, 985, 985]
-Core.Velocity = [883.08, 890.66, 900.3, 910.64, 920.97, 932.68, 945.08, 958.17, 973.32, 989.16, 1073.89, 1250.92]
-Outlet.Velocity = [1619, 1619, 1619, 1619, 857, 857, 857, 306, 1250]
+for InletPiping in InletSections:
+    InletPiping.Diameter = [44.3, 50, 106, 5.68, 5.68, 5.68, 5.68]
+    InletPiping.Velocity = [1530, 1200, 270, 985, 985, 985, 985]
+    InletPiping.Length.magnitude = [477.6, 281.8, 78.6, 350, 350, 350, 350]
+    # Solubility (mol/kg)
+    InletPiping.SolubilityNi = [2.71098E-09] * InletPiping.NodeNumber
+    InletPiping.SolubilityCo = [3.77742E-09] * InletPiping.NodeNumber
+    InletPiping.SolubilityCr = [8.81E-11] * InletPiping.NodeNumber
+    InletPiping.PrimaryBulkTemperature = UnitConverter(
+    InletPiping, "Celsius", "Kelvin", None, None, None, None, None, [266] * InletPiping.NodeNumber
+    )
 
-# Length [cm]
-Inlet.Length.magnitude = [477.6, 281.8, 78.6, 350, 350, 350, 350] 
-Core.Length.magnitude = [49.5] * Core.NodeNumber 
-Outlet.Length.magnitude = [17, 3.5, 139.5, 432, 225.5, 460.3, 460.3, 400, 100]
+for Channel in FuelChannels:
+    Channel.Diameter = [1.3] * Channel.NodeNumber 
+    Channel.Velocity = [883.08, 890.66, 900.3, 910.64, 920.97, 932.68, 945.08, 958.17, 973.32, 989.16, 1073.89, 1250.92]
+    Channel.Length.magnitude = [49.5] * Channel.NodeNumber
+    
+    Channel.SolubilityNi = [
+        2.71098E-09, 2.66196E-09, 2.60372E-09, 2.54535E-09, 2.29445E-09, 2.2137E-09, 1.91294E-09, 1.82788E-09, 1.54081E-09, 
+        1.54384E-09, 1.54584E-09, 1.54584E-09
+        ]
+    Channel.SolubilityCo = [
+        3.77742E-09, 3.51525E-09, 3.20371E-09, 2.8915E-09, 2.60041E-09, 2.3011E-09, 2.08369E-09, 1.86963E-09, 1.67578E-09, 
+        1.53187E-09, 1.43654E-09, 1.43654E-09
+        ]
+    Channel.SolubilityCr = [
+        8.81E-11, 9.61E-11, 1.01E-10, 9.40E-11, 8.69E-11, 7.98E-11, 7.28E-11, 6.57E-11, 5.86E-11, 5.16E-11, 4.69E-11, 
+        4.69E-11
+        ]
 
-# Solubility (mol/kg)
-Inlet.SolubilityNi = [2.71098E-09] * Inlet.NodeNumber
-Inlet.SolubilityCo = [3.77742E-09] * Inlet.NodeNumber
-Inlet.SolubilityCr = [8.81E-11] * Inlet.NodeNumber
+for OutletPiping in OutletSections: 
+    OutletPiping.Diameter = [6.4, 6.4, 6.4, 6.4, 8.9, 8.9, 8.9, 116, 40.8] 
+    OutletPiping.Velocity = [1619, 1619, 1619, 1619, 857, 857, 857, 306, 1250]
+    OutletPiping.Length.magnitude = [17, 3.5, 139.5, 432, 225.5, 460.3, 460.3, 400, 100]
+    OutletPiping.SolubilityNi = [1.54584E-09] * OutletPiping.NodeNumber
+    OutletPiping.SolubilityCo = [1.44E-09] * OutletPiping.NodeNumber
+    OutletPiping.SolubilityCr = [4.84E-11] * OutletPiping.NodeNumber
+    OutletPiping.PrimaryBulkTemperature = UnitConverter(
+    OutletPiping, "Celsius", "Kelvin", None, None, None, None, None, [310] * OutletPiping.NodeNumber
+    )
 
-Core.SolubilityNi = [
-    2.71098E-09, 2.66196E-09, 2.60372E-09, 2.54535E-09, 2.29445E-09, 2.2137E-09, 1.91294E-09, 1.82788E-09, 1.54081E-09, 
-    1.54384E-09, 1.54584E-09, 1.54584E-09
-    ]
-Core.SolubilityCo = [
-    3.77742E-09, 3.51525E-09, 3.20371E-09, 2.8915E-09, 2.60041E-09, 2.3011E-09, 2.08369E-09, 1.86963E-09, 1.67578E-09, 
-    1.53187E-09, 1.43654E-09, 1.43654E-09
-    ]
-Core.SolubilityCr = [
-    8.81E-11, 9.61E-11, 1.01E-10, 9.40E-11, 8.69E-11, 7.98E-11, 7.28E-11, 6.57E-11, 5.86E-11, 5.16E-11, 4.69E-11, 
-    4.69E-11
-    ]
-
-Outlet.SolubilityNi = [1.54584E-09] * Outlet.NodeNumber
-Outlet.SolubilityCo = [1.44E-09] * Outlet.NodeNumber
-Outlet.SolubilityCr = [4.84E-11] * Outlet.NodeNumber
- 
 u_bend = []
 straight_u_bend_section = [9.5] * 82 + [7.95] + [6.14] + [3.94] + [1.4] + [0] # in.
 straight_u_bend_section = [i * 2.54 for i in straight_u_bend_section] # in. to cm
@@ -419,7 +434,6 @@ number_tubes = [8, 11, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 26, 28, 28, 2
                 48, 47, 48, 43, 48, 48, 49, 50, 49, 50, 51, 50, 51, 50, 51, 50, 51, 52, 50, 46, 51, 50, 53, 52, 51, 52,
                 53, 52, 53, 52, 51, 50, 50, 48, 47]
 
-# not including last appended "SteamGenerator" zone
 for Zone, length, i in zip(SGZones, u_bend_total, number_tubes):
     # u-bend split into 4 nodes
     Zone.Length.magnitude = hot_leg_length + [length / 4] * 4 + cold_leg_length
@@ -459,20 +473,9 @@ for Zone, length, i in zip(SGZones, u_bend_total, number_tubes):
     + ["preheater start"] \
     + ["preheater"] * 3
 
-# Temperature [Celsius]
-Inlet.PrimaryBulkTemperature = UnitConverter(
-    Inlet, "Celsius", "Kelvin", None, None, None, None, None, [266] * Inlet.NodeNumber
-    )
-Core.PrimaryBulkTemperature = UnitConverter(
-    Inlet, "Celsius", "Kelvin", None, None, None, None, None, [266.55, 270.48, 275.15, 279.83, 284.51, 289.19, 293.87, 
-    298.54, 303.22, 307.9, 311, 311]
-    )
-Outlet.PrimaryBulkTemperature = UnitConverter(
-    Inlet, "Celsius", "Kelvin", None, None, None, None, None, [310] * Outlet.NodeNumber
-    )
 
 # Combines PHT sections and SG Zones (in the event each zone will be tracked for oxide growth/heat transfer)
-Sections = [Inlet, Core, Outlet] + SGZones
+Sections = FuelChannels + InletSections + OutletSections + SGZones + SGZones_2
 
 for Section in Sections:
     # Particulate #[mg/kg] (ppm)
@@ -488,12 +491,12 @@ for Section in Sections:
         Section.TubeThickness = 0.113
         Section.OuterDiameter = [x + 2 * Section.TubeThickness for x in Section.Diameter]
 
-    if Section == Core:
+    if Section in FuelChannels:
         Section.OuterFe3O4Thickness = [0] * Section.NodeNumber
         Section.NiThickness = [0] * Section.NodeNumber
         Section.OuterOxThickness = [i * 1 for i in Section.OuterFe3O4Thickness]
 
-    if Section == Outlet or Inlet:
+    if Section in OutletSections or Section in InletSections:
         Section.OuterFe3O4Thickness = [2.5E-4] * Section.NodeNumber
         Section.NiThickness = [0] * Section.NodeNumber
         Section.OuterOxThickness = [i * 1 for i in Section.OuterFe3O4Thickness]
@@ -503,7 +506,6 @@ for Section in Sections:
     Section.CoThickness = [0] * Section.NodeNumber
     Section.OxThickness = [x + y for x, y in zip(Section.InnerOxThickness, Section.OuterOxThickness)]
 
-    # Distance
     Section.Distance = np.cumsum(Section.Length.magnitude)
 
 

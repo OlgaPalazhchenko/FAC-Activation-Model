@@ -95,7 +95,7 @@ def eta(Section):
           
     CRYST_i = [x / (y * z) for x, y, z in zip(ConvertedSaturation, [0.35] * Section.NodeNumber, MassInnerOxide)]
     
-    if Section == ld.Inlet or Section == ld.Outlet:
+    if Section in ld.InletSections or Section in ld.OutletSections:
         CRYST_o = CRYST_i
          
     ActivationCoefficient = [(1 / (x + y)) + 1 / z for x, y, z in zip(DIFF_i, CRYST_i, CRYST_o)]  # [cm/s]
@@ -104,7 +104,7 @@ def eta(Section):
 
 
 def particulate(Section, BulkCrud_0):
-    if Section == ld.Core:  # Section based, not node-specific 
+    if Section in ld.FuelChannels:  # Section based, not node-specific 
         # Same deposition constant down length of core (assumes no temperature dependence) 
         DepositionConstant = nc.INCORE_DEPOSITION 
     else:  # isothermal (with exception of SG)
@@ -208,14 +208,13 @@ def deposition(Section, j):
     # Can also be manually set to desired steady-state value, e.g., ~1 ppb    
     TotalParticulate = [x + y for x, y in zip(Section.BigParticulate, Section.SmallParticulate)] # [g / kg_coolant]
     
-    incr = nc.TimeIncrement / 3600
     Time_sec = j * 3600 # s
     DepositThickness = []
 
     # 10th node in-core is where coolant temperature > saturation = boiling 
     # Enthalpy and heat flux vary in the boiling region  
     for i in range(Section.NodeNumber):
-        if Section == ld.Core and i >= 10:
+        if Section in ld.FuelChannels and i >= 10:
             if i == 10:
                 HeatFlux = 0.0762  # [kJ/cm^2 s]
                 Enthalpy = 1415.8  # [kJ/kg]
@@ -233,14 +232,9 @@ def deposition(Section, j):
             # [kg/ cm^2 s] * [g/kg_coolant] / [s^-1] = [g/cm^2]
             PreExponentiaDepositionTerm = BoilingDeposition * TotalParticulate[i] / PARTICULATE_DISSOLUTION # [g/cm^2]
         
-    
-        # all in-core nodes set to 0 deposition (fuel bundle average residence time of ~1 year) 
-        elif Section == ld.Core and (j + 1) % (7000 / incr) == 0:
-            x = 0
         else: # all other PHT sections or in-core, but in a non-boiling region 
-            
             # dW_deposit/dt = DepositionConstant*C_particulate (total) - PARTICULATE_DISSOLUTION*W_deposit
-            if Section == ld.Core:
+            if Section in ld.FuelChannels:
                 # [kg_coolant/m^2 s]*[1m^2/(100cm^2)] = [kg/cm^2 s]
                 DepositionConstant = nc.INCORE_DEPOSITION / (100**2)
             else:
@@ -248,7 +242,12 @@ def deposition(Section, j):
             # [kg_coolant/cm^2 s]*[g/kg_coolant]/[s^-1] = [g/cm^2]
             PreExponentiaDepositionTerm = DepositionConstant * TotalParticulate[i] / PARTICULATE_DISSOLUTION
         
-        x = PreExponentiaDepositionTerm * (1 - np.exp(-PARTICULATE_DISSOLUTION * Time_sec ))
+        # all in-core nodes set to 0 deposition (fuel bundle average residence time of ~1 year) 
+        if Section in ld.FuelChannels and (j + 1) % 7000 == 0:
+            x = 0
+        else:
+            x = PreExponentiaDepositionTerm * (1 - np.exp(-PARTICULATE_DISSOLUTION * Time_sec ))
+        
         DepositThickness.append(x) # [g/cm^2]
     
     return DepositThickness
@@ -309,22 +308,18 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
         None
     
     Lambda_sec = Lambda / 3600 # [s ^-1]
-    if Section == ld.Core:  
+    
+    if Section in ld.FuelChannels:  
         ActiveCoreDeposit = core_active_deposit(
             Section, j, Element, ParentAbundance, Lambda_sec, CrossSection, MolarMass
             )
         # variation with time and distance
         ExponentialTerm = np.exp(-Lambda_sec * Section.Distance[i] / Section.Velocity[i])
-#         ExponentialTerm = [np.exp(-Lambda_sec * x / y) for x, y in zip(Section.Distance, Section.Velocity)]
         
         PreExponentialReleaseTerm = 4 * PARTICULATE_DISSOLUTION * ActiveCoreDeposit[i] / (Lambda_sec * Section.Diameter[i])
-#         PreExponentialReleaseTerm = [
-#             4 * PARTICULATE_DISSOLUTION * x / (Lambda_sec * y) for x, y in zip (ActiveCoreDeposit, Section.Diameter)
-#             ]
+
         BulkActivity = BulkConcentration_o * ExponentialTerm + PreExponentialReleaseTerm * (1 - ExponentialTerm)
-#         BulkActivity = [BulkConcentration_o * x + y * (1 - x) for x, y in
-#                         zip(ExponentialTerm, PreExponentialReleaseTerm)]
-    
+        
     # out-of-core activity                
     else:
         EtaTerm = eta(Section)
@@ -332,14 +327,9 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
             (-Lambda_sec * Section.Distance[i] / Section.Velocity[i])
                                  - (4 * Section.Distance[i] * EtaTerm[i] / (Section.Diameter[i] * Section.Velocity[i]))
                                  )
-#         ExponentialTerm = [np.exp((-Lambda_sec * x / y) - (4 * x * z / (q * y))) for x, y, z, q in
-#                            zip(Section.Distance, Section.Velocity, EtaTerm, Section.Diameter)]
-        
 
         # Distance is not for full PHT, just from start of current PHT section (decay from BulkConcentration_o
         # of that section's first node)
         BulkActivity = BulkConcentration_o * ExponentialTerm
-#         BulkActivity = [BulkConcentration_o * x for x in ExponentialTerm]
     
     return BulkActivity # [Bq/cm^2]
-

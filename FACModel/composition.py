@@ -187,12 +187,13 @@ def cobalt_composition(Section):
         # x + y = 0.0015;  x/y = 2/3 --> y =(3/2)x
         # 3/2x + x = 0.00015 --> 5/2x = 0.00015
 
-    elif Section == ld.Inlet or Section == ld.Outlet:
+    elif Section in ld.InletSections or Section in ld.OutletSections:
         CompositionCr_Alloy = nc.FractionCr_CS
         MolesCobalt = (nc.FractionCo_CS / (5 / 2)) / nc.CoMolarMass
 
     MolesChromium = CompositionCr_Alloy / nc.CrMolarMass
     return 2 / (MolesChromium / MolesCobalt)
+
 
 def fraction_chromite(Section):
     if Section in ld.SGZones:
@@ -202,7 +203,7 @@ def fraction_chromite(Section):
         # preference for Co chromite retention
         # x + y = 0.00006;  x/y = 2/3 --> y =(3/2)x
         # 3/2x + x = 0.00006 --> 5/2x = 0.00006
-    elif Section == ld.Inlet or Section == ld.Outlet:
+    elif Section in ld.InletSections or Section in ld.OutletSections:
         AlloyDensity = nc.FeDensity
         CompositionCr_Alloy = nc.FractionCr_CS
         # MolesCobalt = (nc.FractionCo_CS / (5 / 2)) / nc.CoMolarMass
@@ -212,7 +213,7 @@ def fraction_chromite(Section):
         # 2. all Cr is retained inside the inner oxide layer as FeCr2O4 (for both CS and Alloy-800)
         # 3. 1 g basis of metal lost
 
-    if Section != ld.Core:
+    if Section not in ld.FuelChannels:
         VolumeAlloyCorroded = 1 / AlloyDensity
         MolesChromium = CompositionCr_Alloy / nc.CrMolarMass
         MolesChromite = MolesChromium / 2  # 1:2 stoichiometry in FeCr2O4 b/w compound and Cr
@@ -238,13 +239,13 @@ def fraction_metal_inner_oxide(Section, Element):
         # assumed that amount based on lattice energies retained in inner layer, while rest diffuses
         FractionCoSecondOxide = 0
 
-    elif Section == ld.Inlet or Section == ld.Outlet:  # Second oxide = Fe3O4
+    elif Section in ld.InletSections or Section in ld.OutletSections:  # Second oxide = Fe3O4
         FractionFeSecondOxide = 3 * nc.FeMolarMass / (3 * nc.FeMolarMass + 4 * nc.OMolarMass)
         FractionCrSecondOxide = 0
         FractionCoSecondOxide = 0
         FractionNiSecondOxide = 0
 
-    if Section != ld.Core:
+    if Section not in ld.FuelChannels:
         FractionSecondOxide = 1 - fraction_chromite(Section)
         FractionFeChromite = (1 - cobalt_composition(Section)) * nc.FeMolarMass / (
             cobalt_composition(Section) * nc.CoMolarMass
@@ -252,14 +253,17 @@ def fraction_metal_inner_oxide(Section, Element):
             + (1 - cobalt_composition(Section)) * nc.FeMolarMass
             )
         
-        FractionCrChromite = 2 * nc.CrMolarMass / (cobalt_composition(Section) * nc.CoMolarMass
-                                                   + 2 * nc.CrMolarMass + 4 * nc.OMolarMass
-                                                   + (1 - cobalt_composition(Section)) * nc.FeMolarMass)
+        FractionCrChromite = 2 * nc.CrMolarMass / (
+            cobalt_composition(Section) * nc.CoMolarMass
+            + 2 * nc.CrMolarMass + 4 * nc.OMolarMass
+            + (1 - cobalt_composition(Section)) * nc.FeMolarMass
+            )
         
         FractionCoChromite = cobalt_composition(Section) * nc.CoMolarMass / (
             cobalt_composition(Section) * nc.CoMolarMass
             + 2 * nc.CrMolarMass + 4 * nc.OMolarMass
-            + (1 - cobalt_composition(Section)) * nc.FeMolarMass)
+            + (1 - cobalt_composition(Section)) * nc.FeMolarMass
+            )
         FractionNiChromite = 0 
 
         if Element == "Fe":

@@ -75,7 +75,7 @@ def ElectrochemicalAdjustment(
         AdjustedSaturation.append(x)    
 
     
-    if Section != ld.Core:
+    if Section not in ld.FuelChannels:
         MOConcentrationH = SOConcentrationH  
         # [x*np.exp(-(y-z)*nc.F/(nc.R*t)) 
         # for x,y,z,t in zip(SOConcentrationH, MOMixedPotential, SOMixedPotential, Section.PrimaryBulkTemperature)]
