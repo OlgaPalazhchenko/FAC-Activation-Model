@@ -333,3 +333,7 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
         BulkActivity = BulkConcentration_o * ExponentialTerm
     
     return BulkActivity # [Bq/cm^2]
+
+# The flow through the purification system is provided by the HT pumps.  It is taken from one inlet header on each 
+# loop of the HT system and is passed through one side of a heat interchanger, a cooler, a filter and an ion exchange
+# column before being returned to the inlet of an HT pump through the other side of the interchanger.

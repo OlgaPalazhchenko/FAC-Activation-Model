@@ -287,12 +287,12 @@ def wall_temperature(
             Initial_SHTSFouling = 0.0005 # [g/cm2] same as for PHT (~ 1 um/a)
             
             if 1983 <= calendar_year < 1987:
-                SHTSFouling = Initial_SHTSFouling + (calendar_year - 1983) * 0.0016
+                SHTSFouling = Initial_SHTSFouling + (calendar_year - 1983) * 0.0024
                 # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
             else:
                 # CPP installation (late 1986) reduces secondary side crud by 50% 
                 # (assumed proportional red. in deposit formation)
-                SHTSFouling = Initial_SHTSFouling + (calendar_year - 1983) * 0.0008
+                SHTSFouling = Initial_SHTSFouling + (calendar_year - 1983) * 0.0012
                 
             R_F_secondary.magnitude = fouling_resistance(
                 [0]*Section.NodeNumber, [SHTSFouling]*Section.NodeNumber, SecondarySidePressure

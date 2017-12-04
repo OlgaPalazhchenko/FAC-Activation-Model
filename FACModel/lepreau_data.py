@@ -235,7 +235,7 @@ def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, Ox
     # ([g/cm^2 s] / [g/cm^3] *[10000 um/cm]) = ([cm/s] * [3600 s/h] * [24 h/d] * [365 d/yr]) = [um/yr]
         if Section == Inlet or Section == Outlet:
             return [i * ((1 / nc.FeDensity) * 3600 * 24 * 365 * 10000) for i in Rate]
-        elif Section in SGZones:
+        elif Section in SGZones or Section in SGZones_2:
             return [x * y for x, y in zip(Rate, [(1 / nc.Alloy800Density) * 3600 * 24 * 365 * 10000] 
                                           * Section.NodeNumber)]
         else:
@@ -395,6 +395,10 @@ for Channel in FuelChannels:
         8.81E-11, 9.61E-11, 1.01E-10, 9.40E-11, 8.69E-11, 7.98E-11, 7.28E-11, 6.57E-11, 5.86E-11, 5.16E-11, 4.69E-11, 
         4.69E-11
         ]
+    Channel.PrimaryBulkTemperature = UnitConverter(
+        Inlet, "Celsius", "Kelvin", None, None, None, None, None, [266.55, 270.48, 275.15, 279.83, 284.51, 289.19,
+                                                                   293.87, 298.54, 303.22, 307.9, 311, 311]
+                                                   )
 
 for OutletPiping in OutletSections: 
     OutletPiping.Diameter = [6.4, 6.4, 6.4, 6.4, 8.9, 8.9, 8.9, 116, 40.8] 
@@ -475,7 +479,7 @@ for Zone, length, i in zip(SGZones, u_bend_total, number_tubes):
 
 
 # Combines PHT sections and SG Zones (in the event each zone will be tracked for oxide growth/heat transfer)
-Sections = FuelChannels + InletSections + OutletSections + SGZones + SGZones_2
+Sections = FuelChannels + InletSections + OutletSections + SGZones #+ SGZones_2
 
 for Section in Sections:
     # Particulate #[mg/kg] (ppm)
@@ -483,7 +487,7 @@ for Section in Sections:
     Section.BigParticulate = [0] * Section.NodeNumber
 
     # Oxide thicknesses [g/cm^2]
-    if Section in SGZones:
+    if Section in SGZones or Section in SGZones_2:
         Section.OuterFe3O4Thickness = [1.3E-4] * Section.NodeNumber
         Section.NiThickness = [1.3E-4] * Section.NodeNumber
         Section.OuterOxThickness = [1 * x + 1 * y for x, y in zip(Section.OuterFe3O4Thickness, Section.NiThickness)]
