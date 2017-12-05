@@ -104,7 +104,7 @@ def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
 
         Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = e.ECP(Section)
 
-        if Section == ld.Core:
+        if Section in ld.FuelChannels:
             Section.CorrRate = [0] * Section.NodeNumber
             Section.MetalOxide.FeTotalFe = [0] * Section.NodeNumber
             Section.MetalOxide.MixedPotential = [0] * Section.NodeNumber
@@ -122,7 +122,7 @@ def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
                 Section.CorrRate
                 )
 
-        elif Section == ld.Inlet or Section == ld.Outlet:
+        elif Section in ld.InletSections or Section in ld.OutletSections:
             Section.MetalOxide.NiTotal = [0] * Section.NodeNumber
 #             MetalOxideCo = it.MetalOxideInterfaceConcentration(
 #             Section, "Co", SolutionOxideCoTotal, InnerOxThickness, OuterOxThickness, CorrRate
@@ -164,7 +164,7 @@ def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
             # Magnetite (outer and inner)
             if RK4_OuterFe3O4Thickness[i] > 0:
                 # With outer layer present, dFe3O4_i/dt only depends on corrosion rate/diffusion
-                if Section == ld.Core:
+                if Section in ld.FuelChannels:
                     q = 0
                 else:
                     # While outer layer present, inner Fe3O4 not affected by oxide kinetics (only diffusion)
@@ -176,14 +176,14 @@ def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
                     x = Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
             else:  # OuterFe3O4Thickness[i] ==0
                 if FeTotal[i] >= FeSat[i]:
-                    if Section == ld.Core:
+                    if Section in ld.FuelChannels:
                         q = 0
                     else:
                         q = Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide 
                     x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
                 else:  # if FeTotal[i] < FeSat[i]:
                     x = 0  # nothing to dissolve
-                    if Section == ld.Core:
+                    if Section in ld.FuelChannels:
                         q = 0
                     else:
                         q = Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide
@@ -469,7 +469,7 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
                 ElapsedTime[i] = ElapsedTime[i] + 1 * (nc.TimeIncrement / 3600)
 
     for i in range(Section.NodeNumber):
-        if Section != ld.Core:
+        if Section not in ld.FuelChannels:
             if Section.InnerIronOxThickness[i] <= 8e-6:
                 Section.InnerIronOxThickness[i] = 0.00025  # Resets to original thickness
 
