@@ -188,6 +188,8 @@ def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
                     if Section in ld.FuelChannels:
                         q = 0
                     else:
+                        if Section in ld.SGZones: print(RK4_OuterFe3O4Thickness[i],i)
+                        
                         q = ((Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide)
                              + Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i]))
 
