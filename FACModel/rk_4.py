@@ -174,20 +174,22 @@ def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
                     x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
                 else:  # if FeTotal[i] < FeSat[i]:
                     x = Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
+            
             else:  # OuterFe3O4Thickness[i] ==0
                 if FeTotal[i] >= FeSat[i]:
                     if Section in ld.FuelChannels:
                         q = 0
                     else:
                         q = Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide 
+                    
                     x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
                 else:  # if FeTotal[i] < FeSat[i]:
                     x = 0  # nothing to dissolve
                     if Section in ld.FuelChannels:
                         q = 0
                     else:
-                        q = Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide
-                        + Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
+                        q = ((Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide)
+                             + Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i]))
 
             GrowthOuterMagnetite.append(x)
             GrowthInnerIronOxide.append(q)
@@ -409,8 +411,8 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
             Section.Particle.append(x)
             SpallTime.append(y)
 
-            if Section == ld.Outlet:  # Outlet header spalling corrector 
-                if SpallTime[i] > 4000:
+            if Section in ld.OutletSections:  # Outlet header spalling corrector 
+                if SpallTime[i] >= 4000:
                     SpallTime[i] = 2000 
 
             ElapsedTime = [0] * Section.NodeNumber  # No time has elapsed yet at first time step for all nodes
@@ -458,9 +460,9 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
                     Section.OuterFe3O4Thickness[i], Section.Velocity[i]
                     )
 
-                if Section == ld.Outlet:  # Outlet header spalling corrector
+                if Section in ld.OutletSections:  # Outlet header spalling corrector
                     if SpallTime[i] >= 4000:
-                        SpallTime[i] = 3000
+                        SpallTime[i] = 2000
                 ElapsedTime[i] = 0
                 # once a particle has "spalled" off, elapsed time since spalling resets to zero and counter
                 # restarts at that node

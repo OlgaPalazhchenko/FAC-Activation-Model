@@ -23,8 +23,8 @@ TotalLoading = []
 RIHT = []
 StreamOutletTemperatures = []
 
-SimulationYears = 9  # years
-SimulationHours = SimulationYears * 8760
+SimulationYears = 2  # years
+SimulationHours = SimulationYears * 1000
 
 import time
 start_time = time.time()
@@ -63,7 +63,7 @@ for j in range(SimulationHours):
         In_2 = pht_model.PHT_FAC(ld.Inlet_2, ld.Core, RealTimeHeatTransfer, Activation, j)
     
     if OutputLogging == "yes":
-        if j % 8759 == 0:  # yearly
+        if j % 500 == 0:  # yearly
 #             Loading = [x + y for x, y in zip(Zone.OuterOxThickness, Zone.InnerOxThickness)]
 #             ConvertedLoading = ld.UnitConverter(
 #                 Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Loading, None, None, None

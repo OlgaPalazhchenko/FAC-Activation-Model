@@ -91,8 +91,8 @@ DissolutionActivationEnergyH2onFe3O4 = 285989.8292
 PrecipitationActivationEnergyFe3O4 = 179876.4692
 PrecipitationActivationEnergyH2onFe3O4 = 281688.6659
 
-ActivationEnergyAlloy800 = 293241.9186
-ActivationEnergyH2onAlloy800 = 282290.1404
+ActivationEnergyAlloy800 = 293629.8906
+ActivationEnergyH2onAlloy800 = 282678.1124
 
 SimulationDuration = 10  # Total runtime [h]
 TimeIncrement = 3600  # s  Based on desired time step (3600 s/h for 1h time step)
