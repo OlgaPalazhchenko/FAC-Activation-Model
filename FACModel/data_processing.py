@@ -19,11 +19,12 @@ OutputLogging = "yes"
 FullLoop = "no"
 
 AverageColdLegLoading = []
+TotalLoading = []
 RIHT = []
 StreamOutletTemperatures = []
 
 SimulationYears = 9  # years
-SimulationHours = SimulationYears * 10
+SimulationHours = SimulationYears * 8760
 
 import time
 start_time = time.time()
@@ -31,7 +32,7 @@ start_time = time.time()
 for j in range(SimulationHours):
     In = pht_model.PHT_FAC(ld.Inlet, ld.Core, RealTimeHeatTransfer, Activation, j)
     Co = pht_model.PHT_FAC(ld.Core, ld.Outlet, RealTimeHeatTransfer, Activation, j)
-    Ou = pht_model.PHT_FAC(ld.Outlet, ld.SGZones[58], RealTimeHeatTransfer, Activation, j)
+    Ou = pht_model.PHT_FAC(ld.Outlet, ld.SGZones[12], RealTimeHeatTransfer, Activation, j)
     
     if FullLoop == "yes":
         InletInput = ld.Inlet_2
@@ -40,7 +41,7 @@ for j in range(SimulationHours):
     
     if RealTimeHeatTransfer == "no":
         # SGZones[58] = tube with typical u-bend arc length --> 1.5 m
-        Sg = pht_model.PHT_FAC(ld.SGZones[58], InletInput, RealTimeHeatTransfer, Activation, j)
+        Sg = pht_model.PHT_FAC(ld.SGZones[12], InletInput, RealTimeHeatTransfer, Activation, j)
     
             
     else:
@@ -48,38 +49,37 @@ for j in range(SimulationHours):
         BulkOutletOutput = [
                 Ou.Section1.Bulk.FeTotal, Ou.Section1.Bulk.NiTotal, Ou.Section1.Bulk.CoTotal, Ou.Section1.Bulk.CrTotal
                 ]
-        SgZones = []
-        for Zone in ld.SGZones:
+        SteamGeneratorTubes = []
+        for Zone in [ld.SGZones[1], ld.SGZones[30], ld.SGZones[58], ld.SGZones[85]]:
             BulkSGInput = [Zone.Bulk.FeTotal, Zone.Bulk.NiTotal, Zone.Bulk.CoTotal, Zone.Bulk.CrTotal]
             for x, y in zip(BulkSGInput, BulkOutletOutput):
                 x[0] = y[Ou.Section1.NodeNumber - 1]
             
             # Does this actually work? 
-            x = pht_model.PHT_FAC(Zone, ld.Inlet, j)   
-            SgZones.append(x)
+            Sg_tube = pht_model.PHT_FAC(Zone, ld.Inlet, RealTimeHeatTransfer, Activation, j)   
+            SteamGeneratorTubes.append(Sg_tube)
             
     if FullLoop == "yes":
         In_2 = pht_model.PHT_FAC(ld.Inlet_2, ld.Core, RealTimeHeatTransfer, Activation, j)
     
     if OutputLogging == "yes":
         if j % 8759 == 0:  # yearly
-             
-            TotalLoadingSG = [x + y for x, y in zip(Sg.Section1.OuterOxThickness, Sg.Section1.InnerOxThickness)]
-            ConvertedLoading = ld.UnitConverter(
-                Sg.Section1, "Grams per Cm Squared", "Grams per M Squared", None, None, TotalLoadingSG, None, None, None
-                )
-            AverageColdLeg = sum(ConvertedLoading[11:len(ConvertedLoading)]) \
-                / (len(ConvertedLoading) - 11)
+#             Loading = [x + y for x, y in zip(Zone.OuterOxThickness, Zone.InnerOxThickness)]
+#             ConvertedLoading = ld.UnitConverter(
+#                 Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Loading, None, None, None
+#                 )
+#             AverageColdLeg = sum(ConvertedLoading[11:len(ConvertedLoading)]) \
+#                 / (len(ConvertedLoading) - 11)
       
             T_RIH = (SGHX.energy_balance(21, j)) - 273.15
             
-            OutletTemperatures = []
-            for Zone in ld.SGZones:
-                Temperature = Zone.PrimaryBulkTemperature[Zone.NodeNumber - 1] - 273.15
-                OutletTemperatures.append(Temperature)
-            
-            StreamOutletTemperatures.append(OutletTemperatures)
-            AverageColdLegLoading.append(AverageColdLeg)
+#             OutletTemperatures = []
+#             for Zone in ld.SGZones:
+#                 Temperature = Zone.PrimaryBulkTemperature[Zone.NodeNumber - 1] - 273.15
+#                 OutletTemperatures.append(Temperature)
+                                
+#             StreamOutletTemperatures.append(OutletTemperatures)
+#             AverageColdLegLoading.append(AverageColdLeg)
             RIHT.append(T_RIH)
     else:
         None
@@ -89,8 +89,14 @@ FACRate = sum(
     None, None, None, None)
     ) / (Ou.Section1.NodeNumber)
 
-RIHTData = [AverageColdLegLoading, RIHT, Sg.Section1.InnerOxThickness, Sg.Section1.OuterOxThickness]
-RIHTDataLabels = ['Average cold leg loading', 'RIHT', 'Inner Oxide Layer (g/cm^2)', 'Outer Oxide Layer (g/cm^2)']
+if RealTimeHeatTransfer == "yes":
+    RIHTData = [
+        RIHT, SteamGeneratorTubes[2].Section1.InnerOxThickness, SteamGeneratorTubes[2].Section1.OuterOxThickness
+        ]
+else:
+    RIHTData = [RIHT, Sg.Section1.InnerOxThickness, Sg.Section1.OuterOxThickness]
+    
+RIHTDataLabels = ['RIHT', 'Inner Oxide Layer (g/cm^2)', 'Outer Oxide Layer (g/cm^2)']
 csvfile = "RIHTOutput.csv"
 with open(csvfile, "w") as output:
     writer = csv.writer(output, lineterminator='\n')
@@ -99,7 +105,11 @@ with open(csvfile, "w") as output:
         writer.writerow(i)
     
     writer.writerow(['Outlet Streams'])
-    writer.writerows(StreamOutletTemperatures)
+#     writer.writerows(StreamOutletTemperatures)
+    
+#     writer.writerow(['Oxide Loading [g/m^2]'])
+#     writer.writerow(ld.SGZones[1].OuterOxThickness)
+#     writer.writerow(ld.SGZones[85].OuterOxThickness)
 
     # oxide profile for all sections
     # if RealTimeHeatTransfer == "yes":
@@ -156,9 +166,14 @@ def property_log10(Element, Interface):
         return None
 
 
-def oxide_loading(Layer):
+def oxide_loading(Layer, RealTimeHeatTransfer):
     Oxide = []
-    for Section in [In.Section1, Co.Section1, Ou.Section1, Sg.Section1]:
+    if RealTimeHeatTransfer == "yes":
+        SteamGenerator = SteamGeneratorTubes[2].Section1
+    else:
+        SteamGenerator = Sg.Section1
+        
+    for Section in [In.Section1, Co.Section1, Ou.Section1, SteamGenerator]:
         if Layer == "Inner":
             x = Section.InnerOxThickness
         elif Layer == "Outer":
@@ -180,7 +195,7 @@ def oxide_loading(Layer):
 
 def plot_output():
     LoopDistance = []
-    for Section in [ld.Inlet, ld.Core, ld.Outlet, ld.SGZones[58]]:
+    for Section in [ld.Inlet, ld.Core, ld.Outlet, ld.SGZones[12]]:
         x = Section.Length.magnitude
         LoopDistance.append(x)
     LoopDistance = [j for i in LoopDistance for j in i]
@@ -224,15 +239,27 @@ def plot_output():
     
     fig2, ax1 = plt.subplots()
     # ax1 = fig2.add_subplot(221)
-    ax1.plot(TotalLoopDistance, oxide_loading("Inner"), linestyle=None, marker='o', color='0.50', label='Inner Oxide')
-    ax1.plot(TotalLoopDistance, oxide_loading("Outer"), linestyle=None, marker='o', color='k', label='Outer Oxide')
+    ax1.plot(
+        TotalLoopDistance, oxide_loading("Inner", RealTimeHeatTransfer), linestyle=None, marker='o', color='0.50',
+        label='Inner Oxide'
+        )
+    ax1.plot(
+        TotalLoopDistance, oxide_loading("Outer", RealTimeHeatTransfer), linestyle=None, marker='o', color='k',
+        label='Outer Oxide'
+        )
     # ax1.axis([51,69, 0, 30])
     ax1.set_xlabel('Distance (m)')
     ax1.set_ylabel('Oxide Layer Loadings (${g/m^2}$)')
                   
     ax2 = ax1.twinx()
-    ax2.plot(TotalLoopDistance, oxide_loading("Nickel"), linestyle=None, marker='o', color='c', label='Nickel')
-    ax2.plot(TotalLoopDistance, oxide_loading("Cobalt"), linestyle=None, marker='o', color='m', label='Cobalt')
+    ax2.plot(
+        TotalLoopDistance, oxide_loading("Nickel", RealTimeHeatTransfer), linestyle=None, marker='o', color='c',
+        label='Nickel'
+        )
+    ax2.plot(
+        TotalLoopDistance, oxide_loading("Cobalt", RealTimeHeatTransfer), linestyle=None, marker='o', color='m',
+        label='Cobalt'
+        )
     ax2.set_ylabel('Ni, Co, and Cr Loadings (${g/m^2}$)', rotation=270, labelpad=20)
     lines, labels = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()

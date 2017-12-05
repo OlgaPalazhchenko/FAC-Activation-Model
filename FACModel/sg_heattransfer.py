@@ -440,7 +440,7 @@ def energy_balance(SteamGeneratorOutputNode, j):
     Balance = []
     for Zone in ld.SGZones:
         Zone.PrimaryBulkTemperature = temperature_profile(
-            Zone, ld.SGZones[58].InnerOxThickness, ld.SGZones[58].OuterOxThickness, RemainingPHTMassFlow,
+            Zone, ld.SGZones[12].InnerOxThickness, ld.SGZones[12].OuterOxThickness, RemainingPHTMassFlow,
             SecondarySidePressure, calendar_year)
         
         x = (Zone.TubeNumber / nc.TotalSGTubeNumber) * RemainingPHTMassFlow \
