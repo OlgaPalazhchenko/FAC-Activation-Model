@@ -217,9 +217,9 @@ class PHT_FAC():
                 self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1) 
         
             # RIHT  
-            elif self.Section1 in ld.InletSections:
+#             elif self.Section1 in ld.InletSections:
                 # Temperature profile for each section calculated within energy balance
-                self.Section1.PrimaryBulkTemperature = [SGHX.energy_balance(21, j)] * self.Section1.NodeNumber
+#                 self.Section1.PrimaryBulkTemperature = [SGHX.energy_balance(21, j)] * self.Section1.NodeNumber
 #                 self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1)
 #             else:
 #                 None

@@ -67,6 +67,11 @@ def spatial(Solution, Bulk, km, Diameter, Velocity, Length):
     return BulkConccentration 
 
 
+def constant_oxide_growth():
+    # if the corrosion rate is manually set, no need for RK4 method to solve for oxides (no longer ODE)
+    None 
+
+
 def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
     RK4_InnerIronOxThickness = Section.InnerIronOxThickness
     RK4_OuterFe3O4Thickness = Section.OuterFe3O4Thickness
@@ -188,8 +193,6 @@ def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
                     if Section in ld.FuelChannels:
                         q = 0
                     else:
-                        if Section in ld.SGZones: print(RK4_OuterFe3O4Thickness[i],i)
-                        
                         q = ((Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide)
                              + Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i]))
 
@@ -258,9 +261,8 @@ def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
         Section.NiThickness = [
             x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.NiThickness, P[0], P[1], P[2], P[3])
             ]
-   
 
-    Layers = [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Section.CoThickness, Section.NiThickness]
+#     Layers = [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Section.CoThickness, Section.NiThickness]
     # 4 different layers at each node. If any thicknesses are negative due to dissolution of respective layer, 
     # thickness = 0
 #     for i in range(4):
@@ -372,7 +374,7 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
     # Ni at each node of current section 
 
     # Silences spalling for desired sections
-    if Section != ld.Outlet:
+    if Section not in ld.OutletSections:
         Section.Particle = [0] * Section.NodeNumber 
 
     ConvertedConcentrations = []
@@ -390,15 +392,15 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
         # Oxide totals for RK4 iterations (M/O Concentration depends on total ox thickness) and before spalling function
         if Section.OuterFe3O4Thickness[i] > 0:  # from previous time step
             # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer  
-            Section.OuterOxThickness[i] = Section.OuterFe3O4Thickness[i]
+            Section.OuterOxThickness[i] = (Section.OuterFe3O4Thickness[i]
             + Section.CoThickness[i]
-            + Section.NiThickness[i]
+            + Section.NiThickness[i])
             
             Section.InnerOxThickness[i] = Section.InnerIronOxThickness[i]
         else:  # OuterFe3O4Thickness == 0
-            Section.InnerOxThickness[i] = Section.InnerIronOxThickness[i]
+            Section.InnerOxThickness[i] = (Section.InnerIronOxThickness[i]
             + Section.CoThickness[i]
-            + Section.NiThickness[i]
+            + Section.NiThickness[i])
 
         if j == 0:
             # First time step call generate particle sizes and calc spalling times, respectively
@@ -480,14 +482,14 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
             # Oxide totals for RK4 iterations (M/O Concentration depends on total oxide thickness)
         if Section.OuterFe3O4Thickness[i] > 0:  # from previous time step
             # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer
-            Section.OuterOxThickness[i] = Section.OuterFe3O4Thickness[i]
+            Section.OuterOxThickness[i] = (Section.OuterFe3O4Thickness[i]
             + Section.CoThickness[i]
-            + Section.NiThickness[i]
+            + Section.NiThickness[i])
             
             Section.InnerOxThickness[i] = Section.InnerIronOxThickness[i]
         else:  # OuterFe3O4Thickness == 0
-            Section.InnerOxThickness[i] = Section.InnerIronOxThickness[i]
+            Section.InnerOxThickness[i] = (Section.InnerIronOxThickness[i]
             + Section.CoThickness[i]
-            + Section.NiThickness[i]
+            + Section.NiThickness[i])
 
     return ElapsedTime, SpallTime
