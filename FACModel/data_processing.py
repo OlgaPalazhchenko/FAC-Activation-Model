@@ -153,6 +153,8 @@ with open(csvfile, "w") as output:
     
 #     writer.writerow(['Outlet Streams'])
 #     writer.writerow(StreamOutletTemperatures)
+
+# RIHTLabels = ["U-bend length (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Temperature Profile (oC)"]
     
     writer.writerow(['Inner and Outer Loadings (g/m^2)'])
     for i, j, z in zip(TotalInnerLoading, TotalOuterLoading, desired_ubends):
