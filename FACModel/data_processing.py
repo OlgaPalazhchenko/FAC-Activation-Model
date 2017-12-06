@@ -18,9 +18,9 @@ PlotOutput = "yes"
 OutputLogging = "yes"
 FullLoop = "no"
 
-desired_ubends = [0.685, 1.52]#, 2.31, 3.09]
+ubends = [0.685, 1.52]#, 2.31, 3.09]
+desired_ubends = [i * 100 for i in ubends]
 
-# to determine oxide thicknesses of only select SG tubes w.r.t time:
 def closest(Number):
     difference = []
     for i in ld.u_bend:
@@ -30,8 +30,9 @@ def closest(Number):
     # returns index of value that has smallest difference with input Number
     return difference.index(min(difference))
 
+tube_number = []
+
 for i in desired_ubends:
-    tube_number = []
     x = closest(i)
     tube_number.append(x)
     
@@ -46,7 +47,7 @@ RIHT = [] # monitored with time
 StreamOutletTemperatures = [] # monitored with time 
 TemperatureProfile = []
 
-SimulationYears = 9  # years
+SimulationYears = 1  # years
 SimulationHours = SimulationYears * 50
 
 import time
@@ -91,10 +92,10 @@ for j in range(SimulationHours):
             T_RIH = (SGHX.energy_balance(21, j)) - 273.15
             RIHT.append(T_RIH)
              
-            for Zone in desired_tubes:
-                Temperature = Zone.PrimaryBulkTemperature[Zone.NodeNumber - 1] - 273.15
-                StreamOutletTemperatures.append(Temperature)
-                 
+#             for Zone in desired_tubes:
+#                 Temperature = Zone.PrimaryBulkTemperature[Zone.NodeNumber - 1] - 273.15
+#                 StreamOutletTemperatures.append(Temperature)
+#                  
 #         if j == SimulationHours-1:
 #             for Zone in [ld.SGZones[1], ld.SGZones[30], ld.SGZones[58], ld.SGZones[85]]:
 #                 x = ld.UnitConverter(
@@ -127,8 +128,8 @@ for Zone in desired_tubes:
     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterOxThickness, None, None, None
     )
     
-    totalloading = [i + j for i, j in zip(x, y)]
-    z = sum(totalloading[11:len(totalloading)]) / (len(totalloading) - 11)
+#     totalloading = [i + j for i, j in zip(x, y)]
+#     z = sum(totalloading[11:len(totalloading)]) / (len(totalloading) - 11)
     
     TotalInnerLoading.append(x)
     TotalOuterLoading.append(y)
@@ -150,17 +151,17 @@ with open(csvfile, "w") as output:
         writer.writerow([j])
         writer.writerow(i)
     
-    writer.writerow(['Outlet Streams'])
-    writer.writerow(StreamOutletTemperatures)
+#     writer.writerow(['Outlet Streams'])
+#     writer.writerow(StreamOutletTemperatures)
     
     writer.writerow(['Inner and Outer Loadings (g/m^2)'])
-    for i, j in zip(TotalInnerLoading, TotalOuterLoading):
-#         writer.writerow(z)
+    for i, j, z in zip(TotalInnerLoading, TotalOuterLoading, desired_ubends):
+        writer.writerow([z])
         writer.writerow(i)
         writer.writerow(j)
     
     writer.writerow(['Temperature Profile (oC)'])
-    writer.writerow(TemperatureProfile)
+    writer.writerows(TemperatureProfile)
 
         
 end_time = time.time()
@@ -179,7 +180,7 @@ def property_log10(Element, Interface):
     SolutionOxide = []  # z
     
     # only in main 4 PHTS sections, not counting SG Zones, can be changed to include all, if needed 
-    for Section in [In.Section1, Co.Section1, Ou.Section1, SteamGeneratorTubes[1]]:
+    for Section in [In.Section1, Co.Section1, Ou.Section1, SteamGeneratorTubes[0]]:
         if Element == "Fe":
             Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.Bulk.FeTotal, Section.SolutionOxide.FeTotal]
         elif Element == "Ni":

@@ -7,6 +7,59 @@ import electrochemistry as e
 import random
 
 
+# AverageColdLegLoading = []
+# TotalInnerLoading = []
+# TotalOuterLoading = []
+# RIHT = [] # monitored with time 
+# StreamOutletTemperatures = [] # monitored with time 
+# TemperatureProfile = []
+# 
+# ubends = [0.685, 1.52]#, 2.31, 3.09]
+# desired_ubends = [i * 100 for i in ubends]
+# 
+# def closest(Number):
+#     difference = []
+#     for i in ld.u_bend:
+#         # calculates differences between input Number and all others in given list
+#         difference.append(abs(Number-i))
+#     
+#     # returns index of value that has smallest difference with input Number
+#     return difference.index(min(difference))
+# 
+# tube_number = []
+# 
+# for i in desired_ubends:
+#     x = closest(i)
+#     tube_number.append(x)
+#     
+# desired_tubes = []
+# for i in tube_number:
+#     desired_tubes.append(ld.SGZones[i])
+# 
+# 
+# for Zone in desired_tubes:
+#     x = ld.UnitConverter(
+#     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerOxThickness, None, None, None
+#     )
+#     y = ld.UnitConverter(
+#     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterOxThickness, None, None, None
+#     )
+#     
+# #     totalloading = [i + j for i, j in zip(x, y)]
+# #     z = sum(totalloading[11:len(totalloading)]) / (len(totalloading) - 11)
+#     
+#     TotalInnerLoading.append(x)
+#     TotalOuterLoading.append(y)
+#     TemperatureProfile.append(Zone.PrimaryBulkTemperature)
+# 
+# 
+# for i, j in zip(TotalInnerLoading, desired_ubends):
+#     print (j)
+#     print (i)
+
+
+
+
 def oxide_composition(
         Section, Element, OxideType, Outer, OuterFe3O4Thickness, NiThickness, CoThickness, InnerIronOxThickness
         ):
