@@ -7,59 +7,6 @@ import electrochemistry as e
 import random
 
 
-# AverageColdLegLoading = []
-# TotalInnerLoading = []
-# TotalOuterLoading = []
-# RIHT = [] # monitored with time 
-# StreamOutletTemperatures = [] # monitored with time 
-# TemperatureProfile = []
-# 
-# ubends = [0.685, 1.52]#, 2.31, 3.09]
-# desired_ubends = [i * 100 for i in ubends]
-# 
-# def closest(Number):
-#     difference = []
-#     for i in ld.u_bend:
-#         # calculates differences between input Number and all others in given list
-#         difference.append(abs(Number-i))
-#     
-#     # returns index of value that has smallest difference with input Number
-#     return difference.index(min(difference))
-# 
-# tube_number = []
-# 
-# for i in desired_ubends:
-#     x = closest(i)
-#     tube_number.append(x)
-#     
-# desired_tubes = []
-# for i in tube_number:
-#     desired_tubes.append(ld.SGZones[i])
-# 
-# 
-# for Zone in desired_tubes:
-#     x = ld.UnitConverter(
-#     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerOxThickness, None, None, None
-#     )
-#     y = ld.UnitConverter(
-#     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterOxThickness, None, None, None
-#     )
-#     
-# #     totalloading = [i + j for i, j in zip(x, y)]
-# #     z = sum(totalloading[11:len(totalloading)]) / (len(totalloading) - 11)
-#     
-#     TotalInnerLoading.append(x)
-#     TotalOuterLoading.append(y)
-#     TemperatureProfile.append(Zone.PrimaryBulkTemperature)
-# 
-# 
-# for i, j in zip(TotalInnerLoading, desired_ubends):
-#     print (j)
-#     print (i)
-
-
-
-
 def oxide_composition(
         Section, Element, OxideType, Outer, OuterFe3O4Thickness, NiThickness, CoThickness, InnerIronOxThickness
         ):
@@ -291,14 +238,14 @@ def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
             [RK4_NiThickness, d] = RK4(Section, Section.NiThickness, GrowthNickel, approximation)
             P.append(d)
 
-        for i in range(Section.NodeNumber):
-            # Need the overall inner and outer oxides to be updated for M/O concentration
-            if RK4_OuterFe3O4Thickness[i] > 0:  # from previous time step
-                # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer
-                Section.OuterOxThickness[i] = RK4_OuterFe3O4Thickness[i] + RK4_CoThickness[i] + RK4_NiThickness[i]
-                Section.InnerOxThickness[i] = RK4_InnerIronOxThickness[i]
-            else:  # OuterFe3O4Thickness == 0
-                Section.InnerOxThickness[i] = RK4_InnerIronOxThickness[i] + RK4_CoThickness[i] + RK4_NiThickness[i]
+#         for i in range(Section.NodeNumber):
+#             # Need the overall inner and outer oxides to be updated for M/O concentration
+#             if RK4_OuterFe3O4Thickness[i] > 0:  # from previous time step
+#                 # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer
+#                 Section.OuterOxThickness[i] = RK4_OuterFe3O4Thickness[i] + RK4_CoThickness[i] + RK4_NiThickness[i]
+#                 Section.InnerOxThickness[i] = RK4_InnerIronOxThickness[i]
+#             else:  # OuterFe3O4Thickness == 0
+#                 Section.InnerOxThickness[i] = RK4_InnerIronOxThickness[i] + RK4_CoThickness[i] + RK4_NiThickness[i]
 
     Section.InnerIronOxThickness = [
         x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.InnerIronOxThickness, L[0], L[1], L[2], L[3])
@@ -444,10 +391,17 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
 
         # Oxide totals for RK4 iterations (M/O Concentration depends on total ox thickness) and before spalling function
         if Section.OuterFe3O4Thickness[i] > 0:  # from previous time step
-            # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer  
+            # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer
             Section.OuterOxThickness[i] = (Section.OuterFe3O4Thickness[i]
-            + Section.CoThickness[i]
-            + Section.NiThickness[i])
+                + Section.CoThickness[i]
+                + Section.NiThickness[i])  
+#             if ElementTracking == "yes":
+#                 Section.OuterOxThickness[i] = (Section.OuterFe3O4Thickness[i]
+#                 + Section.CoThickness[i]
+#                 + Section.NiThickness[i])
+#             else:
+#                 Section.OuterOxThickness[i] = Section.OuterFe3O4Thickness[i]
+            
             
             Section.InnerOxThickness[i] = Section.InnerIronOxThickness[i]
         else:  # OuterFe3O4Thickness == 0
@@ -535,14 +489,27 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
             # Oxide totals for RK4 iterations (M/O Concentration depends on total oxide thickness)
         if Section.OuterFe3O4Thickness[i] > 0:  # from previous time step
             # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer
-            Section.OuterOxThickness[i] = (Section.OuterFe3O4Thickness[i]
-            + Section.CoThickness[i]
-            + Section.NiThickness[i])
+#             Section.OuterOxThickness[i] = (Section.OuterFe3O4Thickness[i]
+#                 + Section.CoThickness[i]
+#                 + Section.NiThickness[i])  
+            if ElementTracking == "yes":
+                Section.OuterOxThickness[i] = (Section.OuterFe3O4Thickness[i]
+                + Section.CoThickness[i]
+                + Section.NiThickness[i])
+            else:
+                Section.OuterOxThickness[i] = Section.OuterFe3O4Thickness[i]
             
             Section.InnerOxThickness[i] = Section.InnerIronOxThickness[i]
         else:  # OuterFe3O4Thickness == 0
-            Section.InnerOxThickness[i] = (Section.InnerIronOxThickness[i]
-            + Section.CoThickness[i]
-            + Section.NiThickness[i])
+#             Section.InnerOxThickness[i] = (Section.InnerIronOxThickness[i]
+#             + Section.CoThickness[i]
+#             + Section.NiThickness[i])
+            
+            if ElementTracking == "yes":
+                 Section.InnerOxThickness[i] = (Section.InnerIronOxThickness[i]
+                + Section.CoThickness[i]
+                + Section.NiThickness[i])
+            else:
+                Section.InnerOxThickness[i] = Section.InnerIronOxThickness[i]
 
     return ElapsedTime, SpallTime
