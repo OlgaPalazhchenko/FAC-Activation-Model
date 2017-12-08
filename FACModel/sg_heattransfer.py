@@ -1,6 +1,30 @@
 import lepreau_data as ld
 import numpy as np
 import constants as nc
+import composition as c
+
+ubends = [0.685, 3.09]#, 2.31, 3.09]
+desired_ubends = [i * 100 for i in ubends]
+
+def closest(Number):
+    difference = []
+    for i in ld.u_bend:
+        # calculates differences between input Number and all others in given list
+        difference.append(abs(Number-i))
+    
+    # returns index of value that has smallest difference with input Number
+    return difference.index(min(difference))
+
+tube_number = []
+
+for i in desired_ubends:
+    x = closest(i)
+    tube_number.append(x)
+    
+desired_tubes = []
+for i in tube_number:
+    desired_tubes.append(ld.SGZones[i])
+
 
 # T_sat_secondary = 260.1 + 273.15
 T_sat_primary = 310 + 273.15
@@ -415,8 +439,8 @@ def temperature_profile(
 def station_events(calendar_year):
     if calendar_year <= 1992:
         # divider plate leakage rates estimated based on AECL work
-        InitialLeakage = 0.035 # fraction of total SG inlet mass flow
-        YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
+        InitialLeakage = 0.04 # fraction of total SG inlet mass flow
+        YearlyRateLeakage = 0.005 # yearly increase to fraction of total SG inlet mass flow
         SHTPressure = 4.593  # MPa
     else:
         # PLNGS pressure reduction in 1992 + divider plate replacement
@@ -431,7 +455,7 @@ def station_events(calendar_year):
     return SHTPressure, m_h_leakagecorrection, DividerPlateMassFlow
 
 
-def energy_balance(SteamGeneratorOutputNode, j):
+def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulation, j):
     year = (j / 8760) 
     calendar_year = year + 1983
     
@@ -439,10 +463,17 @@ def energy_balance(SteamGeneratorOutputNode, j):
 
     Balance = []
     for Zone in ld.SGZones:
-        Zone.PrimaryBulkTemperature = temperature_profile(
-            Zone, ld.SGZones[12].InnerOxThickness, ld.SGZones[12].OuterOxThickness, RemainingPHTMassFlow,
-            SecondarySidePressure, calendar_year)
+        if Zone in desired_tubes:
+            InnerOx = Zone.InnerOxThickness
+            OuterOx = Zone.OuterOxThickness
+        else:
+            InnerOx = InnerAccumulation
+            OuterOx = OuterAccumulation
         
+        Zone.PrimaryBulkTemperature = temperature_profile(
+            Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, calendar_year
+            )
+                
         x = (Zone.TubeNumber / nc.TotalSGTubeNumber) * RemainingPHTMassFlow \
             * ld.Enthalpy("PHT", Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode], SecondarySidePressure)
 
@@ -453,5 +484,6 @@ def energy_balance(SteamGeneratorOutputNode, j):
 
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
-# print (energy_balance(21, 1)-273.15)
+
+# print (energy_balance(21, ld.SGZones[12].InnerOxThickness, ld.SGZones[12].OuterOxThickness, 8760*9) - 273.15)
 

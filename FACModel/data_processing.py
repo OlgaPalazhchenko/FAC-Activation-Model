@@ -9,7 +9,9 @@ import sg_heattransfer as SGHX
 import numpy as np
 import csv
 import matplotlib.pyplot as plt
+import composition as c
 from matplotlib import rc
+
 rc('mathtext', default='regular')
 
 RealTimeHeatTransfer = "yes"
@@ -18,38 +20,19 @@ PlotOutput = "yes"
 OutputLogging = "yes"
 FullLoop = "no"
 
-ubends = [0.685, 3.09]#, 2.31, 3.09]
-desired_ubends = [i * 100 for i in ubends]
-
-def closest(Number):
-    difference = []
-    for i in ld.u_bend:
-        # calculates differences between input Number and all others in given list
-        difference.append(abs(Number-i))
-    
-    # returns index of value that has smallest difference with input Number
-    return difference.index(min(difference))
-
-tube_number = []
-
-for i in desired_ubends:
-    x = closest(i)
-    tube_number.append(x)
-    
-desired_tubes = []
-for i in tube_number:
-    desired_tubes.append(ld.SGZones[i])
-    
-AverageColdLegLoading = []
+Solubility = []
+IronConcentration = []
+# AverageColdLegLoading = []
 TotalInnerLoading = []
 TotalOuterLoading = []
 RIHT = [] # monitored with time 
-OutletTemperatures = []
-StreamOutletTemperatures = [] # monitored with time 
+OutletTemperatures1 = []
+OutletTemperatures2 = []
+# StreamOutletTemperatures = [] # monitored with time 
 TemperatureProfile = []
 
-SimulationYears = 1  # years
-SimulationHours = SimulationYears * 500
+SimulationYears = 4  # years
+SimulationHours = SimulationYears * 8760
 
 import time
 start_time = time.time()
@@ -57,7 +40,7 @@ start_time = time.time()
 for j in range(SimulationHours):
     In = pht_model.PHT_FAC(ld.Inlet, ld.Core, RealTimeHeatTransfer, Activation, j)
     Co = pht_model.PHT_FAC(ld.Core, ld.Outlet, RealTimeHeatTransfer, Activation, j)
-    Ou = pht_model.PHT_FAC(ld.Outlet, ld.SGZones[12], RealTimeHeatTransfer, Activation, j)
+    Ou = pht_model.PHT_FAC(ld.Outlet, ld.SGZones[SGHX.tube_number[0]], RealTimeHeatTransfer, Activation, j)
     
     if FullLoop == "yes":
         InletInput = ld.Inlet_2
@@ -65,7 +48,7 @@ for j in range(SimulationHours):
         InletInput = ld.Inlet
     
     if RealTimeHeatTransfer == "no":
-        Sg = pht_model.PHT_FAC(ld.SGZones[12], InletInput, RealTimeHeatTransfer, Activation, j)
+        Sg = pht_model.PHT_FAC(ld.SGZones[SGHX.tube_number[0]], InletInput, RealTimeHeatTransfer, Activation, j)
             
     else:
         # Set input concentrations for all SG zones to be same as input of first (Outlet output)
@@ -74,7 +57,7 @@ for j in range(SimulationHours):
                 ]
         SteamGeneratorTubes = []
 
-        for Zone in desired_tubes:
+        for Zone in SGHX.desired_tubes:
             BulkSGInput = [Zone.Bulk.FeTotal, Zone.Bulk.NiTotal, Zone.Bulk.CoTotal, Zone.Bulk.CrTotal]
             for x, y in zip(BulkSGInput, BulkOutletOutput):
                 x[0] = y[Ou.Section1.NodeNumber - 1]
@@ -86,17 +69,28 @@ for j in range(SimulationHours):
         In_2 = pht_model.PHT_FAC(ld.Inlet_2, ld.Core, RealTimeHeatTransfer, Activation, j)
     
     if OutputLogging == "yes":
-        if j % 250 == 0:  # yearly
+        if j % 8759 == 0:  # yearly
             
             # parameters tracked with time 
-            T_RIH = (SGHX.energy_balance(21, j)) - 273.15
+            T_RIH = (SGHX.energy_balance(
+                ld.SGZones[SGHX.tube_number[0]].NodeNumber - 1, ld.SGZones[SGHX.tube_number[0]].InnerOxThickness,
+                ld.SGZones[SGHX.tube_number[0]].OuterOxThickness, j
+                ) - 273.15)
             RIHT.append(T_RIH)
             
-            for Zone in desired_tubes:
-                Temperature = Zone.PrimaryBulkTemperature[Zone.NodeNumber - 1] - 273.15
-                OutletTemperatures.append(Temperature)
-            StreamOutletTemperatures.append(OutletTemperatures)
-                      
+            for Zone in ld.SGZones:
+                Zone.Bulk.FeSatFe3O4 = c.iron_solubility(Zone)
+            
+            Temperature1 = (
+                ld.SGZones[SGHX.tube_number[0]].PrimaryBulkTemperature[ld.SGZones[SGHX.tube_number[0]].NodeNumber - 1]
+                           - 273.15
+                           )
+            Temperature2 = (
+                ld.SGZones[SGHX.tube_number[1]].PrimaryBulkTemperature[ld.SGZones[SGHX.tube_number[1]].NodeNumber - 1]
+                           - 273.15
+                           )
+            OutletTemperatures1.append(Temperature1)
+            OutletTemperatures2.append(Temperature2)
     else:
         None
             
@@ -107,12 +101,12 @@ for j in range(SimulationHours):
 
 
 # parameters at the end of run 
-for Zone in desired_tubes:
+for Zone in SGHX.desired_tubes:
     x = ld.UnitConverter(
-    Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerOxThickness, None, None, None
+    Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerIronOxThickness, None, None, None
     )
     y = ld.UnitConverter(
-    Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterOxThickness, None, None, None
+    Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterFe3O4Thickness, None, None, None
     )
     
 #     totalloading = [i + j for i, j in zip(x, y)]
@@ -120,11 +114,15 @@ for Zone in desired_tubes:
     
     TotalInnerLoading.append(x)
     TotalOuterLoading.append(y)
+    Solubility.append(Zone.SolutionOxide.FeSatFe3O4)
+    IronConcentration.append(Zone.SolutionOxide.FeTotal)
     Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
     TemperatureProfile.append(Temperature_C)
     
-Data = [desired_ubends, TotalInnerLoading, TotalOuterLoading, TemperatureProfile]
-Labels = ["U-bend length (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Temperature Profile (oC)"]
+Data = [SGHX.desired_ubends, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration, TemperatureProfile]
+Labels = [
+    "U-bend length (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Solubility (mol/kg)", "S/O [Fe] (mol/kg)",
+    "Temperature Profile (oC)"]
     
 csvfile = "RIHTOutput.csv"
 with open(csvfile, "w") as output:
@@ -142,7 +140,8 @@ with open(csvfile, "w") as output:
         writer.writerow([''])
         
     writer.writerow(['Outlet Streams (oC)'])
-    writer.writerows(StreamOutletTemperatures)
+    writer.writerow(OutletTemperatures1)
+    writer.writerow(OutletTemperatures2)
   
     
 end_time = time.time()
@@ -161,7 +160,7 @@ def property_log10(Element, Interface):
     SolutionOxide = []  # z
     
     # only in main 4 PHTS sections, not counting SG Zones, can be changed to include all, if needed 
-    for Section in [In.Section1, Co.Section1, Ou.Section1, SteamGeneratorTubes[0].Section1]:
+    for Section in [In.Section1, Co.Section1, Ou.Section1, ld.SGZones[SGHX.tube_number[0]]]:
         if Element == "Fe":
             Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.Bulk.FeTotal, Section.SolutionOxide.FeTotal]
         elif Element == "Ni":

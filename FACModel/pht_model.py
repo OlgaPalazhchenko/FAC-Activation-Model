@@ -54,8 +54,10 @@ for Section in ld.Sections:
         
         # Initial RIHT temperature 
         if Section in ld.InletSections:
-            Section.PrimaryBulkTemperature = [SGHX.energy_balance(ld.SGZones[0].NodeNumber - 1, 0)]\
-            * Section.NodeNumber
+            Section.PrimaryBulkTemperature = (
+                [SGHX.energy_balance(21, ld.SGZones[0].InnerOxThickness, ld.SGZones[0].OuterOxThickness, 0)]\
+                * Section.NodeNumber
+                )
         
         if Section not in ld.OutletSections:
             if Interface == Section.SolutionOxide:
@@ -213,7 +215,7 @@ class PHT_FAC():
 
         # SG heat transfer 
         if RealTimeHeatTransfer == "yes":
-            if self.Section1 in ld.SGZones:   
+            if self.Section1 in ld.SGZones:  
                 self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1) 
         
             # RIHT  
