@@ -107,5 +107,5 @@ ErosionConstant = 2.4e-11  # [g/cm^2 s]
 OUTCORE_DEPOSITION = 0.0045
 INCORE_DEPOSITION = 0.01
 
-NumberPluggedTubes = 10
+NumberPluggedTubes = 8
 TotalSGTubeNumber = 3542 - NumberPluggedTubes

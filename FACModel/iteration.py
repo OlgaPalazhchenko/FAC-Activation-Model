@@ -91,7 +91,8 @@ def InterfaceOxideKinetics (Section, KineticConstant, SaturationConcentration, M
     Concentration = ld.UnitConverter(
         Section, "Mol per Kg", "Grams per Cm Cubed", SaturationConcentration, None, None, None, MolarMass, None
         ) 
-    return [x * y for x, y in zip(KineticConstant, Concentration)] 
+    SOTerm = [x * y for x, y in zip(KineticConstant, Concentration)]
+    return SOTerm
     
 
 def SolutionOxide(
@@ -143,6 +144,7 @@ def SolutionOxide(
             # same expression for dissolution (Oxide >0) or precipitation, subbing out appropriate kinetic constant 
             if SolutionOxideConcentration[i] >= SaturationConcentration[i]:
                 y = (Diff[i] + OxideKinetics[i] + BTrans[i]) / (Section.KpFe3O4electrochem[i] + km[i])
+                
             else:  # SolutionOxideConcentration[i] < SaturationConcentration[i]:
                 y = (Diff[i] + OxideKinetics[i] + BTrans[i]) / (Section.KdFe3O4electrochem[i] + km[i])
             if Oxide[i] == 0:  # Core 

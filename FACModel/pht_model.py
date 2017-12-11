@@ -214,10 +214,10 @@ class PHT_FAC():
 #                                                           self.Section1.InnerOxThickness, self.Section1.Bulk.Ni63, j, "Ni63")
 
         # SG heat transfer 
-        if RealTimeHeatTransfer == "yes":
-            if self.Section1 in ld.SGZones:  
-                self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1) 
-        
+#         if RealTimeHeatTransfer == "yes":
+#             if self.Section1 in ld.SGZones:  
+#                 self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1) 
+#         
             # RIHT  
 #             elif self.Section1 in ld.InletSections:
                 # Temperature profile for each section calculated within energy balance

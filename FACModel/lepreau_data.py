@@ -10,7 +10,7 @@ class SGParameters():
         self.unit = None
         self.steam_quality = None
 
-PrimarySidePressure = 10  # MPa
+PrimarySidePressure = 9.89  # MPa
 SecondarySidePressure = 4.593  # MPa
 
 SizingParameters = open('SizingParameters.txt', 'r')      
@@ -477,7 +477,6 @@ for Zone, length, i in zip(SGZones, u_bend_total, number_tubes):
     + ["preheater start"] \
     + ["preheater"] * 3
 
-
 # Combines PHT sections and SG Zones (in the event each zone will be tracked for oxide growth/heat transfer)
 Sections = FuelChannels + InletSections + OutletSections + SGZones #+ SGZones_2
 
@@ -512,7 +511,7 @@ for Section in Sections:
 
     Section.Distance = np.cumsum(Section.Length.magnitude)
 
-
+    
 def ReynoldsNumber(Section, Diameter):
     # Diameter is an input due to difference in desired dimension (e.g., inner, outer, hydraulic, etc.)
     Reynolds = [x * y / (z * q) 

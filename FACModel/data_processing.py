@@ -22,7 +22,7 @@ FullLoop = "no"
 
 Solubility = []
 IronConcentration = []
-# AverageColdLegLoading = []
+Loading_time = []
 TotalInnerLoading = []
 TotalOuterLoading = []
 RIHT = [] # monitored with time 
@@ -31,7 +31,7 @@ OutletTemperatures2 = []
 # StreamOutletTemperatures = [] # monitored with time 
 TemperatureProfile = []
 
-SimulationYears = 4  # years
+SimulationYears = 9  # years
 SimulationHours = SimulationYears * 8760
 
 import time
@@ -69,7 +69,7 @@ for j in range(SimulationHours):
         In_2 = pht_model.PHT_FAC(ld.Inlet_2, ld.Core, RealTimeHeatTransfer, Activation, j)
     
     if OutputLogging == "yes":
-        if j % 8759 == 0:  # yearly
+        if j % 3000 == 0:  # yearly
             
             # parameters tracked with time 
             T_RIH = (SGHX.energy_balance(
@@ -86,11 +86,13 @@ for j in range(SimulationHours):
                            - 273.15
                            )
             Temperature2 = (
-                ld.SGZones[SGHX.tube_number[1]].PrimaryBulkTemperature[ld.SGZones[SGHX.tube_number[1]].NodeNumber - 1]
+                ld.SGZones[SGHX.tube_number[0]].PrimaryBulkTemperature[ld.SGZones[SGHX.tube_number[0]].NodeNumber - 1]
                            - 273.15
                            )
             OutletTemperatures1.append(Temperature1)
             OutletTemperatures2.append(Temperature2)
+            
+            Loading_time.append(ld.SGZones[SGHX.tube_number[0]].SolutionOxide.FeSatFe3O4)
     else:
         None
             
@@ -142,7 +144,10 @@ with open(csvfile, "w") as output:
     writer.writerow(['Outlet Streams (oC)'])
     writer.writerow(OutletTemperatures1)
     writer.writerow(OutletTemperatures2)
-  
+    
+    writer.writerow([''])
+    writer.writerow(['FeSat over time (mol/kg)'])
+    writer.writerows(Loading_time)
     
 end_time = time.time()
 delta_time = end_time - start_time
