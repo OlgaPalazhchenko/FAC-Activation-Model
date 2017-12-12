@@ -388,7 +388,6 @@ def temperature_profile(
             SecondaryBulk.append(T_SecondaryBulkOut)
             PrimaryWall.append(T_wh)
             SecondaryWall.append(T_wc)
-            
         else:
             if Section.Length.label[i] == "preheater start":
                 C_min = Cp_c * MassFlow_c.magnitude  # [J/g K]*[g/s] = [J/Ks] ] [W/K]
@@ -486,5 +485,5 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
 
-# print (energy_balance(21, ld.SGZones[12].InnerOxThickness, ld.SGZones[12].OuterOxThickness, 1) - 273.15)
+print (energy_balance(21, ld.SGZones[12].InnerOxThickness, ld.SGZones[12].OuterOxThickness, 1) - 273.15)
 
