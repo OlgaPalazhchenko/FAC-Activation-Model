@@ -1,10 +1,33 @@
 import lepreau_data as ld
 import numpy as np
 import constants as nc
+import composition as c
+
+ubends = [0.385]#, 2.31, 3.09]
+desired_ubends = [i * 100 for i in ubends]
+
+def closest(Number):
+    difference = []
+    for i in ld.u_bend_total:
+        # calculates differences between input Number and all others in given list
+        difference.append(abs(Number-i))
+    
+    # returns index of value that has smallest difference with input Number
+    return difference.index(min(difference))
+
+tube_number = []
+
+for i in desired_ubends:
+    x = closest(i)
+    tube_number.append(x)
+   
+desired_tubes = []
+for i in tube_number:
+    desired_tubes.append(ld.SGZones[i])
 
 # T_sat_secondary = 260.1 + 273.15
 T_sat_primary = 310 + 273.15
-T_PreheaterIn = 186.7 + 273.15
+T_PreheaterIn = 187 + 273.15
 T_PrimaryIn = 310 + 273.15
 
 h_i = ld.SGParameters()
@@ -149,10 +172,10 @@ def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySide
         / (np.pi * Section.OuterDiameter[i])
         
         if i <= 9:
-            x = 0.5 * x_in * 100  
+            x = 0.65 * x_in * 100  
         else:
-            x = 24 - (i/1)
-      
+            x = 20 - (i/1)
+       
         h_o = boiling_heat_transfer(
             x, "SHT", T_sat_secondary, MassFlux_c.magnitude, T_wall, EquivalentDiameter.magnitude, 
             SecondarySidePressure, i)
@@ -357,6 +380,7 @@ def temperature_profile(
             x_out = x_in + Q / (MassFlow_c.magnitude * EnthalpySaturatedSteam.magnitude)
 
             x_in = x_out
+            
             T_PrimaryBulkIn = T_PrimaryBulkOut
             T_SecondaryBulkIn = T_SecondaryBulkOut
 
@@ -364,6 +388,7 @@ def temperature_profile(
             SecondaryBulk.append(T_SecondaryBulkOut)
             PrimaryWall.append(T_wh)
             SecondaryWall.append(T_wc)
+            
         else:
             if Section.Length.label[i] == "preheater start":
                 C_min = Cp_c * MassFlow_c.magnitude  # [J/g K]*[g/s] = [J/Ks] ] [W/K]
@@ -389,7 +414,7 @@ def temperature_profile(
 
             T_PrimaryBulkIn = T_PrimaryBulkOut
             T_SecondaryBulkIn = T_SecondaryBulkOut
-
+            
             if i == Section.NodeNumber - 2:
                 T_SecondaryBulkOut = T_PreheaterIn
                 T_PrimaryBulkOut = T_PrimaryBulkOutEnd
@@ -431,7 +456,7 @@ def station_events(calendar_year):
     return SHTPressure, m_h_leakagecorrection, DividerPlateMassFlow
 
 
-def energy_balance(SteamGeneratorOutputNode, j):
+def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulation, j):
     year = (j / 8760) 
     calendar_year = year + 1983
     
@@ -439,10 +464,17 @@ def energy_balance(SteamGeneratorOutputNode, j):
 
     Balance = []
     for Zone in ld.SGZones:
-        Zone.PrimaryBulkTemperature = temperature_profile(
-            Zone, ld.SGZones[12].InnerOxThickness, ld.SGZones[12].OuterOxThickness, RemainingPHTMassFlow,
-            SecondarySidePressure, calendar_year)
+        if Zone in desired_tubes:
+            InnerOx = Zone.InnerOxThickness
+            OuterOx = Zone.OuterOxThickness
+        else:
+            InnerOx = InnerAccumulation
+            OuterOx = OuterAccumulation
         
+        Zone.PrimaryBulkTemperature = temperature_profile(
+            Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, calendar_year
+            )
+                
         x = (Zone.TubeNumber / nc.TotalSGTubeNumber) * RemainingPHTMassFlow \
             * ld.Enthalpy("PHT", Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode], SecondarySidePressure)
 
@@ -453,5 +485,6 @@ def energy_balance(SteamGeneratorOutputNode, j):
 
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
-# print (energy_balance(21, 1)-273.15)
+
+# print (energy_balance(21, ld.SGZones[12].InnerOxThickness, ld.SGZones[12].OuterOxThickness, 1) - 273.15)
 
