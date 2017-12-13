@@ -14,7 +14,7 @@ from matplotlib import rc
 
 rc('mathtext', default='regular')
 
-RealTimeHeatTransfer = "yes"
+RealTimeHeatTransfer = "no"
 Activation = "no"
 PlotOutput = "yes"
 OutputLogging = "yes"
@@ -31,24 +31,28 @@ OutletTemperatures2 = []
 # StreamOutletTemperatures = [] # monitored with time 
 TemperatureProfile = []
 
-SimulationYears = 9  # years
-SimulationHours = SimulationYears * 8760
+SimulationYears = 1  # years
+SimulationHours = SimulationYears * 50
+
+# load initial chemistry for full/half loop
+pht_model.initial_chemistry(FullLoop)
+Default_Tube = SGHX.closest(1.52 * 100)
 
 import time
 start_time = time.time()
 
 for j in range(SimulationHours):
-    In = pht_model.PHT_FAC(ld.Inlet, ld.Core, RealTimeHeatTransfer, Activation, j)
-    Co = pht_model.PHT_FAC(ld.Core, ld.Outlet, RealTimeHeatTransfer, Activation, j)
-    Ou = pht_model.PHT_FAC(ld.Outlet, ld.SGZones[SGHX.tube_number[0]], RealTimeHeatTransfer, Activation, j)
+    In = pht_model.PHT_FAC(ld.InletFeeder, ld.FuelChannel, RealTimeHeatTransfer, Activation, j)
+    Co = pht_model.PHT_FAC(ld.FuelChannel, ld.OutletFeeder, RealTimeHeatTransfer, Activation, j)
+    Ou = pht_model.PHT_FAC(ld.OutletFeeder, ld.SteamGenerator[Default_Tube], RealTimeHeatTransfer, Activation, j)
     
     if FullLoop == "yes":
-        InletInput = ld.Inlet_2
+        InletInput = ld.InletFeeder_2
     else:
-        InletInput = ld.Inlet
+        InletInput = ld.InletFeeder
     
     if RealTimeHeatTransfer == "no":
-        Sg = pht_model.PHT_FAC(ld.SGZones[SGHX.tube_number[0]], InletInput, RealTimeHeatTransfer, Activation, j)
+        Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, RealTimeHeatTransfer, Activation, j)
             
     else:
         # Set input concentrations for all SG zones to be same as input of first (Outlet output)
@@ -57,45 +61,56 @@ for j in range(SimulationHours):
                 ]
         SteamGeneratorTubes = []
 
-        for Zone in SGHX.desired_tubes:
+        for Zone in SGHX.selected_tubes:
             BulkSGInput = [Zone.Bulk.FeTotal, Zone.Bulk.NiTotal, Zone.Bulk.CoTotal, Zone.Bulk.CrTotal]
             for x, y in zip(BulkSGInput, BulkOutletOutput):
                 x[0] = y[Ou.Section1.NodeNumber - 1]
             
-            Sg_tube = pht_model.PHT_FAC(Zone, ld.Inlet, RealTimeHeatTransfer, Activation, j)   
+            Sg_tube = pht_model.PHT_FAC(Zone, ld.InletFeeder, RealTimeHeatTransfer, Activation, j)   
             SteamGeneratorTubes.append(Sg_tube)
             
     if FullLoop == "yes":
-        In_2 = pht_model.PHT_FAC(ld.Inlet_2, ld.Core, RealTimeHeatTransfer, Activation, j)
+        In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, RealTimeHeatTransfer, Activation, j)
+        Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, RealTimeHeatTransfer, Activation, j)
+        Ou_2 = pht_model.PHT_FAC(
+            ld.OutletFeeder_2, ld.SteamGenerator_2[SGHX.tube_number[0]], RealTimeHeatTransfer, Activation, j
+            )
+        Sg_2 = pht_model.PHT_FAC(
+            ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, RealTimeHeatTransfer, Activation, j
+            )
     
-    if OutputLogging == "yes":
-        if j % 3000 == 0:  # yearly
-            
-            # parameters tracked with time 
-            T_RIH = (SGHX.energy_balance(
-                ld.SGZones[SGHX.tube_number[0]].NodeNumber - 1, ld.SGZones[SGHX.tube_number[0]].InnerOxThickness,
-                ld.SGZones[SGHX.tube_number[0]].OuterOxThickness, j
-                ) - 273.15)
-            RIHT.append(T_RIH)
-            
-            for Zone in ld.SGZones:
+    
+    if j % 300 == 0:  # yearly  
+        # parameters tracked with time 
+        T_RIH = (SGHX.energy_balance(
+            ld.SteamGenerator[Default_Tube].NodeNumber - 1, ld.SteamGenerator[Default_Tube].InnerOxThickness,
+            ld.SteamGenerator[Default_Tube].OuterOxThickness, j
+            ) - 273.15)
+        
+        for Zone in ld.SteamGenerator:
                 Zone.Bulk.FeSatFe3O4 = c.iron_solubility(Zone)
             
+        if OutputLogging == "yes":
+            RIHT.append(T_RIH)
+            
             Temperature1 = (
-                ld.SGZones[SGHX.tube_number[0]].PrimaryBulkTemperature[ld.SGZones[SGHX.tube_number[0]].NodeNumber - 1]
-                           - 273.15
-                           )
-            Temperature2 = (
-                ld.SGZones[SGHX.tube_number[0]].PrimaryBulkTemperature[ld.SGZones[SGHX.tube_number[0]].NodeNumber - 1]
-                           - 273.15
+                ld.SteamGenerator[SGHX.tube_number[0]].PrimaryBulkTemperature[21] - 273.15
                            )
             OutletTemperatures1.append(Temperature1)
-            OutletTemperatures2.append(Temperature2)
             
-            Loading_time.append(ld.SGZones[SGHX.tube_number[0]].SolutionOxide.FeSatFe3O4)
+            if len(SGHX.selected_tubes) > 1:
+                Temperature2 = (
+                    ld.SteamGenerator[SGHX.tube_number[0]].PrimaryBulkTemperature[21] - 273.15
+                               )
+                OutletTemperatures2.append(Temperature2)
+            
+            
+            Loading_time.append(ld.SteamGenerator[SGHX.tube_number[0]].SolutionOxide.FeSatFe3O4)
     else:
         None
-            
+#print (In.Section1.SolutionOxide.FeTotal)
+print (ld.InletFeeder.SolutionOxide.FeTotal)
+          
 # FACRate = sum(
 #     ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
 #     None, None, None, None)
@@ -103,7 +118,7 @@ for j in range(SimulationHours):
 
 
 # parameters at the end of run 
-for Zone in SGHX.desired_tubes:
+for Zone in SGHX.selected_tubes:
     x = ld.UnitConverter(
     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerIronOxThickness, None, None, None
     )
@@ -121,7 +136,7 @@ for Zone in SGHX.desired_tubes:
     Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
     TemperatureProfile.append(Temperature_C)
     
-Data = [SGHX.desired_ubends, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration, TemperatureProfile]
+Data = [SGHX.ubends, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration, TemperatureProfile]
 Labels = [
     "U-bend length (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Solubility (mol/kg)", "S/O [Fe] (mol/kg)",
     "Temperature Profile (oC)"]
@@ -164,8 +179,13 @@ def property_log10(Element, Interface):
     Bulk = []  # y
     SolutionOxide = []  # z
     
+    if RealTimeHeatTransfer == "yes":
+        SteamGenerator = SteamGeneratorTubes[0].Section1
+    else:
+        SteamGenerator = Sg.Section1
+    
     # only in main 4 PHTS sections, not counting SG Zones, can be changed to include all, if needed 
-    for Section in [In.Section1, Co.Section1, Ou.Section1, ld.SGZones[SGHX.tube_number[0]]]:
+    for Section in [In.Section1, Co.Section1, Ou.Section1, SteamGenerator]:
         if Element == "Fe":
             Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.Bulk.FeTotal, Section.SolutionOxide.FeTotal]
         elif Element == "Ni":
@@ -230,7 +250,7 @@ def oxide_loading(Layer, RealTimeHeatTransfer):
 
 def plot_output():
     LoopDistance = []
-    for Section in [ld.Inlet, ld.Core, ld.Outlet, ld.SGZones[12]]:
+    for Section in [ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder, ld.SteamGenerator[Default_Tube]]:
         x = Section.Length.magnitude
         LoopDistance.append(x)
     LoopDistance = [j for i in LoopDistance for j in i]

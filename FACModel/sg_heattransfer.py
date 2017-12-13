@@ -4,7 +4,7 @@ import constants as nc
 import composition as c
 
 ubends = [0.385]#, 2.31, 3.09]
-desired_ubends = [i * 100 for i in ubends]
+ubends = [i * 100 for i in ubends]
 
 def closest(Number):
     difference = []
@@ -16,14 +16,13 @@ def closest(Number):
     return difference.index(min(difference))
 
 tube_number = []
-
-for i in desired_ubends:
+for i in ubends:
     x = closest(i)
     tube_number.append(x)
    
-desired_tubes = []
+selected_tubes = []
 for i in tube_number:
-    desired_tubes.append(ld.SGZones[i])
+    selected_tubes.append(ld.SteamGenerator[i])
 
 # T_sat_secondary = 260.1 + 273.15
 T_sat_primary = 310 + 273.15
@@ -462,11 +461,12 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(calendar_year)
 
     Balance = []
-    for Zone in ld.SGZones:
-        if Zone in desired_tubes:
+    for Zone in ld.SteamGenerator:
+        if Zone in selected_tubes:
+            # tracks oxide growth for these tubes specifically
             InnerOx = Zone.InnerOxThickness
             OuterOx = Zone.OuterOxThickness
-        else:
+        else: # assumes same growth as in default passed tube for remaining tubes
             InnerOx = InnerAccumulation
             OuterOx = OuterAccumulation
         
@@ -485,5 +485,5 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
 
-print (energy_balance(21, ld.SGZones[12].InnerOxThickness, ld.SGZones[12].OuterOxThickness, 1) - 273.15)
+# print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 1) - 273.15)
 

@@ -9,86 +9,97 @@ import sg_heattransfer as SGHX
 
 from operator import itemgetter
 
-
-# Initial temperatures in SG zones
-[SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(1983)
-
-for Zone in ld.SGZones:
-    Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
-        Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
-        )
-
-# Initial concentrations
-for Section in ld.Sections:
-    # Temperature-dependent parameters            
-    Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
+def initial_chemistry(FullLoop):
     
-    Section.DensityH2O = [ld.Density("water", "PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature]
-    Section.ViscosityH2O = [ld.Viscosity("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
-    
-    Section.FractionFeInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe")
-    Section.FractionNiInnerOxide = c.fraction_metal_inner_oxide(Section, "Ni")
-    
-    [
-        Section.Bulk.Co60, Section.Bulk.Co58, Section.Bulk.Fe55, Section.Bulk.Fe59, Section.Bulk.Mn54,
-        Section.Bulk.Cr51, Section.Bulk.Ni63
-        ] = [[0] * Section.NodeNumber] * 7
-    
-    Interfaces = [Section.MetalOxide, Section.SolutionOxide, Section.Bulk]
-    for Interface in Interfaces:
-        # makes into array with appropriate # of nodes for that PHTS section
-        Interface.ConcentrationH2 = [nc.H2 * nc.H2Density / nc.H2MolarMass] * Section.NodeNumber
-        Interface.ConcentrationH = c.bulkpH_calculator(Section)  # from system pH calculation
-        
-        # Concentration/Saturation Input [mol/kg]
-        Interface.FeTotal = c.iron_solubility(Section)
-        Interface.FeSatFe3O4 = [1 * i for i in Interface.FeTotal]
-        Interface.NiTotal = [i * 1 for i in Section.SolubilityNi]
-        Interface.NiSatFerrite = [i * 1 for i in Section.SolubilityNi]
-        Interface.NiSatMetallicNi = [i * 1 for i in Section.SolubilityNi]
-    
-        Interface.CoTotal = [i * 1 for i in Section.SolubilityCo]
-        Interface.CoSatFerrite = [i * 1 for i in Section.SolubilityCo]
-        Interface.CrTotal = [i * 1 for i in Section.SolubilityCr]
-        Interface.CrSat = [i * 1 for i in Section.SolubilityCr]
-        
-        # Initial RIHT temperature 
-        if Section in ld.InletSections:
-            Section.PrimaryBulkTemperature = (
-                [SGHX.energy_balance(21, ld.SGZones[0].InnerOxThickness, ld.SGZones[0].OuterOxThickness, 0)]\
-                * Section.NodeNumber
-                )
-        
-        if Section not in ld.OutletSections:
-            if Interface == Section.SolutionOxide:
-                Interface.FeTotal = [i * 0.8 for i in c.iron_solubility(Section)]
-        
-        if Section in ld.FuelChannels and Interface == Section.MetalOxide:
-            Interface.FeTotal = [0] * Section.NodeNumber
-        
-        if Section in ld.OutletSections and Interface == Section.MetalOxide:
-            # From Cook's thesis - experimental corrosion rate measurements and calcs
-            Interface.FeTotal = [0.00000026] * Section.NodeNumber 
-        
-        if Section not in ld.SGZones:
-            Interface.NiTotal = [0] * Section.NodeNumber
-        
-    Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = e.ECP(Section)
-    
-    if Section in ld.FuelChannels:
-        Section.CorrRate = [0] * Section.NodeNumber
+    [SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(1983)
+    # initial temperatures in steam generator(s)
+    for Zone in ld.SteamGenerator:
+        Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
+            Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
+            )
+    if FullLoop == "yes":
+        # if full loop selected, both steam generators iterated through for initial temperatures (87 bundles each)
+        Sections = ld.FullLoop
+        for Zone in ld.SteamGenerator_2:
+            Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
+            Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
+            )       
     else:
-        Section.CorrRate, Section.MetalOxide.MixedPotential = it.CorrosionRate(Section)
+        Sections = ld.HalfLoop
+    
+    # initial concentrations
+    for Section in Sections:
+        # temperature-dependent parameters            
+        Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
         
-    [
-        Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
-        Section.MetalOxide.ConcentrationH
-        ] \
-        = e.ElectrochemicalAdjustment(
-        Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
-        Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
-        Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
-        )
+        Section.DensityH2O = [
+            ld.Density("water", "PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
+            ]
+        Section.ViscosityH2O = [ld.Viscosity("water", "PHT", x) for x in Section.PrimaryBulkTemperature]
+        
+        Section.FractionFeInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe")
+        Section.FractionNiInnerOxide = c.fraction_metal_inner_oxide(Section, "Ni")
+        
+        [
+            Section.Bulk.Co60, Section.Bulk.Co58, Section.Bulk.Fe55, Section.Bulk.Fe59, Section.Bulk.Mn54,
+            Section.Bulk.Cr51, Section.Bulk.Ni63
+            ] = [[0] * Section.NodeNumber] * 7
+        
+        Interfaces = [Section.MetalOxide, Section.SolutionOxide, Section.Bulk]
+        for Interface in Interfaces:
+            # makes into array with appropriate # of nodes for that PHTS section
+            Interface.ConcentrationH2 = [nc.H2 * nc.H2Density / nc.H2MolarMass] * Section.NodeNumber
+            Interface.ConcentrationH = c.bulkpH_calculator(Section)  # from system pH calculation
+            
+            # concentration/Saturation Input [mol/kg]
+            Interface.FeTotal = c.iron_solubility(Section)
+            Interface.FeSatFe3O4 = [1 * i for i in Interface.FeTotal]
+            Interface.NiTotal = [i * 1 for i in Section.SolubilityNi]
+            Interface.NiSatFerrite = [i * 1 for i in Section.SolubilityNi]
+            Interface.NiSatMetallicNi = [i * 1 for i in Section.SolubilityNi]
+        
+            Interface.CoTotal = [i * 1 for i in Section.SolubilityCo]
+            Interface.CoSatFerrite = [i * 1 for i in Section.SolubilityCo]
+            Interface.CrTotal = [i * 1 for i in Section.SolubilityCr]
+            Interface.CrSat = [i * 1 for i in Section.SolubilityCr]
+            
+            # initial RIHT temperature 
+            if Section in ld.InletSections:
+                Section.PrimaryBulkTemperature = ([
+                        SGHX.energy_balance(21, ld.SteamGenerator[0].InnerOxThickness,
+                                            ld.SteamGenerator[0].OuterOxThickness, 0)
+                     ] * Section.NodeNumber)
+            
+            if Section not in ld.OutletSections:
+                if Interface == Section.SolutionOxide:
+                    Interface.FeTotal = [i * 0.8 for i in c.iron_solubility(Section)]
+            
+            if Section in ld.FuelSections and Interface == Section.MetalOxide:
+                Interface.FeTotal = [0] * Section.NodeNumber
+            
+            if Section in ld.OutletSections and Interface == Section.MetalOxide:
+                # from Cook's thesis - experimental corrosion rate measurements and calcs
+                Interface.FeTotal = [0.00000026] * Section.NodeNumber 
+            
+            if Section not in ld.SteamGenerator and Section not in ld.SteamGenerator_2:
+                Interface.NiTotal = [0] * Section.NodeNumber
+            
+        Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = e.ECP(Section)
+        
+        if Section in ld.FuelSections:
+            Section.CorrRate = [0] * Section.NodeNumber
+        else:
+            Section.CorrRate, Section.MetalOxide.MixedPotential = it.CorrosionRate(Section)
+            
+        [
+            Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
+            Section.MetalOxide.ConcentrationH
+            ] \
+            = e.ElectrochemicalAdjustment(
+            Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
+            Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
+            Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
+            )
 
 Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
 
@@ -185,7 +196,7 @@ class PHT_FAC():
                 z[0] = q[self.Section1.NodeNumber - 1]
            
         # Stellite wear bulk input term for cobalt and chromium    
-        if self.Section1 in ld.FuelChannels:
+        if self.Section1 in ld.FuelSections:
             self.Section2.Bulk.CoTotal[0] = self.Section1.Bulk.CoTotal[self.Section1.NodeNumber - 1] + nc.CobaltWear
             self.Section2.Bulk.CrTotal[0] = (self.Section1.Bulk.CrTotal[self.Section1.NodeNumber - 1]
                                              + nc.CobaltWear * (nc.FractionCr_Stellite / nc.FractionCo_Stellite))
@@ -215,7 +226,7 @@ class PHT_FAC():
 
         # SG heat transfer 
 #         if RealTimeHeatTransfer == "yes":
-#             if self.Section1 in ld.SGZones:  
+#             if self.Section1 in ld.SteamGenerator or self.Section1 in ld.SteamGenerator_2:  
 #                 self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1) 
 #         
             # RIHT  
