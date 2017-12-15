@@ -67,210 +67,189 @@ def spatial(Solution, Bulk, km, Diameter, Velocity, Length):
     return BulkConccentration 
 
 
-def constant_oxide_growth():
-    # if the corrosion rate is manually set, no need for RK4 method to solve for oxides (no longer ODE)
-    None 
 
+def oxide_growth(Section, ElementTracking):
+    
+    MolarMasses = [nc.FeMolarMass, nc.FeMolarMass, nc.NiMolarMass, nc.NiMolarMass, nc.CoMolarMass, nc.CoMolarMass]
+    
+    # Converts all concentration units to be used within RK4 from [mol/kg] to [g/cm^3]
+    Concentrations = [
+        Section.SolutionOxide.FeTotal, Section.SolutionOxide.NiTotal, Section.SolutionOxide.CoTotal,
+        Section.SolutionOxide.FeSatFe3O4, Section.SolutionOxide.NiSatFerrite, Section.SolutionOxide.CoSatFerrite
+        ]
+    ConvertedConcentrations = []
+    for i, k in zip(Concentrations, MolarMasses):  # Concentrations has 6 lists in it
+        x = [(z / 1000) * (k * y) for z, y in zip(i, Section.DensityH2O)]
+        ConvertedConcentrations.append(x)
+    FeTotal, NiTotal, CoTotal, FeSat, NiSat, CoSat = ConvertedConcentrations
 
-def oxidegrowth(Section, Saturations, BulkConcentrations, ElementTracking):
+    # Determines dy/dt (growth functions) for each type of solid corrosion product at each node based on 
+    # respective element's saturation behaviour
+    GrowthOuterMagnetite = []
+    GrowthInnerIronOxide = []
+    
+    if ElementTracking == "yes":
+        GrowthCobalt = []
+        GrowthNickel = []
+
+    # Iterate using previously solved RK4 thickness: re-evaluates growth functions based on S/O + M/O 
+    # concentrations using new thickness     
+    for i in range(Section.NodeNumber):
+        # Magnetite (outer and inner)
+        if RK4_OuterFe3O4Thickness[i] > 0:
+            # With outer layer present, dFe3O4_i/dt only depends on corrosion rate/diffusion
+            if Section in ld.FuelSections:
+                q = 0
+            else:
+                # While outer layer present, inner Fe3O4 not affected by oxide kinetics (only diffusion)
+                q = Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide  # dy/dt = f(y)
+            if FeTotal[i] >= FeSat[i]:  # Precipitation of outer layer magnetite 
+            # dy/dt = f(y) via Diff term in SO concentration
+                x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
+            else:  # if FeTotal[i] < FeSat[i]:
+                x = Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
+        
+        else:  # OuterFe3O4Thickness[i] ==0
+            if FeTotal[i] >= FeSat[i]:
+                if Section in ld.FuelSections:
+                    q = 0
+                else:
+                    q = Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide 
+                
+                x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
+            else:  # if FeTotal[i] < FeSat[i]:
+                x = 0  # nothing to dissolve
+                if Section in ld.FuelSections:
+                    q = 0
+                else:
+                    q = ((Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide)
+                         + Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i]))
+
+        GrowthOuterMagnetite.append(x)
+        GrowthInnerIronOxide.append(q)
+        
+        if ElementTracking == "yes":
+            # Cobalt incorporation
+            if RK4_InnerIronOxThickness[i] > 0:  # Oxide layer present for Co to incorporate into
+                if CoTotal[i] >= CoSat[i]:
+                    y = Section.KpFe3O4electrochem[i] * (CoTotal[i] - CoSat[i]) 
+                else:  # CoTotal[i] < CoSat[i]
+                    if RK4_CoThickness[i] > 0:
+                        y = Section.KdFe3O4electrochem[i] * (CoTotal[i] - CoSat[i])
+                    else:  # CoThickness == 0
+                        y = 0  # Nothing to dissolve 
+            else:  # InnerIronOxThickness[i] == 0 (Core)
+                y = 0  # Nothing to incorporate into 
+
+            GrowthCobalt.append(y)           
+
+            # Nickel incorporation or Ni(s) deposition (independent of presence of an oxide layer backbone)
+            if NiTotal[i] >= NiSat[i]:
+                z = Section.KpFe3O4electrochem[i] * (NiTotal[i] - NiSat[i])
+            else:  # NiTotal[i] < NiSat[i]:
+                if RK4_NiThickness[i] > 0:  # Ni must be present for its dissolution to occur
+                    z = Section.KdFe3O4electrochem[i] * (NiTotal[i] - NiSat[i])
+                else:
+                    z = 0  # Nothing to dissolve
+            GrowthNickel.append(z)
+    return GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt
+    
+
+def oxides(Section, CorrosionRate, Saturations, BulkConcentrations, ElementTracking):
     RK4_InnerIronOxThickness = Section.InnerIronOxThickness
     RK4_OuterFe3O4Thickness = Section.OuterFe3O4Thickness
     # If element tracking is off, Co/Ni thickness remains same as initial loadings
     RK4_NiThickness = Section.NiThickness
     RK4_CoThickness = Section.CoThickness
     
-    L = []
-    M = []
     
-    if ElementTracking == "yes": # lists for Ni and Co growth
-        N = []
-        P = []
-      
-    MolarMasses = [nc.FeMolarMass, nc.FeMolarMass, nc.NiMolarMass, nc.NiMolarMass, nc.CoMolarMass, nc.CoMolarMass]
-
-    for approximation in range(4):  # 4 approximations in the "RK4" method
-        # #Solves S/O elemental concentrations at current approximation of oxide thickness(es)
-        # (needed inside SolutionOxideBalance function to determine if <> saturation)
-
-        # Calculates S/O elemental concentrations based on updated oxide thicknesses at each time step
-        SolutionOxideConcentrations = [
-            Section.SolutionOxide.FeTotal, Section.SolutionOxide.NiTotal, Section.SolutionOxide.CoTotal
-            ]
-        SOConc = []
-        # Excludes Cr concentrations --> purely based on stellite transport (all Cr-oxides assumed to be insoluble)
-        for x, y, z, w in zip (SolutionOxideConcentrations, BulkConcentrations[0:3], Saturations, ["Fe", "Ni", "Co"]):
-            q = it.SolutionOxide(
-                Section, y, z, x, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness,
-                w
-                )
-
-            SOConc.append(q)
-        Section.SolutionOxide.FeTotal, Section.SolutionOxide.NiTotal, Section.SolutionOxide.CoTotal = SOConc
-
-        Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = e.ECP(Section)
-
-        if Section in ld.FuelSections:
-            Section.CorrRate = [0] * Section.NodeNumber
-            Section.MetalOxide.FeTotalFe = [0] * Section.NodeNumber
-            Section.MetalOxide.MixedPotential = [0] * Section.NodeNumber
-        else:
-
-            Section.MetalOxide.FeTotal = it.MetalOxideInterfaceConcentration(
-                Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
-                Section.CorrRate
-                )
-            Section.CorrRate, Section.MetalOxide.MixedPotential = it.CorrosionRate(Section)
-
-        if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
-            Section.MetalOxide.NiTotal = it.MetalOxideInterfaceConcentration(
-                Section, "Ni", Section.SolutionOxide.NiTotal, Section.InnerOxThickness, Section.OuterOxThickness,
-                Section.CorrRate
-                )
-
-        elif Section in ld.InletSections or Section in ld.OutletSections:
-            Section.MetalOxide.NiTotal = [0] * Section.NodeNumber
-#             MetalOxideCo = it.MetalOxideInterfaceConcentration(
-#             Section, "Co", SolutionOxideCoTotal, InnerOxThickness, OuterOxThickness, CorrRate
-#             )
-
-        [
-            Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
-            Section.MetalOxide.ConcentrationH
-            ] = \
-            e.ElectrochemicalAdjustment(
-            Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
-            Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
-            Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
+    if CorrosionRate == "constant":
+        it.corrosion_rate_concentrations(
+            Section, BulkConcentrations, Saturations, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
+            RK4_NiThickness, RK4_CoThickness
             )
-
-        # Converts all concentration units to be used within RK4 from [mol/kg] to [g/cm^3]
-        Concentrations = [
-            Section.SolutionOxide.FeTotal, Section.SolutionOxide.NiTotal, Section.SolutionOxide.CoTotal,
-            Section.SolutionOxide.FeSatFe3O4, Section.SolutionOxide.NiSatFerrite, Section.SolutionOxide.CoSatFerrite
-            ]
-        ConvertedConcentrations = []
-        for i, k in zip(Concentrations, MolarMasses):  # Concentrations has 6 lists in it
-            x = [(z / 1000) * (k * y) for z, y in zip(i, Section.DensityH2O)]
-            ConvertedConcentrations.append(x)
-        FeTotal, NiTotal, CoTotal, FeSat, NiSat, CoSat = ConvertedConcentrations
-
+        GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt = oxide_growth(
+                Section, ElementTracking
+                )
+    
+    else:
+        L = []
+        M = []
+        
+        if ElementTracking == "yes": # lists for Ni and Co growth
+            N = []
+            P = []
+        
         # Determines dy/dt (growth functions) for each type of solid corrosion product at each node based on 
         # respective element's saturation behaviour
         GrowthOuterMagnetite = []
         GrowthInnerIronOxide = []
-        
+         
         if ElementTracking == "yes":
             GrowthCobalt = []
             GrowthNickel = []
-
-        # Iterate using previously solved RK4 thickness: re-evaluates growth functions based on S/O + M/O 
-        # concentrations using new thickness     
-        for i in range(Section.NodeNumber):
-            # Magnetite (outer and inner)
-            if RK4_OuterFe3O4Thickness[i] > 0:
-                # With outer layer present, dFe3O4_i/dt only depends on corrosion rate/diffusion
-                if Section in ld.FuelSections:
-                    q = 0
-                else:
-                    # While outer layer present, inner Fe3O4 not affected by oxide kinetics (only diffusion)
-                    q = Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide  # dy/dt = f(y)
-                if FeTotal[i] >= FeSat[i]:  # Precipitation of outer layer magnetite 
-                # dy/dt = f(y) via Diff term in SO concentration
-                    x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
-                else:  # if FeTotal[i] < FeSat[i]:
-                    x = Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
+        
+        for approximation in range(4):  # 4 approximations in the "RK4" method
             
-            else:  # OuterFe3O4Thickness[i] ==0
-                if FeTotal[i] >= FeSat[i]:
-                    if Section in ld.FuelSections:
-                        q = 0
-                    else:
-                        q = Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide 
-                    
-                    x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
-                else:  # if FeTotal[i] < FeSat[i]:
-                    x = 0  # nothing to dissolve
-                    if Section in ld.FuelSections:
-                        q = 0
-                    else:
-                        q = ((Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide)
-                             + Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i]))
-
-            GrowthOuterMagnetite.append(x)
-            GrowthInnerIronOxide.append(q)
+            it.corrosion_rate_concentrations(
+                Section, BulkConcentrations, Saturations, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
+                RK4_NiThickness, RK4_CoThickness
+                )
             
-            if ElementTracking == "yes":
-                # Cobalt incorporation
-                if RK4_InnerIronOxThickness[i] > 0:  # Oxide layer present for Co to incorporate into
-                    if CoTotal[i] >= CoSat[i]:
-                        y = Section.KpFe3O4electrochem[i] * (CoTotal[i] - CoSat[i]) 
-                    else:  # CoTotal[i] < CoSat[i]
-                        if RK4_CoThickness[i] > 0:
-                            y = Section.KdFe3O4electrochem[i] * (CoTotal[i] - CoSat[i])
-                        else:  # CoThickness == 0
-                            y = 0  # Nothing to dissolve 
-                else:  # InnerIronOxThickness[i] == 0 (Core)
-                    y = 0  # Nothing to incorporate into 
+            GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt = oxide_growth(
+                Section, ElementTracking
+                )
+            
+            # Iterate using previously solved RK4 thickness: re-evaluates growth functions based on S/O + M/O 
+            # concentrations using new thickness     
+           
+            # Section.Oxidelayer = initial input from previous time step's RK4 solution 
+            [RK4_InnerIronOxThickness, a] = RK4(Section, Section.InnerIronOxThickness, GrowthInnerIronOxide, approximation)
+            L.append(a)
     
-                GrowthCobalt.append(y)           
+            [RK4_OuterFe3O4Thickness, b] = RK4(Section, Section.OuterFe3O4Thickness, GrowthOuterMagnetite, approximation)
+            M.append(b)
     
-                # Nickel incorporation or Ni(s) deposition (independent of presence of an oxide layer backbone)
-                if NiTotal[i] >= NiSat[i]:
-                    z = Section.KpFe3O4electrochem[i] * (NiTotal[i] - NiSat[i])
-                else:  # NiTotal[i] < NiSat[i]:
-                    if RK4_NiThickness[i] > 0:  # Ni must be present for its dissolution to occur
-                        z = Section.KdFe3O4electrochem[i] * (NiTotal[i] - NiSat[i])
-                    else:
-                        z = 0  # Nothing to dissolve
-                GrowthNickel.append(z)
-
-        # Section.Oxidelayer = initial input from previous time step's RK4 solution 
-        [RK4_InnerIronOxThickness, a] = RK4(Section, Section.InnerIronOxThickness, GrowthInnerIronOxide, approximation)
-        L.append(a)
-
-        [RK4_OuterFe3O4Thickness, b] = RK4(Section, Section.OuterFe3O4Thickness, GrowthOuterMagnetite, approximation)
-        M.append(b)
-
-        if ElementTracking == "yes": # otherwise, no growth 
-            [RK4_CoThickness, c] = RK4(Section, Section.CoThickness, GrowthCobalt, approximation)
-            N.append(c)
+            if ElementTracking == "yes": # otherwise, no growth 
+                [RK4_CoThickness, c] = RK4(Section, Section.CoThickness, GrowthCobalt, approximation)
+                N.append(c)
+        
+                [RK4_NiThickness, d] = RK4(Section, Section.NiThickness, GrowthNickel, approximation)
+                P.append(d)
     
-            [RK4_NiThickness, d] = RK4(Section, Section.NiThickness, GrowthNickel, approximation)
-            P.append(d)
-
-#         for i in range(Section.NodeNumber):
-#             # Need the overall inner and outer oxides to be updated for M/O concentration
-#             if RK4_OuterFe3O4Thickness[i] > 0:  # from previous time step
-#                 # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer
-#                 Section.OuterOxThickness[i] = RK4_OuterFe3O4Thickness[i] + RK4_CoThickness[i] + RK4_NiThickness[i]
-#                 Section.InnerOxThickness[i] = RK4_InnerIronOxThickness[i]
-#             else:  # OuterFe3O4Thickness == 0
-#                 Section.InnerOxThickness[i] = RK4_InnerIronOxThickness[i] + RK4_CoThickness[i] + RK4_NiThickness[i]
-
-    Section.InnerIronOxThickness = [
-        x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.InnerIronOxThickness, L[0], L[1], L[2], L[3])
-        ]
-    Section.OuterFe3O4Thickness = [
-        x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.OuterFe3O4Thickness, M[0], M[1], M[2], M[3])
-        ]
+    #         for i in range(Section.NodeNumber):
+    #             # Need the overall inner and outer oxides to be updated for M/O concentration
+    #             if RK4_OuterFe3O4Thickness[i] > 0:  # from previous time step
+    #                 # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer
+    #                 Section.OuterOxThickness[i] = RK4_OuterFe3O4Thickness[i] + RK4_CoThickness[i] + RK4_NiThickness[i]
+    #                 Section.InnerOxThickness[i] = RK4_InnerIronOxThickness[i]
+    #             else:  # OuterFe3O4Thickness == 0
+    #                 Section.InnerOxThickness[i] = RK4_InnerIronOxThickness[i] + RK4_CoThickness[i] + RK4_NiThickness[i]
     
-    if ElementTracking == "yes": # otherwise, not updated 
-        Section.CoThickness = [
-            x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.CoThickness, N[0], N[1], N[2], N[3])
+        Section.InnerIronOxThickness = [
+            x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.InnerIronOxThickness, L[0], L[1], L[2], L[3])
             ]
-        Section.NiThickness = [
-            x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.NiThickness, P[0], P[1], P[2], P[3])
+        Section.OuterFe3O4Thickness = [
+            x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.OuterFe3O4Thickness, M[0], M[1], M[2], M[3])
             ]
-
-#     Layers = [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Section.CoThickness, Section.NiThickness]
-    # 4 different layers at each node. If any thicknesses are negative due to dissolution of respective layer, 
-    # thickness = 0
-#     for i in range(4):
-#         for x in range(Section.NodeNumber):
-#             if Layers[i][x] < 0:
-#                 Layers[i][x] = 0
-    return None
-
+        
+        if ElementTracking == "yes": # otherwise, not updated 
+            Section.CoThickness = [
+                x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.CoThickness, N[0], N[1], N[2], N[3])
+                ]
+            Section.NiThickness = [
+                x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.NiThickness, P[0], P[1], P[2], P[3])
+                ]
+    
+    #     Layers = [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Section.CoThickness, Section.NiThickness]
+        # 4 different layers at each node. If any thicknesses are negative due to dissolution of respective layer, 
+        # thickness = 0
+    #     for i in range(4):
+    #         for x in range(Section.NodeNumber):
+    #             if Layers[i][x] < 0:
+    #                 Layers[i][x] = 0
+        return None
+    
 
 def RK4(Section, InitialThickness, GrowthFunction, approximation):
     x = [i * nc.TimeIncrement for i in GrowthFunction]  # f(t)*delta t

@@ -178,7 +178,7 @@ def SolutionOxide(
     return Conc    
         
             
-def CorrosionRate(Section):
+def corrosion_rate(Section):
     [ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2] = c.hydrolysis(
         Section, Section.MetalOxide.FeTotal, Section.MetalOxide.NiTotal, Section.MetalOxide.ConcentrationH
         )
@@ -256,3 +256,62 @@ def CorrosionRate(Section):
     if Section in ld.OutletSections:
         rate = [3e-9] * Section.NodeNumber
     return rate, MixedECP 
+
+
+def corrosion_rate_concentrations(Section, BulkConcentrations, Saturations, RK4_InnerIronOxThickness,
+                                  RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness):
+        
+    #Solves S/O elemental concentrations at current approximation of oxide thickness(es)
+    # (needed inside SolutionOxideBalance function to determine if <> saturation)
+
+    # Calculates S/O elemental concentrations based on updated oxide thicknesses at each time step
+    SolutionOxideConcentrations = [
+        Section.SolutionOxide.FeTotal, Section.SolutionOxide.NiTotal, Section.SolutionOxide.CoTotal
+        ]
+    SOConc = []
+    # Excludes Cr concentrations --> purely based on stellite transport (all Cr-oxides assumed to be insoluble)
+    for x, y, z, w in zip (SolutionOxideConcentrations, BulkConcentrations[0:3], Saturations, ["Fe", "Ni", "Co"]):
+        q = SolutionOxide(
+            Section, y, z, x, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness,
+            w
+            )
+
+        SOConc.append(q)
+    Section.SolutionOxide.FeTotal, Section.SolutionOxide.NiTotal, Section.SolutionOxide.CoTotal = SOConc
+
+    Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = e.ECP(Section)
+
+    if Section in ld.FuelSections:
+        Section.CorrRate = [0] * Section.NodeNumber
+        Section.MetalOxide.FeTotalFe = [0] * Section.NodeNumber
+        Section.MetalOxide.MixedPotential = [0] * Section.NodeNumber
+    else:
+
+        Section.MetalOxide.FeTotal = MetalOxideInterfaceConcentration(
+            Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
+            Section.CorrRate
+            )
+        Section.CorrRate, Section.MetalOxide.MixedPotential = corrosion_rate(Section)
+
+    if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
+        Section.MetalOxide.NiTotal = MetalOxideInterfaceConcentration(
+            Section, "Ni", Section.SolutionOxide.NiTotal, Section.InnerOxThickness, Section.OuterOxThickness,
+            Section.CorrRate
+            )
+
+    elif Section in ld.InletSections or Section in ld.OutletSections:
+        Section.MetalOxide.NiTotal = [0] * Section.NodeNumber
+#             MetalOxideCo = MetalOxideInterfaceConcentration(
+#             Section, "Co", SolutionOxideCoTotal, InnerOxThickness, OuterOxThickness, CorrRate
+#             )
+
+    [
+        Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
+        Section.MetalOxide.ConcentrationH
+        ] = \
+        e.ElectrochemicalAdjustment(
+        Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
+        Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
+        Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
+        )
+    

@@ -89,7 +89,7 @@ def initial_chemistry(FullLoop):
         if Section in ld.FuelSections:
             Section.CorrRate = [0] * Section.NodeNumber
         else:
-            Section.CorrRate, Section.MetalOxide.MixedPotential = it.CorrosionRate(Section)
+            Section.CorrRate, Section.MetalOxide.MixedPotential = it.corrosion_rate(Section)
             
         [
             Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
@@ -238,7 +238,7 @@ class PHT_FAC():
 #                 None
                
         # RK4 oxide thickness calculation (no spalling)
-        rk_4.oxidegrowth(self.Section1, Saturations, BulkConcentrations, ElementTracking = "no")
+        rk_4.oxides(self.Section1, "not constant", Saturations, BulkConcentrations, ElementTracking = "no")
         
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
