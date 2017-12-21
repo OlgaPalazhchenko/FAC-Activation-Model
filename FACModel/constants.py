@@ -1,11 +1,3 @@
-
-z = 1/4 + 1
-w = 1/4
-+1
-q = ((1/4)
-     +1)
-
-print (z,w,q)
 # General electrochemistry constants
 Beta = 0.5  # Symmetry coefficient
 kH2 = 0.00078  # Henry's law constant for H2 @ 298.15 K [mol/L*atm]

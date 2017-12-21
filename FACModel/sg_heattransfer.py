@@ -1,10 +1,9 @@
 import lepreau_data as ld
 import numpy as np
 import constants as nc
-import composition as c
 
-ubends = [0.385]#, 2.31, 3.09]
-desired_ubends = [i * 100 for i in ubends]
+selected_ubends = [0.385]#, 2.31, 3.09]
+selected_ubends = [i * 100 for i in selected_ubends]
 
 def closest(Number):
     difference = []
@@ -17,13 +16,13 @@ def closest(Number):
 
 tube_number = []
 
-for i in desired_ubends:
+for i in selected_ubends:
     x = closest(i)
     tube_number.append(x)
-   
-desired_tubes = []
+  
+selected_tubes = []
 for i in tube_number:
-    desired_tubes.append(ld.SGZones[i])
+    selected_tubes.append(ld.SGZones[i])
 
 # T_sat_secondary = 260.1 + 273.15
 T_sat_primary = 310 + 273.15
@@ -463,7 +462,7 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
 
     Balance = []
     for Zone in ld.SGZones:
-        if Zone in desired_tubes:
+        if Zone in selected_tubes:
             InnerOx = Zone.InnerOxThickness
             OuterOx = Zone.OuterOxThickness
         else:

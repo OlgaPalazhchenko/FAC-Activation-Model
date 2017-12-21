@@ -57,7 +57,7 @@ for j in range(SimulationHours):
                 ]
         SteamGeneratorTubes = []
 
-        for Zone in SGHX.desired_tubes:
+        for Zone in SGHX.selected_tubes:
             BulkSGInput = [Zone.Bulk.FeTotal, Zone.Bulk.NiTotal, Zone.Bulk.CoTotal, Zone.Bulk.CrTotal]
             for x, y in zip(BulkSGInput, BulkOutletOutput):
                 x[0] = y[Ou.Section1.NodeNumber - 1]
@@ -66,7 +66,10 @@ for j in range(SimulationHours):
             SteamGeneratorTubes.append(Sg_tube)
             
     if FullLoop == "yes":
-        In_2 = pht_model.PHT_FAC(ld.Inlet_2, ld.Core, RealTimeHeatTransfer, Activation, j)
+        In_2 = pht_model.PHT_FAC(ld.Inlet_2, ld.Core_2, RealTimeHeatTransfer, Activation, j)
+        Co_2 = pht_model.PHT_FAC(ld.Core_2, ld.Outlet_2, RealTimeHeatTransfer, Activation, j)
+        Ou_2 = pht_model.PHT_FAC(ld.Outlet_2, ld.SGZones_2[SGHX.tube_number[0]], RealTimeHeatTransfer, Activation, j)
+        Sg_2 = pht_model.PHT_FAC(ld.SGZones_2[SGHX.tube_number[0]], ld.Inlet, RealTimeHeatTransfer, Activation, j)
     
     if OutputLogging == "yes":
         if j % 3000 == 0:  # yearly
@@ -103,7 +106,7 @@ for j in range(SimulationHours):
 
 
 # parameters at the end of run 
-for Zone in SGHX.desired_tubes:
+for Zone in SGHX.selected_tubes:
     x = ld.UnitConverter(
     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerIronOxThickness, None, None, None
     )
@@ -121,7 +124,7 @@ for Zone in SGHX.desired_tubes:
     Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
     TemperatureProfile.append(Temperature_C)
     
-Data = [SGHX.desired_ubends, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration, TemperatureProfile]
+Data = [SGHX.selected_ubends, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration, TemperatureProfile]
 Labels = [
     "U-bend length (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Solubility (mol/kg)", "S/O [Fe] (mol/kg)",
     "Temperature Profile (oC)"]
