@@ -348,23 +348,25 @@ class Section():  # Defining each primary heat transport section as a class
         self.TubeNumber = None
 
  
-# Creates the 4 PHTS sections and their methods based on the Sections class template/blueprint
-Inlet = Section(21, 0, 7)
-Inlet_2 = Section(21, 0, 7)
+# creates the PHTS sections and their methods based on the Sections class template/blueprint
+InletFeeder = Section(21, 0, 7)
+InletFeeder_2 = Section(21, 0, 7)
 
-Core = Section(42, 0, 12)
-Core_2 = Section(42, 0, 12)
+FuelChannel = Section(42, 0, 12)
+FuelChannel_2 = Section(42, 0, 12)
 
-Outlet = Section(63, 0, 9)
-Outlet_2 = Section(63, 0, 9)
+OutletFeeder = Section(63, 0, 9)
+OutletFeeder_2 = Section(63, 0, 9)
 
-# Steam generator split into 87 zones based on the distinct tube bend arc lengths
-SGZones = [Section(84, 0, 22) for each in range(87)]
-SGZones_2 = [Section(84, 0, 22) for each in range(87)]
+# each steam generator split into 87 distinct bundles based on the tube bend arc lengths
+SteamGenerator = [Section(84, 0, 22) for each in range(87)]
+SteamGenerator_2 = [Section(84, 0, 22) for each in range(87)]
 
-InletSections = [Inlet, Inlet_2]
-OutletSections = [Outlet, Outlet_2]
-FuelChannels = [Core, Core_2]
+# only one feeder and fuel channel in each section for now 
+InletSections = [InletFeeder, InletFeeder_2]
+OutletSections = [OutletFeeder, OutletFeeder_2]
+FuelSections = [FuelChannel, FuelChannel_2]
+SteamGeneratorSections = [SteamGenerator, SteamGenerator_2]
 
 for InletPiping in InletSections:
     InletPiping.Diameter = [44.3, 50, 106, 5.68, 5.68, 5.68, 5.68]
@@ -378,7 +380,7 @@ for InletPiping in InletSections:
     InletPiping, "Celsius", "Kelvin", None, None, None, None, None, [266] * InletPiping.NodeNumber
     )
 
-for Channel in FuelChannels:
+for Channel in FuelSections:
     Channel.Diameter = [1.3] * Channel.NodeNumber 
     Channel.Velocity = [883.08, 890.66, 900.3, 910.64, 920.97, 932.68, 945.08, 958.17, 973.32, 989.16, 1073.89, 1250.92]
     Channel.Length.magnitude = [49.5] * Channel.NodeNumber
@@ -396,7 +398,7 @@ for Channel in FuelChannels:
         4.69E-11
         ]
     Channel.PrimaryBulkTemperature = UnitConverter(
-        Inlet, "Celsius", "Kelvin", None, None, None, None, None, [266.55, 270.48, 275.15, 279.83, 284.51, 289.19,
+        Channel, "Celsius", "Kelvin", None, None, None, None, None, [266.55, 270.48, 275.15, 279.83, 284.51, 289.19,
                                                                    293.87, 298.54, 303.22, 307.9, 311, 311]
                                                    )
 
@@ -411,6 +413,7 @@ for OutletPiping in OutletSections:
     OutletPiping, "Celsius", "Kelvin", None, None, None, None, None, [310] * OutletPiping.NodeNumber
     )
 
+# assumed that these u-bends/straight leg lengths are = for all steam generators 
 u_bend = []
 straight_u_bend_section = [9.5] * 82 + [7.95] + [6.14] + [3.94] + [1.4] + [0] # in.
 straight_u_bend_section = [i * 2.54 for i in straight_u_bend_section] # in. to cm
@@ -438,55 +441,63 @@ number_tubes = [8, 11, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 26, 28, 28, 2
                 48, 47, 48, 43, 48, 48, 49, 50, 49, 50, 51, 50, 51, 50, 51, 50, 51, 52, 50, 46, 51, 50, 53, 52, 51, 52,
                 53, 52, 53, 52, 51, 50, 50, 48, 47]
 
-for Zone, length, i in zip(SGZones, u_bend_total, number_tubes):
-    # u-bend split into 4 nodes
-    Zone.Length.magnitude = hot_leg_length + [length / 4] * 4 + cold_leg_length
-    Zone.TubeNumber = i
+
+def steam_generator_properties(SteamGenerator):
     
-    Zone.Diameter = [1.368] * Zone.NodeNumber
-    Zone.Velocity = [
-        533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 498, 494, 491, 489, 487, 484, 483, 481, 480, 479, 476, 
-        474
-        ]
-    
-    Zone.SolubilityNi = [
-        1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 1.96011E-09, 
-        2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09, 2.60733E-09, 
-        2.62118E-09, 2.63802E-09, 2.66147E-09, 2.68978E-09, 2.71747E-09
-        ]
-    Zone.SolubilityCo = [
-        1.46729E-09, 1.46729E-09, 1.46729E-09, 1.49896E-09, 1.62443E-09, 1.75595E-09, 1.91821E-09, 2.06673E-09,
-        2.2024E-09, 2.35035E-09, 2.5275E-09, 2.67907E-09, 2.80762E-09, 2.92529E-09, 3.0321E-09, 3.13232E-09,
-        3.22305E-09, 3.2971E-09, 3.38716E-09, 3.51258E-09, 3.66401E-09, 3.81211E-09
-        ]
-    Zone.SolubilityCr = [
-        4.84E-11, 4.84E-11, 4.84E-11, 4.99E-11, 5.61E-11, 6.20E-11, 6.73E-11, 7.22E-11, 7.67E-11, 8.10E-11, 8.52E-11, 
-        8.88E-11, 9.18E-11, 9.46E-11, 9.71E-11, 9.94E-11, 1.01E-10, 1.03E-10, 1.00E-10, 9.62E-11, 9.15E-11, 8.70E-11
-                         ]
-    
-    Zone.PrimaryBulkTemperature = UnitConverter(
-        Zone, "Celsius", "Kelvin", None, None, None, None, None, 
-        [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27, 279.43, 
-         277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03]
-        )
-    
-    Zone.Length.label = ["PHT boiling"] * 2 \
-    + [None] * 6 \
-    + ["u-bend"] * 4 \
-    + [None] * 5 \
-    + ["preheater start"] \
-    + ["preheater"] * 3
+    for Zone, length, i in zip(SteamGenerator, u_bend_total, number_tubes):
+        # u-bend split into 4 nodes
+        Zone.Length.magnitude = hot_leg_length + [length / 4] * 4 + cold_leg_length
+        Zone.TubeNumber = i
+        
+        Zone.Diameter = [1.368] * Zone.NodeNumber
+        Zone.Velocity = [
+            533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 498, 494, 491, 489, 487, 484, 483, 481, 480, 479, 476, 
+            474
+            ]
+        
+        Zone.SolubilityNi = [
+            1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 1.96011E-09, 
+            2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09, 2.60733E-09, 
+            2.62118E-09, 2.63802E-09, 2.66147E-09, 2.68978E-09, 2.71747E-09
+            ]
+        Zone.SolubilityCo = [
+            1.46729E-09, 1.46729E-09, 1.46729E-09, 1.49896E-09, 1.62443E-09, 1.75595E-09, 1.91821E-09, 2.06673E-09,
+            2.2024E-09, 2.35035E-09, 2.5275E-09, 2.67907E-09, 2.80762E-09, 2.92529E-09, 3.0321E-09, 3.13232E-09,
+            3.22305E-09, 3.2971E-09, 3.38716E-09, 3.51258E-09, 3.66401E-09, 3.81211E-09
+            ]
+        Zone.SolubilityCr = [
+            4.84E-11, 4.84E-11, 4.84E-11, 4.99E-11, 5.61E-11, 6.20E-11, 6.73E-11, 7.22E-11, 7.67E-11, 8.10E-11, 8.52E-11, 
+            8.88E-11, 9.18E-11, 9.46E-11, 9.71E-11, 9.94E-11, 1.01E-10, 1.03E-10, 1.00E-10, 9.62E-11, 9.15E-11, 8.70E-11
+                             ]
+        
+        Zone.PrimaryBulkTemperature = UnitConverter(
+            Zone, "Celsius", "Kelvin", None, None, None, None, None, 
+            [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27, 279.43, 
+             277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03]
+            )
+        
+        Zone.Length.label = ["PHT boiling"] * 2 \
+        + [None] * 6 \
+        + ["u-bend"] * 4 \
+        + [None] * 5 \
+        + ["preheater start"] \
+        + ["preheater"] * 3
+
+
+steam_generator_properties(SteamGenerator)
+steam_generator_properties(SteamGenerator_2)
 
 # Combines PHT sections and SG Zones (in the event each zone will be tracked for oxide growth/heat transfer)
-Sections = FuelChannels + InletSections + OutletSections + SGZones #+ SGZones_2
+FullLoop = InletSections + FuelSections + OutletSections + SteamGenerator + SteamGenerator_2
+HalfLoop = [InletSections[0], FuelSections[0], OutletSections[0]] + SteamGeneratorSections[0]
 
-for Section in Sections:
+for Section in FullLoop:
     # Particulate #[mg/kg] (ppm)
     Section.SmallParticulate = [0] * Section.NodeNumber
     Section.BigParticulate = [0] * Section.NodeNumber
 
     # Oxide thicknesses [g/cm^2]
-    if Section in SGZones or Section in SGZones_2:
+    if Section in SteamGenerator or Section in SteamGenerator_2:
         Section.OuterFe3O4Thickness = [1.3E-4] * Section.NodeNumber
         Section.NiThickness = [1.3E-4] * Section.NodeNumber
         Section.OuterOxThickness = [1 * x + 1 * y for x, y in zip(Section.OuterFe3O4Thickness, Section.NiThickness)]
@@ -494,7 +505,7 @@ for Section in Sections:
         Section.TubeThickness = 0.113
         Section.OuterDiameter = [x + 2 * Section.TubeThickness for x in Section.Diameter]
 
-    if Section in FuelChannels:
+    if Section in FuelSections:
         Section.OuterFe3O4Thickness = [0] * Section.NodeNumber
         Section.NiThickness = [0] * Section.NodeNumber
         Section.OuterOxThickness = [i * 1 for i in Section.OuterFe3O4Thickness]
