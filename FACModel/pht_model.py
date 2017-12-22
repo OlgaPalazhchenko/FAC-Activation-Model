@@ -87,9 +87,9 @@ def initial_chemistry(FullLoop):
         Section.SolutionOxide.MixedPotential, Section.SolutionOxide.EqmPotentialFe3O4 = e.ECP(Section)
         
         if Section in ld.FuelSections:
-            Section.CorrRate = [0] * Section.NodeNumber
+            Section.CorrRate == [0] * Section.NodeNumber
         else:
-            Section.CorrRate, Section.MetalOxide.MixedPotential = it.corrosion_rate(Section)
+            Section.CorrRate, Section.MetalOxide.MixedPotential = it.corrosion_rate(Section, ConstantRate="no")
             
         [
             Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
@@ -105,7 +105,8 @@ Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
 
 
 class PHT_FAC():
-    def __init__(self, ActiveSection, OutgoingSection, RealTimeHeatTransfer, Activation, j):  # j = overall time step
+    def __init__(self, ActiveSection, OutgoingSection, RealTimeHeatTransfer, Activation, ConstantRate, j):  
+        # j = overall time step
         self.Section1 = ActiveSection
         self.Section2 = OutgoingSection
         
@@ -238,7 +239,7 @@ class PHT_FAC():
 #                 None
                
         # RK4 oxide thickness calculation (no spalling)
-        rk_4.oxides(self.Section1, "not constant", Saturations, BulkConcentrations, ElementTracking = "no")
+        rk_4.oxide_layers(self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking = "no")
         
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
