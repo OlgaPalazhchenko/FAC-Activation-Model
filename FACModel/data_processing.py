@@ -33,7 +33,7 @@ OutletTemperatures2 = []
 TemperatureProfile = []
 
 SimulationYears = 1  # years
-SimulationHours = SimulationYears * 500
+SimulationHours = SimulationYears * 8760
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(FullLoop)
@@ -86,7 +86,7 @@ for j in range(SimulationHours):
             )
     
     
-    if j % 300 == 0:  # yearly  
+    if j % 8759 == 0:  # yearly  
         # parameters tracked with time 
         T_RIH = (SGHX.energy_balance(
             ld.SteamGenerator[Default_Tube].NodeNumber - 1, ld.SteamGenerator[Default_Tube].InnerOxThickness,
