@@ -37,6 +37,7 @@ SimulationHours = SimulationYears * 8760
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(FullLoop)
+# 1.52 m is the u-bend arc length of an average SG tube
 Default_Tube = SGHX.closest(1.52 * 100)
 
 import time
