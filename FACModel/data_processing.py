@@ -3,6 +3,7 @@ Created on Oct 22, 2017
 
 @author: opalazhc
 '''
+
 import pht_model
 import lepreau_data as ld
 import sg_heattransfer as SGHX
@@ -20,8 +21,6 @@ Activation = "no"
 PlotOutput = "yes"
 OutputLogging = "yes"
 FullLoop = "no"
-
-#need to fix surface activities
 
 Solubility = []
 IronConcentration = []
@@ -87,7 +86,6 @@ for j in range(SimulationHours):
         Sg_2 = pht_model.PHT_FAC(
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, RealTimeHeatTransfer, Activation, ConstantRate, j
             )
-    
     
     if j % 8759 == 0:  # yearly  
         # parameters tracked with time 
