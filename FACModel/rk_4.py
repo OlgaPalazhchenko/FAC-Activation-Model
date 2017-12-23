@@ -68,7 +68,9 @@ def spatial(Solution, Bulk, km, Diameter, Velocity, Length):
 
 
 
-def oxide_growth(Section, ElementTracking):
+def oxide_growth(
+        Section, ElementTracking,  RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness
+        ):
     
     MolarMasses = [nc.FeMolarMass, nc.FeMolarMass, nc.NiMolarMass, nc.NiMolarMass, nc.CoMolarMass, nc.CoMolarMass]
     
@@ -152,27 +154,47 @@ def oxide_growth(Section, ElementTracking):
                 else:
                     z = 0  # Nothing to dissolve
             GrowthNickel.append(z)
+    
+    
+        else:
+            GrowthNickel = [0] * Section.NodeNumber
+            GrowthCobalt = [0] * Section.NodeNumber
+    
     return GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt
     
 
-def oxides(Section, CorrosionRate, Saturations, BulkConcentrations, ElementTracking):
-    RK4_InnerIronOxThickness = Section.InnerIronOxThickness
-    RK4_OuterFe3O4Thickness = Section.OuterFe3O4Thickness
-    # If element tracking is off, Co/Ni thickness remains same as initial loadings
-    RK4_NiThickness = Section.NiThickness
-    RK4_CoThickness = Section.CoThickness
+def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking):
     
-    
-    if CorrosionRate == "constant":
+    if ConstantRate == "yes":
         it.corrosion_rate_concentrations(
-            Section, BulkConcentrations, Saturations, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
-            RK4_NiThickness, RK4_CoThickness
+            Section, ConstantRate, BulkConcentrations, Saturations, Section.InnerIronOxThickness,
+            Section.OuterFe3O4Thickness, Section.NiThickness, Section.CoThickness
             )
         GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt = oxide_growth(
-                Section, ElementTracking
+                Section, ElementTracking,  Section.InnerIronOxThickness, Section.OuterFe3O4Thickness,
+                Section.NiThickness, Section.CoThickness
                 )
+        
+        Section.InnerIronOxThickness = [
+            x + y * nc.TimeIncrement for x, y in zip(Section.InnerIronOxThickness, GrowthInnerIronOxide)
+            ]
+        Section.OuterFe3O4Thickness = [
+            x + y * nc.TimeIncrement for x, y in zip(Section.OuterFe3O4Thickness, GrowthOuterMagnetite)
+            ]
+        
+        if ElementTracking == "yes":
+            Section.NiThickness = [x + y * nc.TimeIncrement for x, y in zip(Section.NiThickness, GrowthNickel)]
+            Section.CoThickness = [x + y * nc.TimeIncrement for x, y in zip(Section.CoThickness, GrowthCobalt)]
     
     else:
+        
+        RK4_InnerIronOxThickness = Section.InnerIronOxThickness
+        RK4_OuterFe3O4Thickness = Section.OuterFe3O4Thickness
+        # If element tracking is off, Co/Ni thickness remains same as initial loadings
+        RK4_NiThickness = Section.NiThickness
+        RK4_CoThickness = Section.CoThickness
+        
+        
         L = []
         M = []
         
@@ -180,34 +202,30 @@ def oxides(Section, CorrosionRate, Saturations, BulkConcentrations, ElementTrack
             N = []
             P = []
         
-        # Determines dy/dt (growth functions) for each type of solid corrosion product at each node based on 
-        # respective element's saturation behaviour
-        GrowthOuterMagnetite = []
-        GrowthInnerIronOxide = []
-         
-        if ElementTracking == "yes":
-            GrowthCobalt = []
-            GrowthNickel = []
-        
         for approximation in range(4):  # 4 approximations in the "RK4" method
             
             it.corrosion_rate_concentrations(
-                Section, BulkConcentrations, Saturations, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
-                RK4_NiThickness, RK4_CoThickness
+                Section, ConstantRate, BulkConcentrations, Saturations, RK4_InnerIronOxThickness,
+                RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness
                 )
             
             GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt = oxide_growth(
-                Section, ElementTracking
+                Section, ElementTracking,  RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness,
+                RK4_CoThickness
                 )
             
             # Iterate using previously solved RK4 thickness: re-evaluates growth functions based on S/O + M/O 
             # concentrations using new thickness     
            
             # Section.Oxidelayer = initial input from previous time step's RK4 solution 
-            [RK4_InnerIronOxThickness, a] = RK4(Section, Section.InnerIronOxThickness, GrowthInnerIronOxide, approximation)
+            [RK4_InnerIronOxThickness, a] = RK4(
+                Section, Section.InnerIronOxThickness, GrowthInnerIronOxide, approximation
+                )
             L.append(a)
     
-            [RK4_OuterFe3O4Thickness, b] = RK4(Section, Section.OuterFe3O4Thickness, GrowthOuterMagnetite, approximation)
+            [RK4_OuterFe3O4Thickness, b] = RK4(
+                Section, Section.OuterFe3O4Thickness, GrowthOuterMagnetite, approximation
+                )
             M.append(b)
     
             if ElementTracking == "yes": # otherwise, no growth 
@@ -217,20 +235,15 @@ def oxides(Section, CorrosionRate, Saturations, BulkConcentrations, ElementTrack
                 [RK4_NiThickness, d] = RK4(Section, Section.NiThickness, GrowthNickel, approximation)
                 P.append(d)
     
-    #         for i in range(Section.NodeNumber):
-    #             # Need the overall inner and outer oxides to be updated for M/O concentration
-    #             if RK4_OuterFe3O4Thickness[i] > 0:  # from previous time step
-    #                 # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer
-    #                 Section.OuterOxThickness[i] = RK4_OuterFe3O4Thickness[i] + RK4_CoThickness[i] + RK4_NiThickness[i]
-    #                 Section.InnerOxThickness[i] = RK4_InnerIronOxThickness[i]
-    #             else:  # OuterFe3O4Thickness == 0
-    #                 Section.InnerOxThickness[i] = RK4_InnerIronOxThickness[i] + RK4_CoThickness[i] + RK4_NiThickness[i]
-    
         Section.InnerIronOxThickness = [
-            x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.InnerIronOxThickness, L[0], L[1], L[2], L[3])
+            x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(
+                Section.InnerIronOxThickness, L[0], L[1], L[2], L[3]
+                )
             ]
         Section.OuterFe3O4Thickness = [
-            x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.OuterFe3O4Thickness, M[0], M[1], M[2], M[3])
+            x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(
+                Section.OuterFe3O4Thickness, M[0], M[1], M[2], M[3]
+                )
             ]
         
         if ElementTracking == "yes": # otherwise, not updated 
@@ -337,7 +350,7 @@ def spalling_time(
     return SpTime
 
 
-def oxide(Layer, TotalOxideThickness, Spalling):
+def layer_spalling(Layer, TotalOxideThickness, Spalling):
     # inner/outer oxthickness & spalling = [g/cm^2]
     # This assumes that solid corrosion product species (Fe3O4, Ni0.6Fe2.4O4, etc.), if present simultaneously, 
     # are uniformally distributed with depth/layer thickness
@@ -370,9 +383,6 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
         # Oxide totals for RK4 iterations (M/O Concentration depends on total oxide thickness)
         if Section.OuterFe3O4Thickness[i] > 0:  # from previous time step
             # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer
-#             Section.OuterOxThickness[i] = (Section.OuterFe3O4Thickness[i]
-#                 + Section.CoThickness[i]
-#                 + Section.NiThickness[i])  
             if ElementTracking == "yes":
                 Section.OuterOxThickness[i] = (Section.OuterFe3O4Thickness[i]
                 + Section.CoThickness[i]
@@ -381,11 +391,8 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
                 Section.OuterOxThickness[i] = Section.OuterFe3O4Thickness[i]
             
             Section.InnerOxThickness[i] = Section.InnerIronOxThickness[i]
-        else:  # OuterFe3O4Thickness == 0
-#             Section.InnerOxThickness[i] = (Section.InnerIronOxThickness[i]
-#             + Section.CoThickness[i]
-#             + Section.NiThickness[i])
-            
+        
+        else:  
             if ElementTracking == "yes":
                 Section.InnerOxThickness[i] = (Section.InnerIronOxThickness[i]
                 + Section.CoThickness[i]
@@ -413,33 +420,33 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
                 # enough time elapsed for particle of that size (with respective spall time) to come off
                 if Section.OuterOxThickness[i] > 0:
                     # [cm]*[g/cm^3] = [g/cm^2] of layer removed due to spalling
-                    Section.OuterFe3O4Thickness[i] = oxide(
+                    Section.OuterFe3O4Thickness[i] = layer_spalling(
                         Section.OuterFe3O4Thickness[i], Section.OuterOxThickness[i], Section.Particle[i]
                         ) 
                     if ElementTracking == "yes":
-                        Section.CoThickness[i] = oxide(
+                        Section.CoThickness[i] = layer_spalling(
                             Section.CoThickness[i], Section.OuterOxThickness[i], Section.Particle[i]
                             )
-                        Section.NiThickness[i] = oxide(
+                        Section.NiThickness[i] = layer_spalling(
                             Section.NiThickness[i], Section.OuterOxThickness[i], Section.Particle[i]
                         )
-                    Section.OuterOxThickness[i] = oxide(
+                    Section.OuterOxThickness[i] = layer_spalling(
                         Section.OuterOxThickness[i], Section.OuterOxThickness[i], Section.Particle[i]
                         )  # new total outer ox
                 
                 else:  # OuterOXThickness == 0, spalling takes place at inner layer  
-                    Section.InnerIronOxThickness[i] = oxide(
+                    Section.InnerIronOxThickness[i] = layer_spalling(
                         Section.InnerIronOxThickness[i], Section.InnerOxThickness[i], Section.Particle[i]
                         )
                     if ElementTracking == "yes":
                         
-                        Section.CoThickness[i] = oxide(
+                        Section.CoThickness[i] = layer_spalling(
                             Section.CoThickness[i], Section.InnerOxThickness[i], Section.Particle[i]
                             )
-                        Section.NiThickness[i] = oxide(
+                        Section.NiThickness[i] = layer_spalling(
                             Section.NiThickness[i], Section.InnerOxThickness[i], Section.Particle[i]
                             )
-                    Section.InnerOxThickness[i] = oxide(
+                    Section.InnerOxThickness[i] = layer_spalling(
                         Section.InnerOxThickness[i], Section.InnerOxThickness[i], Section.Particle[i]
                         )  # new total inner ox
 
@@ -450,13 +457,6 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
                     Section, Section.Particle[i], FeSat[i], FeTotal[i], Section.KdFe3O4electrochem[i],
                     Section.OuterFe3O4Thickness[i], Section.Velocity[i]
                     )
-
-#                 if Section in ld.OutletSections:  # Outlet header spalling corrector
-#                     if SpallTime[i] >= 4000:
-#                         SpallTime[i] = 2000
-#                 ElapsedTime[i] = 0
-                # once a particle has "spalled" off, elapsed time since spalling resets to zero and counter
-                # restarts at that node
 
             else:  # not enough time has passed
                 ElapsedTime[i] = ElapsedTime[i] + 1 * (nc.TimeIncrement / 3600)

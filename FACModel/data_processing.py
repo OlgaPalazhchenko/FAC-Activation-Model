@@ -15,6 +15,7 @@ from matplotlib import rc
 rc('mathtext', default='regular')
 
 RealTimeHeatTransfer = "no"
+ConstantRate = "yes"
 Activation = "no"
 PlotOutput = "yes"
 OutputLogging = "yes"
@@ -32,19 +33,22 @@ OutletTemperatures2 = []
 TemperatureProfile = []
 
 SimulationYears = 1  # years
-SimulationHours = SimulationYears * 50
+SimulationHours = SimulationYears * 8760
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(FullLoop)
+# 1.52 m is the u-bend arc length of an average SG tube
 Default_Tube = SGHX.closest(1.52 * 100)
 
 import time
 start_time = time.time()
 
 for j in range(SimulationHours):
-    In = pht_model.PHT_FAC(ld.InletFeeder, ld.FuelChannel, RealTimeHeatTransfer, Activation, j)
-    Co = pht_model.PHT_FAC(ld.FuelChannel, ld.OutletFeeder, RealTimeHeatTransfer, Activation, j)
-    Ou = pht_model.PHT_FAC(ld.OutletFeeder, ld.SteamGenerator[Default_Tube], RealTimeHeatTransfer, Activation, j)
+    In = pht_model.PHT_FAC(ld.InletFeeder, ld.FuelChannel, RealTimeHeatTransfer, Activation, ConstantRate, j)
+    Co = pht_model.PHT_FAC(ld.FuelChannel, ld.OutletFeeder, RealTimeHeatTransfer, Activation, ConstantRate, j)
+    Ou = pht_model.PHT_FAC(
+        ld.OutletFeeder, ld.SteamGenerator[Default_Tube], RealTimeHeatTransfer, Activation, ConstantRate, j
+        )
     
     if FullLoop == "yes":
         InletInput = ld.InletFeeder_2
@@ -52,7 +56,9 @@ for j in range(SimulationHours):
         InletInput = ld.InletFeeder
     
     if RealTimeHeatTransfer == "no":
-        Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, RealTimeHeatTransfer, Activation, j)
+        Sg = pht_model.PHT_FAC(
+            ld.SteamGenerator[Default_Tube], InletInput, RealTimeHeatTransfer, Activation, ConstantRate, j
+            )
             
     else:
         # Set input concentrations for all SG zones to be same as input of first (Outlet output)
@@ -66,21 +72,35 @@ for j in range(SimulationHours):
             for x, y in zip(BulkSGInput, BulkOutletOutput):
                 x[0] = y[Ou.Section1.NodeNumber - 1]
             
-            Sg_tube = pht_model.PHT_FAC(Zone, ld.InletFeeder, RealTimeHeatTransfer, Activation, j)   
+            Sg_tube = pht_model.PHT_FAC(Zone, ld.InletFeeder, RealTimeHeatTransfer, Activation, ConstantRate, j)   
             SteamGeneratorTubes.append(Sg_tube)
             
     if FullLoop == "yes":
+<<<<<<< HEAD
+        In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, RealTimeHeatTransfer, Activation, ConstantRate, j)
+        Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, RealTimeHeatTransfer, Activation, ConstantRate, j)
+=======
         In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, RealTimeHeatTransfer, Activation, j)
         Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, RealTimeHeatTransfer, Activation, j)
+>>>>>>> branch 'SGHeatTransfer' of https://github.com/OlgaPalazhchenko/FAC-Activation-Model.git
         Ou_2 = pht_model.PHT_FAC(
+<<<<<<< HEAD
+            ld.OutletFeeder_2, ld.SteamGenerator_2[SGHX.tube_number[0]], RealTimeHeatTransfer, Activation, ConstantRate,
+            j
+=======
             ld.OutletFeeder_2, ld.SteamGenerator_2[Default_Tube], RealTimeHeatTransfer, Activation, j
+>>>>>>> branch 'SGHeatTransfer' of https://github.com/OlgaPalazhchenko/FAC-Activation-Model.git
             )
         Sg_2 = pht_model.PHT_FAC(
+<<<<<<< HEAD
+            ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, RealTimeHeatTransfer, Activation, ConstantRate, j
+=======
             ld.SteamGenerator_2[Default_Tube], ld.InletFeeder, RealTimeHeatTransfer, Activation, j
+>>>>>>> branch 'SGHeatTransfer' of https://github.com/OlgaPalazhchenko/FAC-Activation-Model.git
             )
     
     
-    if j % 300 == 0:  # yearly  
+    if j % 8759 == 0:  # yearly  
         # parameters tracked with time 
         T_RIH = (SGHX.energy_balance(
             ld.SteamGenerator[Default_Tube].NodeNumber - 1, ld.SteamGenerator[Default_Tube].InnerOxThickness,
@@ -108,8 +128,7 @@ for j in range(SimulationHours):
             Loading_time.append(ld.SteamGenerator[SGHX.tube_number[0]].SolutionOxide.FeSatFe3O4)
     else:
         None
-#print (In.Section1.SolutionOxide.FeTotal)
-print (ld.InletFeeder.SolutionOxide.FeTotal)
+
           
 # FACRate = sum(
 #     ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,

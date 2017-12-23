@@ -178,7 +178,7 @@ def SolutionOxide(
     return Conc    
         
             
-def corrosion_rate(Section):
+def corrosion_rate(Section, ConstantRate):
     [ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2] = c.hydrolysis(
         Section, Section.MetalOxide.FeTotal, Section.MetalOxide.NiTotal, Section.MetalOxide.ConcentrationH
         )
@@ -234,31 +234,36 @@ def corrosion_rate(Section):
     
         
     MixedECP = e.MixedPotential(Section, ExchangeCurrentH2onFe, EqmPotentialH2, ExchangeCurrentFe, EqmPotentialFe)
-    CorrosionCurrent = [x * (np.exp((nc.Beta * nc.n * nc.F * (y - z)) / (nc.R * q))
-                           - np.exp((-(1 - nc.Beta) * nc.n * nc.F * (y - z)) / (nc.R * q))) for x, y, z, q in
-                        zip(ExchangeCurrentFe, MixedECP, EqmPotentialFe, Section.PrimaryBulkTemperature)]
-  
-    if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
-        # icorr = ia = -ic  equivalent MW for Alloy 800 (0.46 Fe, 0.33 Ni, -> 2e- processes; 0.21 Cr -> 3 e- process)   
-        Constant = [(1 / nc.F) * ((nc.FeMolarMass * 0.46 / nc.n)
-                              + (nc.NiMolarMass * 0.33 / nc.n)
-                              + (0.21 * nc.CrMolarMass / 3))] * Section.NodeNumber
-        
-    elif Section in ld.OutletSections or Section in ld.InletSections:
-        Constant = [nc.FeMolarMass / (nc.n * nc.F)] * Section.NodeNumber
-    else:
-        Constant = 0
-        
-    rate = [x * y for x, y in zip(CorrosionCurrent, Constant)]  # [g/cm^2*s] 
+    
+    
     if Section in ld.FuelSections:
         rate = [0] * Section.NodeNumber
     # preset desired FAC rate
-    if Section in ld.OutletSections:
+    elif Section in ld.OutletSections and ConstantRate == "yes":
         rate = [3e-9] * Section.NodeNumber
+    
+    else:
+        CorrosionCurrent = [x * (np.exp((nc.Beta * nc.n * nc.F * (y - z)) / (nc.R * q))
+                               - np.exp((-(1 - nc.Beta) * nc.n * nc.F * (y - z)) / (nc.R * q))) for x, y, z, q in
+                            zip(ExchangeCurrentFe, MixedECP, EqmPotentialFe, Section.PrimaryBulkTemperature)]
+      
+        if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
+            # icorr = ia = -ic  equivalent MW for Alloy 800 (0.46 Fe, 0.33 Ni, -> 2e- processes; 0.21 Cr -> 3 e- process)   
+            Constant = [(1 / nc.F) * ((nc.FeMolarMass * 0.46 / nc.n)
+                                  + (nc.NiMolarMass * 0.33 / nc.n)
+                                  + (0.21 * nc.CrMolarMass / 3))] * Section.NodeNumber
+            
+        elif Section in ld.OutletSections or Section in ld.InletSections:
+            Constant = [nc.FeMolarMass / (nc.n * nc.F)] * Section.NodeNumber
+        else:
+            Constant = 0
+            
+        rate = [x * y for x, y in zip(CorrosionCurrent, Constant)]  # [g/cm^2*s] 
+    
     return rate, MixedECP 
 
 
-def corrosion_rate_concentrations(Section, BulkConcentrations, Saturations, RK4_InnerIronOxThickness,
+def corrosion_rate_concentrations(Section, ConstantRate, BulkConcentrations, Saturations, RK4_InnerIronOxThickness,
                                   RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness):
         
     #Solves S/O elemental concentrations at current approximation of oxide thickness(es)
@@ -291,7 +296,7 @@ def corrosion_rate_concentrations(Section, BulkConcentrations, Saturations, RK4_
             Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
             Section.CorrRate
             )
-        Section.CorrRate, Section.MetalOxide.MixedPotential = corrosion_rate(Section)
+        Section.CorrRate, Section.MetalOxide.MixedPotential = corrosion_rate(Section, ConstantRate)
 
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
         Section.MetalOxide.NiTotal = MetalOxideInterfaceConcentration(
