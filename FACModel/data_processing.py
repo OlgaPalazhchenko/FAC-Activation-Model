@@ -1,10 +1,9 @@
 '''
 Created on Oct 22, 2017
-ksdjksljgd
+
 @author: opalazhc
 '''
 
-dgdsgdsg
 import pht_model
 import lepreau_data as ld
 import sg_heattransfer as SGHX
@@ -78,29 +77,15 @@ for j in range(SimulationHours):
             SteamGeneratorTubes.append(Sg_tube)
             
     if FullLoop == "yes":
-<<<<<<< HEAD
         In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, RealTimeHeatTransfer, Activation, ConstantRate, j)
         Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, RealTimeHeatTransfer, Activation, ConstantRate, j)
-=======
-        In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, RealTimeHeatTransfer, Activation, j)
-        Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, RealTimeHeatTransfer, Activation, j)
->>>>>>> branch 'SGHeatTransfer' of https://github.com/OlgaPalazhchenko/FAC-Activation-Model.git
         Ou_2 = pht_model.PHT_FAC(
-<<<<<<< HEAD
             ld.OutletFeeder_2, ld.SteamGenerator_2[SGHX.tube_number[0]], RealTimeHeatTransfer, Activation, ConstantRate,
             j
-=======
-            ld.OutletFeeder_2, ld.SteamGenerator_2[Default_Tube], RealTimeHeatTransfer, Activation, j
->>>>>>> branch 'SGHeatTransfer' of https://github.com/OlgaPalazhchenko/FAC-Activation-Model.git
             )
         Sg_2 = pht_model.PHT_FAC(
-<<<<<<< HEAD
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, RealTimeHeatTransfer, Activation, ConstantRate, j
-=======
-            ld.SteamGenerator_2[Default_Tube], ld.InletFeeder, RealTimeHeatTransfer, Activation, j
->>>>>>> branch 'SGHeatTransfer' of https://github.com/OlgaPalazhchenko/FAC-Activation-Model.git
             )
-    
     
     if j % 8759 == 0:  # yearly  
         # parameters tracked with time 
