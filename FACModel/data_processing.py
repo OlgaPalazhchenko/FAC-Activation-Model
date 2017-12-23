@@ -21,6 +21,8 @@ PlotOutput = "yes"
 OutputLogging = "yes"
 FullLoop = "no"
 
+#need to fix surface activities
+
 Solubility = []
 IronConcentration = []
 Loading_time = []
