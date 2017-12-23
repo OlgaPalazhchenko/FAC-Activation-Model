@@ -70,21 +70,14 @@ for j in range(SimulationHours):
             SteamGeneratorTubes.append(Sg_tube)
             
     if FullLoop == "yes":
-<<<<<<< HEAD
-        In_2 = pht_model.PHT_FAC(ld.Inlet_2, ld.Core_2, RealTimeHeatTransfer, Activation, j)
-        Co_2 = pht_model.PHT_FAC(ld.Core_2, ld.Outlet_2, RealTimeHeatTransfer, Activation, j)
-        Ou_2 = pht_model.PHT_FAC(ld.Outlet_2, ld.SGZones_2[SGHX.tube_number[0]], RealTimeHeatTransfer, Activation, j)
-        Sg_2 = pht_model.PHT_FAC(ld.SGZones_2[SGHX.tube_number[0]], ld.Inlet, RealTimeHeatTransfer, Activation, j)
-=======
         In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, RealTimeHeatTransfer, Activation, j)
         Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, RealTimeHeatTransfer, Activation, j)
         Ou_2 = pht_model.PHT_FAC(
-            ld.OutletFeeder_2, ld.SteamGenerator_2[SGHX.tube_number[0]], RealTimeHeatTransfer, Activation, j
+            ld.OutletFeeder_2, ld.SteamGenerator_2[Default_Tube], RealTimeHeatTransfer, Activation, j
             )
         Sg_2 = pht_model.PHT_FAC(
-            ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, RealTimeHeatTransfer, Activation, j
+            ld.SteamGenerator_2[Default_Tube], ld.InletFeeder, RealTimeHeatTransfer, Activation, j
             )
->>>>>>> refs/remotes/origin/SGHeatTransfer
     
     
     if j % 300 == 0:  # yearly  
@@ -143,11 +136,7 @@ for Zone in SGHX.selected_tubes:
     Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
     TemperatureProfile.append(Temperature_C)
     
-<<<<<<< HEAD
-Data = [SGHX.selected_ubends, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration, TemperatureProfile]
-=======
 Data = [SGHX.ubends, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration, TemperatureProfile]
->>>>>>> refs/remotes/origin/SGHeatTransfer
 Labels = [
     "U-bend length (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Solubility (mol/kg)", "S/O [Fe] (mol/kg)",
     "Temperature Profile (oC)"]

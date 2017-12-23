@@ -387,7 +387,7 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
 #             + Section.NiThickness[i])
             
             if ElementTracking == "yes":
-                 Section.InnerOxThickness[i] = (Section.InnerIronOxThickness[i]
+                Section.InnerOxThickness[i] = (Section.InnerIronOxThickness[i]
                 + Section.CoThickness[i]
                 + Section.NiThickness[i])
             else:
