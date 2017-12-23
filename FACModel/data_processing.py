@@ -19,7 +19,7 @@ RealTimeHeatTransfer = "no"
 ConstantRate = "yes"
 Activation = "no"
 PlotOutput = "yes"
-OutputLogging = "no"
+OutputLogging = "yes"
 FullLoop = "no"
 
 Solubility = []
