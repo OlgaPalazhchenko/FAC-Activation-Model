@@ -1,14 +1,10 @@
 import lepreau_data as ld
 import numpy as np
 import constants as nc
+import composition as c
 
-<<<<<<< HEAD
-selected_ubends = [0.385]#, 2.31, 3.09]
-selected_ubends = [i * 100 for i in selected_ubends]
-=======
 ubends = [0.385]#, 2.31, 3.09]
 ubends = [i * 100 for i in ubends]
->>>>>>> refs/remotes/origin/SGHeatTransfer
 
 def closest(Number):
     difference = []
@@ -20,26 +16,13 @@ def closest(Number):
     return difference.index(min(difference))
 
 tube_number = []
-<<<<<<< HEAD
-
-for i in selected_ubends:
-=======
 for i in ubends:
->>>>>>> refs/remotes/origin/SGHeatTransfer
     x = closest(i)
     tube_number.append(x)
-<<<<<<< HEAD
-  
-=======
    
->>>>>>> refs/remotes/origin/SGHeatTransfer
 selected_tubes = []
 for i in tube_number:
-<<<<<<< HEAD
-    selected_tubes.append(ld.SGZones[i])
-=======
     selected_tubes.append(ld.SteamGenerator[i])
->>>>>>> refs/remotes/origin/SGHeatTransfer
 
 # T_sat_secondary = 260.1 + 273.15
 T_sat_primary = 310 + 273.15
@@ -478,14 +461,9 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(calendar_year)
 
     Balance = []
-<<<<<<< HEAD
-    for Zone in ld.SGZones:
-        if Zone in selected_tubes:
-=======
     for Zone in ld.SteamGenerator:
         if Zone in selected_tubes:
             # tracks oxide growth for these tubes specifically
->>>>>>> refs/remotes/origin/SGHeatTransfer
             InnerOx = Zone.InnerOxThickness
             OuterOx = Zone.OuterOxThickness
         else: # assumes same growth as in default passed tube for remaining tubes
