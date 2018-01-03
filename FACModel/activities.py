@@ -59,7 +59,7 @@ def eta(Section):
             nc.FeMolarMass, None
             ) 
     
-    if Section in ld.SGZones: 
+    if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2: 
     
         DeltaTemperature = [abs(x - y) for x, y in zip(
             Section.PrimaryBulkTemperature[1:], Section.PrimaryBulkTemperature
@@ -104,16 +104,18 @@ def eta(Section):
 
 
 def particulate(Section, BulkCrud_0):
-    if Section in ld.FuelChannels:  # Section based, not node-specific 
+    if Section in ld.FuelSections:  # Section based, not node-specific 
         # Same deposition constant down length of core (assumes no temperature dependence) 
         DepositionConstant = nc.INCORE_DEPOSITION 
     else:  # isothermal (with exception of SG)
         DepositionConstant = nc.OUTCORE_DEPOSITION 
     
-    # Deposition constant converted from kg_coolant to cm/s by dividing by density coolant (kg/m^3) and converting to cm
-    # [kg_coolant/m^2 s]/[kg_coolant/m^3] = [m/s]*[100 cm/m] * [1/cm] = [s^-1]    
-    Deposition_sec = [100 * DepositionConstant * (4 / y) / (1000 * z) for y, z in
-                  zip(Section.Diameter, Section.DensityH2O)]
+    # density converted from [g/cm^3] to [kg/m^3] 
+    DensityCoolant = [(i / 1000) * (100 ** 3) for i in Section.DensityH2O]
+    
+    # Deposition constant converted from kg_coolant/m^2 s to cm/s, dividing by density coolant (kg/m^3) converting to cm
+    # [kg_coolant/m^2 s]/[kg_coolant/m^3] = [m/s]*[100 cm/m] * [1/cm] = [s^-1]
+    Deposition_sec = [(DepositionConstant / x) * (4 / y) * 100 for x, y in zip(DensityCoolant, Section.Diameter)] 
     
     # Erosion constant: [g/cm^2 s] --> [g/m^2 s]
     Erosion = nc.ErosionConstant * (100 ** 2)
@@ -167,7 +169,11 @@ def surface_activity(Section, BulkActivity, j, Isotope):
 def core_active_deposit(Section, j, Element, ParentAbundance, DecayConstant, CrossSection, MolarMass):
     # Section1 = Core, Section2 = Outlet
     # Only outlet is used for averaging the composition of the crud (majority of spalling here due to high velocity)
-    Section2 = ld.Outlet
+    if Section == ld.FuelChannel:
+        Section2 = ld.OutletFeeder
+    elif Section == ld.FuelChannel_2:
+        Section2 = ld.OutletFeeder_2
+    
     Composition = []
     
     # Checks which oxide layer is uppermost (i.e., if outer layer removed due to spalling)
@@ -214,7 +220,7 @@ def deposition(Section, j):
     # 10th node in-core is where coolant temperature > saturation = boiling 
     # Enthalpy and heat flux vary in the boiling region  
     for i in range(Section.NodeNumber):
-        if Section in ld.FuelChannels and i >= 10:
+        if Section in ld.FuelSections and i >= 10:
             if i == 10:
                 HeatFlux = 0.0762  # [kJ/cm^2 s]
                 Enthalpy = 1415.8  # [kJ/kg]
@@ -234,7 +240,7 @@ def deposition(Section, j):
         
         else: # all other PHT sections or in-core, but in a non-boiling region 
             # dW_deposit/dt = DepositionConstant*C_particulate (total) - PARTICULATE_DISSOLUTION*W_deposit
-            if Section in ld.FuelChannels:
+            if Section in ld.FuelSections:
                 # [kg_coolant/m^2 s]*[1m^2/(100cm^2)] = [kg/cm^2 s]
                 DepositionConstant = nc.INCORE_DEPOSITION / (100**2)
             else:
@@ -243,7 +249,7 @@ def deposition(Section, j):
             PreExponentiaDepositionTerm = DepositionConstant * TotalParticulate[i] / PARTICULATE_DISSOLUTION
         
         # all in-core nodes set to 0 deposition (fuel bundle average residence time of ~1 year) 
-        if Section in ld.FuelChannels and (j + 1) % 7000 == 0:
+        if Section in ld.FuelSections and (j + 1) % 7000 == 0:
             x = 0
         else:
             x = PreExponentiaDepositionTerm * (1 - np.exp(-PARTICULATE_DISSOLUTION * Time_sec ))
@@ -255,7 +261,6 @@ def deposition(Section, j):
 
 def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
     
-    # [s^-1], Converts from h^-1 to s^-1
     if Isotope == "Co60":
         Lambda = LAMBDACo60
         MolarMass = MOLARMASSCo60
@@ -309,14 +314,15 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
     
     Lambda_sec = Lambda / 3600 # [s ^-1]
     
-    if Section in ld.FuelChannels:  
+    if Section in ld.FuelSections:  
         ActiveCoreDeposit = core_active_deposit(
             Section, j, Element, ParentAbundance, Lambda_sec, CrossSection, MolarMass
             )
         # variation with time and distance
         ExponentialTerm = np.exp(-Lambda_sec * Section.Distance[i] / Section.Velocity[i])
         
-        PreExponentialReleaseTerm = 4 * PARTICULATE_DISSOLUTION * ActiveCoreDeposit[i] / (Lambda_sec * Section.Diameter[i])
+        PreExponentialReleaseTerm = 4 * PARTICULATE_DISSOLUTION * ActiveCoreDeposit[i] /\
+        (Lambda_sec * Section.Diameter[i])
 
         BulkActivity = BulkConcentration_o * ExponentialTerm + PreExponentialReleaseTerm * (1 - ExponentialTerm)
         
@@ -332,7 +338,10 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
         # of that section's first node)
         BulkActivity = BulkConcentration_o * ExponentialTerm
     
-    return BulkActivity # [Bq/cm^2]
+    # convert from Ci/cm^3 to microCurie/m^3 
+    CurieBulkActivity = [(10 ** 6) * i * (100 ** 3) / (3.7 * 10 ** 10) for i in BulkActivity]
+    
+    return CurieBulkActivity # [Bq/cm^3]
 
 # The flow through the purification system is provided by the HT pumps.  It is taken from one inlet header on each 
 # loop of the HT system and is passed through one side of a heat interchanger, a cooler, a filter and an ion exchange

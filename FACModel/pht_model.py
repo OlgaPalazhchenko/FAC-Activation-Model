@@ -9,7 +9,7 @@ import sg_heattransfer as SGHX
 
 from operator import itemgetter
 
-def initial_chemistry(FullLoop):
+def initial_chemistry(Loop):
     
     [SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(1983)
     # initial temperatures in steam generator(s)
@@ -17,14 +17,14 @@ def initial_chemistry(FullLoop):
         Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
             Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
             )
-    if FullLoop == "yes":
+    if Loop == "full":
         # if full loop selected, both steam generators iterated through for initial temperatures (87 bundles each)
         Sections = ld.FullLoop
         for Zone in ld.SteamGenerator_2:
             Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
             Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
             )       
-    else:
+    elif Loop == "half":
         Sections = ld.HalfLoop
     
     # initial concentrations
@@ -89,7 +89,7 @@ def initial_chemistry(FullLoop):
         if Section in ld.FuelSections:
             Section.CorrRate == [0] * Section.NodeNumber
         else:
-            Section.CorrRate, Section.MetalOxide.MixedPotential = it.corrosion_rate(Section, ConstantRate="no")
+            Section.CorrRate, Section.MetalOxide.MixedPotential = it.FAC_solver(Section, ConstantRate="no")
             
         [
             Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
@@ -105,8 +105,8 @@ Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
 
 
 class PHT_FAC():
-    def __init__(self, ActiveSection, OutgoingSection, RealTimeHeatTransfer, Activation, ConstantRate, j):  
-        # j = overall time step
+    def __init__(self, ActiveSection, OutgoingSection, HeatTransfer, Activation, ConstantRate, j):  
+        # j = time step
         self.Section1 = ActiveSection
         self.Section2 = OutgoingSection
         
@@ -117,9 +117,8 @@ class PHT_FAC():
                 ]
     
             BulkActivities2 = [
-                self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59,
-                self.Section2.Bulk.Fe55, self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51,
-                self.Section2.Bulk.Ni63
+                self.Section2.Bulk.Co60, self.Section2.Bulk.Co58, self.Section2.Bulk.Fe59, self.Section2.Bulk.Fe55,
+                self.Section2.Bulk.Mn54, self.Section2.Bulk.Cr51, self.Section2.Bulk.Ni63
                 ]
              
 #             SurfaceActivities = [
@@ -127,11 +126,11 @@ class PHT_FAC():
 #                 self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
 #                 ]            
  
-            # Deposit thickness around PHTS
+            # Deposit thickness around PHTS only calculated if activity transport is being tracked
             self.Section1.DepositThickness = a.deposition(self.Section1, j)
             
             # Exponential decay of bulk particulate at start of section as function of distance + removal due to 
-            # deposition and erosion source
+            # deposition and addition from erosion
             self.Section1.BigParticulate = a.particulate(self.Section1, self.Section1.BigParticulate[0])
             self.Section1.SmallParticulate = a.particulate(self.Section1, self.Section1.SmallParticulate[0])
             
@@ -226,7 +225,7 @@ class PHT_FAC():
 #                                                           self.Section1.InnerOxThickness, self.Section1.Bulk.Ni63, j, "Ni63")
 
         # SG heat transfer 
-#         if RealTimeHeatTransfer == "yes":
+#         if HeatTransfer == "yes":
 #             if self.Section1 in ld.SteamGenerator or self.Section1 in ld.SteamGenerator_2:  
 #                 self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1) 
 #         

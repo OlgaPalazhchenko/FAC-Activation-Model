@@ -178,7 +178,10 @@ def SolutionOxide(
     return Conc    
         
             
-def corrosion_rate(Section, ConstantRate):
+def FAC_solver(Section, ConstantRate):
+    
+    # updates hydrolysis distribution of Fe species. Even if FAC rate kept constant, oxide thickness changes
+    # M/O Fe total concentration changes w.r.t. thickness, so species cncentrations change too
     [ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2] = c.hydrolysis(
         Section, Section.MetalOxide.FeTotal, Section.MetalOxide.NiTotal, Section.MetalOxide.ConcentrationH
         )
@@ -217,6 +220,8 @@ def corrosion_rate(Section, ConstantRate):
             # Section, Section.StandardEqmPotentialNi, [1]*Section.NodeNumber, 1, 1, composition.ConcentrationNi2,
             # composition.ActivityCoefficient2, 1, "aqueous"
             # )
+            
+            # assumed that different activation energies for half-cells if redox occurs on Alloy-800 vs. carbon steel
             w = e.exchangecurrentdensity(
                 Section, nc.ActivationEnergyH2onAlloy800, Section.MetalOxide.ConcentrationH[i], x,
                 Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor"
@@ -231,10 +236,8 @@ def corrosion_rate(Section, ConstantRate):
         EqmPotentialFe.append(y)
         ExchangeCurrentFe.append(z)
         ExchangeCurrentH2onFe.append(w)
-    
         
     MixedECP = e.MixedPotential(Section, ExchangeCurrentH2onFe, EqmPotentialH2, ExchangeCurrentFe, EqmPotentialFe)
-    
     
     if Section in ld.FuelSections:
         rate = [0] * Section.NodeNumber
@@ -242,6 +245,7 @@ def corrosion_rate(Section, ConstantRate):
     elif Section in ld.OutletSections and ConstantRate == "yes":
         rate = [3e-9] * Section.NodeNumber
     
+    # corrosion current calculation not required of rate has been set as constant
     else:
         CorrosionCurrent = [x * (np.exp((nc.Beta * nc.n * nc.F * (y - z)) / (nc.R * q))
                                - np.exp((-(1 - nc.Beta) * nc.n * nc.F * (y - z)) / (nc.R * q))) for x, y, z, q in
@@ -263,7 +267,7 @@ def corrosion_rate(Section, ConstantRate):
     return rate, MixedECP 
 
 
-def corrosion_rate_concentrations(Section, ConstantRate, BulkConcentrations, Saturations, RK4_InnerIronOxThickness,
+def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturations, RK4_InnerIronOxThickness,
                                   RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness):
         
     #Solves S/O elemental concentrations at current approximation of oxide thickness(es)
@@ -296,7 +300,7 @@ def corrosion_rate_concentrations(Section, ConstantRate, BulkConcentrations, Sat
             Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
             Section.CorrRate
             )
-        Section.CorrRate, Section.MetalOxide.MixedPotential = corrosion_rate(Section, ConstantRate)
+        Section.CorrRate, Section.MetalOxide.MixedPotential = FAC_solver(Section, ConstantRate)
 
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
         Section.MetalOxide.NiTotal = MetalOxideInterfaceConcentration(
@@ -306,17 +310,20 @@ def corrosion_rate_concentrations(Section, ConstantRate, BulkConcentrations, Sat
 
     elif Section in ld.InletSections or Section in ld.OutletSections:
         Section.MetalOxide.NiTotal = [0] * Section.NodeNumber
-#             MetalOxideCo = MetalOxideInterfaceConcentration(
-#             Section, "Co", SolutionOxideCoTotal, InnerOxThickness, OuterOxThickness, CorrRate
-#             )
+        
+    # Cobalt M/O interface concentration not currently tracked but can be enabled
+#         MetalOxideCo = MetalOxideInterfaceConcentration(
+#         Section, "Co", SolutionOxideCoTotal, InnerOxThickness, OuterOxThickness, CorrRate
+#         )
 
     [
         Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
         Section.MetalOxide.ConcentrationH
-        ] = \
-        e.ElectrochemicalAdjustment(
+        ] = e.ElectrochemicalAdjustment(
         Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
         Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
         Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
         )
+    
+    return None
     

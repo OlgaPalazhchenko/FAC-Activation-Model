@@ -7,84 +7,84 @@ Created on Oct 22, 2017
 import pht_model
 import lepreau_data as ld
 import sg_heattransfer as SGHX
+import composition as c
 import numpy as np
 import csv
-import matplotlib.pyplot as plt
-import composition as c
-from matplotlib import rc
 
+import matplotlib.pyplot as plt
+from matplotlib import rc
 rc('mathtext', default='regular')
 
-RealTimeHeatTransfer = "no"
+
+HeatTransfer = "no"
+# preset corrosion rate instead of calculated from FAC model
 ConstantRate = "yes"
-Activation = "no"
+Activation = "yes"
 PlotOutput = "yes"
 OutputLogging = "yes"
-FullLoop = "no"
+Loop = "half"
 
-Solubility = []
-IronConcentration = []
-Loading_time = []
-TotalInnerLoading = []
-TotalOuterLoading = []
-RIHT = [] # monitored with time 
-OutletTemperatures1 = []
-OutletTemperatures2 = []
-# StreamOutletTemperatures = [] # monitored with time 
-TemperatureProfile = []
+# 1.52 m is the u-bend arc length of an average SG tube
+Default_Tube = SGHX.closest(1.52 * 100)
+SteamGeneratorTubes = []
+
+if OutputLogging == "yes":
+    Solubility = []
+    IronConcentration = []
+    Loading_time = []
+    TotalInnerLoading = []
+    TotalOuterLoading = []
+    RIHT = [] # monitored with time 
+    OutletTemperatures1 = []
+    OutletTemperatures2 = []
+    # StreamOutletTemperatures = [] # monitored with time 
+    TemperatureProfile = []
 
 SimulationYears = 1  # years
 SimulationHours = SimulationYears * 8760
 
 # load initial chemistry for full/half loop
-pht_model.initial_chemistry(FullLoop)
-# 1.52 m is the u-bend arc length of an average SG tube
-Default_Tube = SGHX.closest(1.52 * 100)
+pht_model.initial_chemistry(Loop)
 
 import time
 start_time = time.time()
 
 for j in range(SimulationHours):
-    In = pht_model.PHT_FAC(ld.InletFeeder, ld.FuelChannel, RealTimeHeatTransfer, Activation, ConstantRate, j)
-    Co = pht_model.PHT_FAC(ld.FuelChannel, ld.OutletFeeder, RealTimeHeatTransfer, Activation, ConstantRate, j)
-    Ou = pht_model.PHT_FAC(
-        ld.OutletFeeder, ld.SteamGenerator[Default_Tube], RealTimeHeatTransfer, Activation, ConstantRate, j
-        )
+    In = pht_model.PHT_FAC(ld.InletFeeder, ld.FuelChannel, HeatTransfer, Activation, ConstantRate, j)
+    Co = pht_model.PHT_FAC(ld.FuelChannel, ld.OutletFeeder, HeatTransfer, Activation, ConstantRate, j)
+    Ou = pht_model.PHT_FAC(ld.OutletFeeder, ld.SteamGenerator[Default_Tube], HeatTransfer, Activation, ConstantRate, j)
     
-    if FullLoop == "yes":
+    if Loop == "full":
         InletInput = ld.InletFeeder_2
     else:
         InletInput = ld.InletFeeder
     
-    if RealTimeHeatTransfer == "no":
-        Sg = pht_model.PHT_FAC(
-            ld.SteamGenerator[Default_Tube], InletInput, RealTimeHeatTransfer, Activation, ConstantRate, j
-            )
+    Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, HeatTransfer, Activation, ConstantRate, j)
             
-    else:
-        # Set input concentrations for all SG zones to be same as input of first (Outlet output)
+    if HeatTransfer == "yes":
+        # Set input concentrations for all SG zones to be same as output of outlet feeder
         BulkOutletOutput = [
                 Ou.Section1.Bulk.FeTotal, Ou.Section1.Bulk.NiTotal, Ou.Section1.Bulk.CoTotal, Ou.Section1.Bulk.CrTotal
                 ]
-        SteamGeneratorTubes = []
-
+        
         for Zone in SGHX.selected_tubes:
             BulkSGInput = [Zone.Bulk.FeTotal, Zone.Bulk.NiTotal, Zone.Bulk.CoTotal, Zone.Bulk.CrTotal]
             for x, y in zip(BulkSGInput, BulkOutletOutput):
                 x[0] = y[Ou.Section1.NodeNumber - 1]
             
-            Sg_tube = pht_model.PHT_FAC(Zone, ld.InletFeeder, RealTimeHeatTransfer, Activation, ConstantRate, j)   
-            SteamGeneratorTubes.append(Sg_tube)
+            z = pht_model.PHT_FAC(Zone, ld.InletFeeder, HeatTransfer, Activation, ConstantRate, j)   
             
-    if FullLoop == "yes":
-        In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, RealTimeHeatTransfer, Activation, ConstantRate, j)
-        Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, RealTimeHeatTransfer, Activation, ConstantRate, j)
+            SteamGeneratorTubes.append(z)
+            
+    if Loop == "full":
+        In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, HeatTransfer, Activation, ConstantRate, j)
+        Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, HeatTransfer, Activation, ConstantRate, j)
         Ou_2 = pht_model.PHT_FAC(
-            ld.OutletFeeder_2, ld.SteamGenerator_2[SGHX.tube_number[0]], RealTimeHeatTransfer, Activation, ConstantRate,
+            ld.OutletFeeder_2, ld.SteamGenerator_2[SGHX.tube_number[0]], HeatTransfer, Activation, ConstantRate,
             j
             )
         Sg_2 = pht_model.PHT_FAC(
-            ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, RealTimeHeatTransfer, Activation, ConstantRate, j
+            ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, HeatTransfer, Activation, ConstantRate, j
             )
     
     if j % 8759 == 0:  # yearly  
@@ -180,15 +180,17 @@ seconds = delta_time - 60 * minutes
 print('%d:%d:%d' % (hours, minutes, seconds))
 
 
+if HeatTransfer == "yes":
+    # SteamGeneratorTubes is the list of initialized objects based on run tubes (arc lengths)
+    SteamGenerator = SteamGeneratorTubes[0].Section1
+else:
+    SteamGenerator = Sg.Section1
+    
+
 def property_log10(Element, Interface):
     Sat = []  # x
     Bulk = []  # y
     SolutionOxide = []  # z
-    
-    if RealTimeHeatTransfer == "yes":
-        SteamGenerator = SteamGeneratorTubes[0].Section1
-    else:
-        SteamGenerator = Sg.Section1
     
     # only in main 4 PHTS sections, not counting SG Zones, can be changed to include all, if needed 
     for Section in [In.Section1, Co.Section1, Ou.Section1, SteamGenerator]:
@@ -227,13 +229,9 @@ def property_log10(Element, Interface):
         return None
 
 
-def oxide_loading(Layer, RealTimeHeatTransfer):
+def oxide_loading(Layer):
     Oxide = []
-    if RealTimeHeatTransfer == "yes":
-        SteamGenerator = SteamGeneratorTubes[0].Section1
-    else:
-        SteamGenerator = Sg.Section1
-        
+    
     for Section in [In.Section1, Co.Section1, Ou.Section1, SteamGenerator]:
         if Layer == "Inner":
             x = Section.InnerOxThickness
@@ -254,6 +252,32 @@ def oxide_loading(Layer, RealTimeHeatTransfer):
     return ConvertedOxide        
 
 
+def activity_volumetric(Isotope):
+    VolumetricActivity = []
+    for Section in [In.Section1, Co.Section1, Ou.Section1, SteamGenerator]:
+        if Isotope == "Co60":
+            x = Section.Bulk.Co60
+        elif Isotope == "Co58":
+            x = Section.Bulk.Co58
+        elif Isotope == "Fe55":
+            x = Section.Bulk.Fe55
+        elif Isotope == "Fe59":
+            x = Section.Bulk.Fe59
+        elif Isotope == "Cr51":
+            x = Section.Bulk.Cr51
+        elif Isotope == "Mn54":
+            x = Section.Bulk.Mn54
+        elif Isotope == "Ni63":
+            x = Section.Bulk.Ni63
+        else:
+            None
+        VolumetricActivity.append(x)
+    
+    VolumetricActivity = [j for i in VolumetricActivity for j in i]
+    
+    return VolumetricActivity
+
+   
 def plot_output():
     LoopDistance = []
     for Section in [ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder, ld.SteamGenerator[Default_Tube]]:
@@ -263,7 +287,6 @@ def plot_output():
     TotalLoopDistance = [i / 100 for i in np.cumsum(LoopDistance)]  # Distance down length of PHTS [m]
     
     fig1 = plt.figure()
-    
     ax1 = fig1.add_subplot(221)
     ax1.plot(TotalLoopDistance, property_log10("Fe", "SO"), marker='o', color='r', label='S/O Interface')
     ax1.plot(TotalLoopDistance, property_log10("Fe", "Sat"), marker='o', color='0', label='Magnetite Solubility')
@@ -299,13 +322,12 @@ def plot_output():
     plt.show()
     
     fig2, ax1 = plt.subplots()
-    # ax1 = fig2.add_subplot(221)
     ax1.plot(
-        TotalLoopDistance, oxide_loading("Inner", RealTimeHeatTransfer), linestyle=None, marker='o', color='0.50',
+        TotalLoopDistance, oxide_loading("Inner"), linestyle=None, marker='o', color='0.50',
         label='Inner Oxide'
         )
     ax1.plot(
-        TotalLoopDistance, oxide_loading("Outer", RealTimeHeatTransfer), linestyle=None, marker='o', color='k',
+        TotalLoopDistance, oxide_loading("Outer"), linestyle=None, marker='o', color='k',
         label='Outer Oxide'
         )
     # ax1.axis([51,69, 0, 30])
@@ -314,11 +336,11 @@ def plot_output():
                   
     ax2 = ax1.twinx()
     ax2.plot(
-        TotalLoopDistance, oxide_loading("Nickel", RealTimeHeatTransfer), linestyle=None, marker='o', color='c',
+        TotalLoopDistance, oxide_loading("Nickel"), linestyle=None, marker='o', color='c',
         label='Nickel'
         )
     ax2.plot(
-        TotalLoopDistance, oxide_loading("Cobalt", RealTimeHeatTransfer), linestyle=None, marker='o', color='m',
+        TotalLoopDistance, oxide_loading("Cobalt"), linestyle=None, marker='o', color='m',
         label='Cobalt'
         )
     ax2.set_ylabel('Ni, Co, and Cr Loadings (${g/m^2}$)', rotation=270, labelpad=20)
@@ -326,6 +348,26 @@ def plot_output():
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax2.legend(lines + lines2, labels + labels2, loc=0)        
     plt.axis([4, 69, 0, 0.01])
+    plt.tight_layout()
+    plt.show()
+    
+    
+    fig3, ax1 = plt.subplots()
+    ax1.plot(
+        TotalLoopDistance, activity_volumetric("Co60"), linestyle=None, marker='o', color='0.50',
+        label='Co60'
+        )
+    ax1.plot(
+        TotalLoopDistance, activity_volumetric("Co58"), linestyle=None, marker='o', color='m',
+        label='Co58'
+        )
+    ax1.plot(
+        TotalLoopDistance, activity_volumetric("Fe55"), linestyle=None, marker='o', color='m',
+        label='Fe55'
+        )
+    
+    ax1.set_xlabel('Distance (m)')
+    ax1.set_ylabel('Coolant Activity (${uCi/m^3}$)')
     plt.tight_layout()
     plt.show()
     

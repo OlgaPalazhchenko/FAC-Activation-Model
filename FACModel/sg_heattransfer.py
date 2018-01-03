@@ -3,9 +3,11 @@ import numpy as np
 import constants as nc
 import composition as c
 
+# select all the SG tubes to be run (by arc length)
 ubends = [0.385]#, 2.31, 3.09]
 ubends = [i * 100 for i in ubends]
 
+# searches through all u-bend arc lengths and chooses the one closest to input
 def closest(Number):
     difference = []
     for i in ld.u_bend_total:
@@ -54,7 +56,9 @@ for i in [U_h, U_c, U_total]:
 
 for i in [R_F_primary, R_F_secondary]:
     i.unit = "cm^2 K/W"
+
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
+# 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow 
 MassFlow_c.magnitude = 240 * 1000
 MassFlow_h.magnitude = 1900 * 1000
 
