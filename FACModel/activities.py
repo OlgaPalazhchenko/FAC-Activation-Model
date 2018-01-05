@@ -99,7 +99,7 @@ def eta(Section):
         CRYST_o = CRYST_i
          
     ActivationCoefficient = [(1 / (x + y)) + 1 / z for x, y, z in zip(DIFF_i, CRYST_i, CRYST_o)]  # [cm/s]
-        
+    
     return ActivationCoefficient
 
 
@@ -338,10 +338,10 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
         # of that section's first node)
         BulkActivity = BulkConcentration_o * ExponentialTerm
     
-    # convert from Ci/cm^3 to microCurie/m^3 
-    CurieBulkActivity = [(10 ** 6) * i * (100 ** 3) / (3.7 * 10 ** 10) for i in BulkActivity]
-    
-    return CurieBulkActivity # [Bq/cm^3]
+    # convert from Bq/cm^3 to microCurie/m^3 
+    # CurieBulkActivity = BulkActivity * (100 ** 3) / (3.7 * (10 ** 10)) 
+    print (BulkActivity, Element)
+    return BulkActivity # [Bq/cm^3]
 
 # The flow through the purification system is provided by the HT pumps.  It is taken from one inlet header on each 
 # loop of the HT system and is passed through one side of a heat interchanger, a cooler, a filter and an ion exchange

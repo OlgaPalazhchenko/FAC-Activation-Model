@@ -41,7 +41,7 @@ if OutputLogging == "yes":
     TemperatureProfile = []
 
 SimulationYears = 1  # years
-SimulationHours = SimulationYears * 8760
+SimulationHours = SimulationYears * 50
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)
@@ -186,6 +186,7 @@ if HeatTransfer == "yes":
 else:
     SteamGenerator = Sg.Section1
     
+print (SteamGenerator.Bulk.Fe59)
 
 def property_log10(Element, Interface):
     Sat = []  # x
@@ -280,7 +281,7 @@ def activity_volumetric(Isotope):
    
 def plot_output():
     LoopDistance = []
-    for Section in [ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder, ld.SteamGenerator[Default_Tube]]:
+    for Section in [ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder, SteamGenerator]:
         x = Section.Length.magnitude
         LoopDistance.append(x)
     LoopDistance = [j for i in LoopDistance for j in i]
@@ -358,12 +359,16 @@ def plot_output():
         label='Co60'
         )
     ax1.plot(
-        TotalLoopDistance, activity_volumetric("Co58"), linestyle=None, marker='o', color='m',
+        TotalLoopDistance, activity_volumetric("Fe55"), linestyle=None, marker='o', color='m',
         label='Co58'
         )
     ax1.plot(
-        TotalLoopDistance, activity_volumetric("Fe55"), linestyle=None, marker='o', color='m',
-        label='Fe55'
+        TotalLoopDistance, activity_volumetric("Fe59"), linestyle=None, marker='o', color='k',
+        label='Fe59'
+        )
+    ax1.plot(
+        TotalLoopDistance, activity_volumetric("Mn54"), linestyle=None, marker='o', color='g',
+        label='Mn54'
         )
     
     ax1.set_xlabel('Distance (m)')
