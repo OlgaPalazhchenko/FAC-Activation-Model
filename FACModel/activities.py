@@ -129,9 +129,9 @@ def particulate(Section, BulkCrud_0):
     return Concentration # [g / kg_coolant]
                     
 
-def surface_activity(Section, BulkActivity, j, Isotope):
+def surface_activity(Section, BulkActivity, j, i, Isotope):
     
-    t = [j] * Section.NodeNumber   
+    time = [j] * Section.NodeNumber   
     
     if Isotope == "Co60":
         Lambda = LAMBDACo60
@@ -150,19 +150,18 @@ def surface_activity(Section, BulkActivity, j, Isotope):
     else:
         None
             
-    Lambda_sec = [Lambda / 3600] * Section.NodeNumber  # [s^-1], Converts from h^-1 to s^-1
+    Lambda_sec = Lambda / 3600  # [s^-1], Converts from h^-1 to s^-1
     EtaTerm = eta(Section)
     
-    ActivityTerm = [x * y / z for x, y, z in zip(EtaTerm, BulkActivity, Lambda_sec)] 
-    ExponentialTerm = [1 - np.exp(-Lambda * j)] * Section.NodeNumber 
+    ActivityTerm = EtaTerm[i] * BulkActivity[i] / Lambda_sec
+    ExponentialTerm = 1 - np.exp(-Lambda * j) 
     
-    ActivityConcentration = [x * y for x, y in zip(ActivityTerm, ExponentialTerm)]  # [Bq/cm^2]
-    ActivityConcentration_metersquared = [i * (1000 * (100 ** 2)) for i in ActivityConcentration]  # [mBq/m^2]
+    ActivityConcentration = ActivityTerm * ExponentialTerm # [Bq/cm^2]
+    ActivityConcentration_metersquared = ActivityConcentration * (1000 * (100 ** 2))  # [mBq/m^2]
     
     # [mCi/m^2]
-    CurieSurfaceActivity = ld.UnitConverter(
-        Section, "Bq", "Ci", ActivityConcentration_metersquared, None, None, None, None, None
-        ) 
+    CurieSurfaceActivity = ActivityConcentration / (3.7 * 10 ** 10)
+     
     return CurieSurfaceActivity
 
 
@@ -340,7 +339,7 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
     
     # convert from Bq/cm^3 to microCurie/m^3 
     # CurieBulkActivity = BulkActivity * (100 ** 3) / (3.7 * (10 ** 10)) 
-    print (BulkActivity, Element)
+    
     return BulkActivity # [Bq/cm^3]
 
 # The flow through the purification system is provided by the HT pumps.  It is taken from one inlet header on each 

@@ -185,8 +185,7 @@ if HeatTransfer == "yes":
     SteamGenerator = SteamGeneratorTubes[0].Section1
 else:
     SteamGenerator = Sg.Section1
-    
-print (SteamGenerator.Bulk.Fe59)
+
 
 def property_log10(Element, Interface):
     Sat = []  # x
