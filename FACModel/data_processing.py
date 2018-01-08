@@ -16,10 +16,10 @@ from matplotlib import rc
 rc('mathtext', default='regular')
 
 
-HeatTransfer = "no"
+HeatTransfer = "yes"
 # preset corrosion rate instead of calculated from FAC model
 ConstantRate = "yes"
-Activation = "yes"
+Activation = "no"
 PlotOutput = "yes"
 OutputLogging = "yes"
 Loop = "half"
@@ -27,6 +27,26 @@ Loop = "half"
 # 1.52 m is the u-bend arc length of an average SG tube
 Default_Tube = SGHX.closest(1.52 * 100)
 SteamGeneratorTubes = []
+
+
+def sg_heat_transfer(HeatTransfer, Outlet):
+    SteamGeneratorTubes = []
+    if HeatTransfer == "yes":
+        # Set input concentrations for all SG zones to be same as output of outlet feeder
+        BulkOutletOutput = [
+                Outlet.Bulk.FeTotal, Outlet.Bulk.NiTotal, Outlet.Section1.Bulk.CoTotal, Outlet.Section1.Bulk.CrTotal
+                ]
+        
+        for Tube in SGHX.selected_tubes:
+            BulkSGInput = [Tube.Bulk.FeTotal, Tube.Bulk.NiTotal, Tube.Bulk.CoTotal, Tube.Bulk.CrTotal]
+            for x, y in zip(BulkSGInput, BulkOutletOutput):
+                x[0] = y[Outlet.Section1.NodeNumber - 1]
+            
+            z = pht_model.PHT_FAC(Tube, ld.InletFeeder, HeatTransfer, Activation, ConstantRate, j)   
+            
+            SteamGeneratorTubes.append(z)
+    return SteamGeneratorTubes
+
 
 if OutputLogging == "yes":
     Solubility = []
@@ -41,7 +61,7 @@ if OutputLogging == "yes":
     TemperatureProfile = []
 
 SimulationYears = 1  # years
-SimulationHours = SimulationYears * 50
+SimulationHours = SimulationYears * 8760
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)
@@ -61,18 +81,26 @@ for j in range(SimulationHours):
     
     Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, HeatTransfer, Activation, ConstantRate, j)
             
+    #make all of this into function ? 
+    # update inlet temperature to = RIHT 
+    # heat transfer should always be on? 
+    
+    # Q's: NPC submission?
+    # paper for publication?
+    # update on what has been worked on  
+    
     if HeatTransfer == "yes":
         # Set input concentrations for all SG zones to be same as output of outlet feeder
         BulkOutletOutput = [
                 Ou.Section1.Bulk.FeTotal, Ou.Section1.Bulk.NiTotal, Ou.Section1.Bulk.CoTotal, Ou.Section1.Bulk.CrTotal
                 ]
         
-        for Zone in SGHX.selected_tubes:
-            BulkSGInput = [Zone.Bulk.FeTotal, Zone.Bulk.NiTotal, Zone.Bulk.CoTotal, Zone.Bulk.CrTotal]
+        for Tube in SGHX.selected_tubes:
+            BulkSGInput = [Tube.Bulk.FeTotal, Tube.Bulk.NiTotal, Tube.Bulk.CoTotal, Tube.Bulk.CrTotal]
             for x, y in zip(BulkSGInput, BulkOutletOutput):
                 x[0] = y[Ou.Section1.NodeNumber - 1]
             
-            z = pht_model.PHT_FAC(Zone, ld.InletFeeder, HeatTransfer, Activation, ConstantRate, j)   
+            z = pht_model.PHT_FAC(Tube, ld.InletFeeder, HeatTransfer, Activation, ConstantRate, j)   
             
             SteamGeneratorTubes.append(z)
             

@@ -241,7 +241,7 @@ class PHT_FAC():
 #                 None
                
         # RK4 oxide thickness calculation (no spalling)
-        rk_4.oxide_layers(self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking = "no")
+        rk_4.oxide_layers(self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking = "yes")
         
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
