@@ -130,39 +130,41 @@ def particulate(Section, BulkCrud_0):
                     
 
 def surface_activity(Section, BulkActivity, j, i, Isotope):
-    
-    time = [j] * Section.NodeNumber   
-    
-    if Isotope == "Co60":
-        Lambda = LAMBDACo60
-    elif Isotope == "Co58":
-        Lambda = LAMBDACo58  
-    elif Isotope == "Fe55":
-        Lambda = LAMBDAFe55
-    elif Isotope == "Fe59":
-        Lambda = LAMBDAFe59
-    elif Isotope == "Mn54":
-        Lambda = LAMBDAMn54
-    elif Isotope == "Cr51":
-        Lambda = LAMBDACr51
-    elif Isotope == "Ni63":
-        Lambda = LAMBDANi63
+    if Section in ld.FuelSections:
+        return None
     else:
-        None
-            
-    Lambda_sec = Lambda / 3600  # [s^-1], Converts from h^-1 to s^-1
-    EtaTerm = eta(Section)
-    
-    ActivityTerm = EtaTerm[i] * BulkActivity[i] / Lambda_sec
-    ExponentialTerm = 1 - np.exp(-Lambda * j) 
-    
-    ActivityConcentration = ActivityTerm * ExponentialTerm # [Bq/cm^2]
-    ActivityConcentration_metersquared = ActivityConcentration * (1000 * (100 ** 2))  # [mBq/m^2]
-    
-    # [mCi/m^2]
-    CurieSurfaceActivity = ActivityConcentration / (3.7 * 10 ** 10)
-     
-    return CurieSurfaceActivity
+        time = [j] * Section.NodeNumber   
+        
+        if Isotope == "Co60":
+            Lambda = LAMBDACo60
+        elif Isotope == "Co58":
+            Lambda = LAMBDACo58  
+        elif Isotope == "Fe55":
+            Lambda = LAMBDAFe55
+        elif Isotope == "Fe59":
+            Lambda = LAMBDAFe59
+        elif Isotope == "Mn54":
+            Lambda = LAMBDAMn54
+        elif Isotope == "Cr51":
+            Lambda = LAMBDACr51
+        elif Isotope == "Ni63":
+            Lambda = LAMBDANi63
+        else:
+            None
+               
+        Lambda_sec = Lambda / 3600  # [s^-1], Converts from h^-1 to s^-1
+        EtaTerm = eta(Section)
+        
+        ActivityTerm = EtaTerm[i] * BulkActivity / Lambda_sec
+        ExponentialTerm = 1 - np.exp(-Lambda * j) 
+        
+        ActivityConcentration = ActivityTerm * ExponentialTerm # [Bq/cm^2]
+        ActivityConcentration_metersquared = ActivityConcentration * (1000 * (100 ** 2))  # [mBq/m^2]
+        
+        # [mCi/m^2]
+        CurieSurfaceActivity = ActivityConcentration / (3.7 * 10 ** 10)
+         
+        return CurieSurfaceActivity
 
 
 def core_active_deposit(Section, j, Element, ParentAbundance, DecayConstant, CrossSection, MolarMass):
@@ -205,6 +207,7 @@ def core_active_deposit(Section, j, Element, ParentAbundance, DecayConstant, Cro
         PreExponentialConstant * i * (1 - np.exp(-j * (DecayConstant + PARTICULATE_DISSOLUTION) * 3600)) for i in
         CoreDepositThickness
         ]
+
     # Activity of specific element in the in-core deposit [Bq/cm^2]
     return ActiveDeposit
 
@@ -317,12 +320,13 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
         ActiveCoreDeposit = core_active_deposit(
             Section, j, Element, ParentAbundance, Lambda_sec, CrossSection, MolarMass
             )
+        
         # variation with time and distance
         ExponentialTerm = np.exp(-Lambda_sec * Section.Distance[i] / Section.Velocity[i])
         
         PreExponentialReleaseTerm = 4 * PARTICULATE_DISSOLUTION * ActiveCoreDeposit[i] /\
         (Lambda_sec * Section.Diameter[i])
-
+        
         BulkActivity = BulkConcentration_o * ExponentialTerm + PreExponentialReleaseTerm * (1 - ExponentialTerm)
         
     # out-of-core activity                
@@ -332,11 +336,12 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
             (-Lambda_sec * Section.Distance[i] / Section.Velocity[i])
                                  - (4 * Section.Distance[i] * EtaTerm[i] / (Section.Diameter[i] * Section.Velocity[i]))
                                  )
+        
 
         # Distance is not for full PHT, just from start of current PHT section (decay from BulkConcentration_o
         # of that section's first node)
         BulkActivity = BulkConcentration_o * ExponentialTerm
-    
+       
     # convert from Bq/cm^3 to microCurie/m^3 
     # CurieBulkActivity = BulkActivity * (100 ** 3) / (3.7 * (10 ** 10)) 
     

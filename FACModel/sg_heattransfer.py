@@ -21,7 +21,8 @@ tube_number = []
 for i in ubends:
     x = closest(i)
     tube_number.append(x)
-   
+
+# selects class initializations based on desired u-bend tube arc lengths
 selected_tubes = []
 for i in tube_number:
     selected_tubes.append(ld.SteamGenerator[i])

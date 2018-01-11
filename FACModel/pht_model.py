@@ -40,11 +40,6 @@ def initial_chemistry(Loop):
         Section.FractionFeInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe")
         Section.FractionNiInnerOxide = c.fraction_metal_inner_oxide(Section, "Ni")
         
-        [
-            Section.Bulk.Co60, Section.Bulk.Co58, Section.Bulk.Fe55, Section.Bulk.Fe59, Section.Bulk.Mn54,
-            Section.Bulk.Cr51, Section.Bulk.Ni63
-            ] = [[0] * Section.NodeNumber] * 7
-        
         Interfaces = [Section.MetalOxide, Section.SolutionOxide, Section.Bulk]
         for Interface in Interfaces:
             # makes into array with appropriate # of nodes for that PHTS section
@@ -63,12 +58,17 @@ def initial_chemistry(Loop):
             Interface.CrTotal = [i * 1 for i in Section.SolubilityCr]
             Interface.CrSat = [i * 1 for i in Section.SolubilityCr]
             
+            [
+                Interface.Co60, Interface.Co58, Interface.Fe55, Interface.Fe59, Interface.Mn54, Interface.Cr51,
+                Interface.Ni63
+                ] = [[0] * Section.NodeNumber] * 7
+             
             # initial RIHT temperature 
             if Section in ld.InletSections:
-                Section.PrimaryBulkTemperature = ([
-                        SGHX.energy_balance(21, ld.SteamGenerator[0].InnerOxThickness,
-                                            ld.SteamGenerator[0].OuterOxThickness, 0)
-                     ] * Section.NodeNumber)
+                Section.PrimaryBulkTemperature = (
+                    [SGHX.energy_balance(21, ld.SteamGenerator[0].InnerOxThickness,
+                                         ld.SteamGenerator[0].OuterOxThickness, 0)] * Section.NodeNumber
+                                                  )
             
             if Section not in ld.OutletSections:
                 if Interface == Section.SolutionOxide:
@@ -105,7 +105,7 @@ Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
 
 
 class PHT_FAC():
-    def __init__(self, ActiveSection, OutgoingSection, HeatTransfer, Activation, ConstantRate, j):  
+    def __init__(self, ActiveSection, OutgoingSection, ElementTracking, Activation, ConstantRate, j):  
         # j = time step
         self.Section1 = ActiveSection
         self.Section2 = OutgoingSection
@@ -122,8 +122,9 @@ class PHT_FAC():
                 ]
              
             SurfaceActivities = [
-                self.Section1.Bulk.Co60, self.Section1.Bulk.Co58, self.Section1.Bulk.Fe59, self.Section1.Bulk.Fe55,
-                self.Section1.Bulk.Mn54, self.Section1.Bulk.Cr51, self.Section1.Bulk.Ni63
+                self.Section1.MetalOxide.Co60, self.Section1.MetalOxide.Co58, self.Section1.MetalOxide.Fe59,
+                self.Section1.MetalOxide.Fe55, self.Section1.MetalOxide.Mn54, self.Section1.MetalOxide.Cr51,
+                self.Section1.MetalOxide.Ni63
                 ]            
  
             # Deposit thickness around PHTS only calculated if activity transport is being tracked
@@ -161,10 +162,10 @@ class PHT_FAC():
             # solves for bulk volumetric activities and connects activity concentrations b/w PHT sections
             if Activation == "yes":
                 for x, y in zip (BulkActivities, Tags):
-                    x[i] = a.bulk_activity(self.Section1, itemgetter(0)(x), y, j,i)
+                    x[i] = a.bulk_activity(self.Section1, itemgetter(0)(x), y, j, i)
                     
                 for x, y, z in zip (BulkActivities, SurfaceActivities, Tags):
-                    y[i] = a.surface_activity(self.Section1, x[i], j, i, y)
+                    y[i] = a.surface_activity(self.Section1, x[i], j, i, z)
                     
             for x, y in zip (BulkConcentrations, SolutionOxideConcentrations):
                 if i > 0: 
@@ -190,14 +191,17 @@ class PHT_FAC():
                         x[i] = a.bulk_activity(self.Section1, itemgetter(3)(x), y, j, i)
             else:
                 None
-  
+                
+       
         # Connects output of one PHT section to input of subsequent section 
         for x, y in zip(BulkConcentrations, BulkConcentrations2):
             y[0] = x[self.Section1.NodeNumber - 1]
+        
         if Activation == "yes":
-            for q, z in zip(BulkActivities, BulkActivities2):
-                z[0] = q[self.Section1.NodeNumber - 1]
-           
+            for x, y in zip(BulkActivities, BulkActivities2):
+                y[0] = x[self.Section1.NodeNumber - 1]
+        
+  
         # Stellite wear bulk input term for cobalt and chromium    
         if self.Section1 in ld.FuelSections:
             self.Section2.Bulk.CoTotal[0] = self.Section1.Bulk.CoTotal[self.Section1.NodeNumber - 1] + nc.CobaltWear
@@ -241,9 +245,9 @@ class PHT_FAC():
 #                 None
                
         # RK4 oxide thickness calculation (no spalling)
-        rk_4.oxide_layers(self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking = "yes")
+        rk_4.oxide_layers(self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking)
         
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
-            self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking= "no"
+            self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking
             )
