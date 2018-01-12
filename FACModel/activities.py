@@ -97,7 +97,7 @@ def eta(Section):
     
     if Section in ld.InletSections or Section in ld.OutletSections:
         CRYST_o = CRYST_i
-         
+            
     ActivationCoefficient = [(1 / (x + y)) + 1 / z for x, y, z in zip(DIFF_i, CRYST_i, CRYST_o)]  # [cm/s]
     
     return ActivationCoefficient
@@ -174,7 +174,8 @@ def core_active_deposit(Section, j, Element, ParentAbundance, DecayConstant, Cro
         Section2 = ld.OutletFeeder
     elif Section == ld.FuelChannel_2:
         Section2 = ld.OutletFeeder_2
-    
+#     Section2 = ld.OutletFeeder
+
     Composition = []
     
     # Checks which oxide layer is uppermost (i.e., if outer layer removed due to spalling)
@@ -193,21 +194,21 @@ def core_active_deposit(Section, j, Element, ParentAbundance, DecayConstant, Cro
             Section2, Element, OxideType, Outer, Section2.OuterFe3O4Thickness[i], Section2.NiThickness[i],
             Section2.CoThickness[i], Section2.InnerIronOxThickness[i]
             )
+        
         Composition.append(x)
-    
+        
     # Average composition element in the outlet feeder oxide    
     ElementComposition = sum(Composition) / Section2.NodeNumber
     
     CoreDepositThickness = deposition(Section, j)
     # DecayConstant = [s^-1]
     PreExponentialConstant = DecayConstant * AVOGADRO * NEUTRON_FLUX * ElementComposition * ParentAbundance \
-    / MolarMass * (DecayConstant + PARTICULATE_DISSOLUTION)
+    / (MolarMass * (DecayConstant + PARTICULATE_DISSOLUTION))
     
     ActiveDeposit = [
         PreExponentialConstant * i * (1 - np.exp(-j * (DecayConstant + PARTICULATE_DISSOLUTION) * 3600)) for i in
         CoreDepositThickness
         ]
-
     # Activity of specific element in the in-core deposit [Bq/cm^2]
     return ActiveDeposit
 
@@ -320,7 +321,7 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
         ActiveCoreDeposit = core_active_deposit(
             Section, j, Element, ParentAbundance, Lambda_sec, CrossSection, MolarMass
             )
-        
+       
         # variation with time and distance
         ExponentialTerm = np.exp(-Lambda_sec * Section.Distance[i] / Section.Velocity[i])
         
@@ -335,17 +336,17 @@ def bulk_activity(Section, BulkConcentration_o, Isotope, j, i):
         ExponentialTerm = np.exp(
             (-Lambda_sec * Section.Distance[i] / Section.Velocity[i])
                                  - (4 * Section.Distance[i] * EtaTerm[i] / (Section.Diameter[i] * Section.Velocity[i]))
-                                 )
-        
-
+                                )
+#         if Section == ld.OutletFeeder:
+#             print (BulkConcentration_o, Isotope)
         # Distance is not for full PHT, just from start of current PHT section (decay from BulkConcentration_o
         # of that section's first node)
         BulkActivity = BulkConcentration_o * ExponentialTerm
        
-    # convert from Bq/cm^3 to microCurie/m^3 
-    # CurieBulkActivity = BulkActivity * (100 ** 3) / (3.7 * (10 ** 10)) 
+    # convert from Bq/cm^3 to Curie/cm^3 
+    #CurieBulkActivity = BulkActivity  / (3.7 * (10 ** 10)) 
     
-    return BulkActivity # [Bq/cm^3]
+    return BulkActivity # [Ci/cm^3]
 
 # The flow through the purification system is provided by the HT pumps.  It is taken from one inlet header on each 
 # loop of the HT system and is passed through one side of a heat interchanger, a cooler, a filter and an ion exchange

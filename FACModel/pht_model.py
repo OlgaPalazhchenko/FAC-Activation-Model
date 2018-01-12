@@ -125,8 +125,8 @@ class PHT_FAC():
                 self.Section1.MetalOxide.Co60, self.Section1.MetalOxide.Co58, self.Section1.MetalOxide.Fe59,
                 self.Section1.MetalOxide.Fe55, self.Section1.MetalOxide.Mn54, self.Section1.MetalOxide.Cr51,
                 self.Section1.MetalOxide.Ni63
-                ]            
- 
+                ]
+         
             # Deposit thickness around PHTS only calculated if activity transport is being tracked
             self.Section1.DepositThickness = a.deposition(self.Section1, j)
             
@@ -161,8 +161,10 @@ class PHT_FAC():
         for i in range(self.Section1.NodeNumber):
             # solves for bulk volumetric activities and connects activity concentrations b/w PHT sections
             if Activation == "yes":
-                for x, y in zip (BulkActivities, Tags):
-                    x[i] = a.bulk_activity(self.Section1, itemgetter(0)(x), y, j, i)
+                self.Section1.Bulk.Co60[i] = a.bulk_activity(self.Section1, self.Section1.Bulk.Co60[0], "Co60", j, i)
+                self.Section1.Bulk.Fe59[i] = a.bulk_activity(self.Section1, self.Section1.Bulk.Fe59[0], "Fe59", j, i)
+#                 for x, y in zip (BulkActivities, Tags):
+#                     x[i] = a.bulk_activity(self.Section1, x[0], y, j, i)
                     
                 for x, y, z in zip (BulkActivities, SurfaceActivities, Tags):
                     y[i] = a.surface_activity(self.Section1, x[i], j, i, z)
@@ -188,7 +190,7 @@ class PHT_FAC():
                     self.Section1.SmallParticulate = a.particulate(self.Section1, self.Section1.SmallParticulate[3])
                     
                     for x,y in zip (BulkActivities, Tags):
-                        x[i] = a.bulk_activity(self.Section1, itemgetter(3)(x), y, j, i)
+                        x[i] = a.bulk_activity(self.Section1, x[3], y, j, i)
             else:
                 None
                 

@@ -52,7 +52,7 @@ def oxide_composition(
                 return c.fraction_metal_inner_oxide(Section, "Cr")
 
             if OxideType == 0:  # InnerIronOxide = 0
-                return 0
+                return "lol"
         else:
             return None
 

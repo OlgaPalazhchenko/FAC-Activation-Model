@@ -15,10 +15,9 @@ from matplotlib import rc
 rc('mathtext', default='regular')
 
 
-HeatTransfer = "yes"
 # preset corrosion rate instead of calculated from FAC model
 ConstantRate = "yes"
-Activation = "no"
+Activation = "yes"
 PlotOutput = "yes"
 OutputLogging = "yes"
 Loop = "half"
@@ -32,16 +31,24 @@ Default_Tube = SGHX.closest(1.52 * 100)
 def sg_heat_transfer(Outlet, InletInput):
     Tubes = []
     # Set input concentrations for all SG zones to be same as output of outlet feeder
+    BulkOutletActivityOutput = [
+        Outlet.Bulk.Co60, Outlet.Bulk.Co58, Outlet.Bulk.Fe59, Outlet.Bulk.Fe55, Outlet.Bulk.Cr51, Outlet.Bulk.Mn54,
+        Outlet.Bulk.Ni63
+        ]
+    
     BulkOutletOutput = [Outlet.Bulk.FeTotal, Outlet.Bulk.NiTotal, Outlet.Bulk.CoTotal, Outlet.Bulk.CrTotal]
     
     for Tube in SGHX.selected_tubes:
         BulkSGInput = [Tube.Bulk.FeTotal, Tube.Bulk.NiTotal, Tube.Bulk.CoTotal, Tube.Bulk.CrTotal]
-        for x, y in zip(BulkSGInput, BulkOutletOutput):
+        BulkSGActivityInput = [
+        Tube.Bulk.Co60, Tube.Bulk.Co58, Tube.Bulk.Fe59, Tube.Bulk.Fe55, Tube.Bulk.Cr51, Tube.Bulk.Mn54, Tube.Bulk.Ni63
+        ]
+        for x, y, z, q in zip(BulkSGInput, BulkOutletOutput, BulkSGActivityInput, BulkOutletActivityOutput):
             x[0] = y[Outlet.NodeNumber - 1]
+            z[0] = q[Outlet.NodeNumber - 1]
         
-        z = pht_model.PHT_FAC(Tube, InletInput, ElementTracking, Activation, ConstantRate, j)   
-        
-        Tubes.append(z)
+        w = pht_model.PHT_FAC(Tube, InletInput, ElementTracking, Activation, ConstantRate, j)   
+        Tubes.append(w)
     return Tubes
 
 
@@ -57,7 +64,7 @@ if OutputLogging == "yes":
     # StreamOutletTemperatures = [] # monitored with time 
     TemperatureProfile = []
 
-SimulationYears = 1  # years
+SimulationYears = 3  # years
 SimulationHours = SimulationYears * 50
 
 # load initial chemistry for full/half loop
@@ -121,7 +128,7 @@ for j in range(SimulationHours):
                 OutletTemperatures2.append(Temperature2)
             
             
-            Loading_time.append(ld.SteamGenerator[SGHX.tube_number[1]].SolutionOxide.FeSatFe3O4)
+            Loading_time.append(ld.SteamGenerator[SGHX.tube_number[0]].SolutionOxide.FeSatFe3O4)
     else:
         None
 
@@ -364,12 +371,12 @@ def plot_output():
         label='Co58'
         )
     ax1.plot(
-        TotalLoopDistance, activity_volumetric("Fe59"), linestyle=None, marker='o', color='k',
-        label='Fe59'
+        TotalLoopDistance, activity_volumetric("Cr51"), linestyle=None, marker='o', color='c',
+        label='Cr51'
         )
     ax1.plot(
-        TotalLoopDistance, activity_volumetric("Mn54"), linestyle=None, marker='o', color='g',
-        label='Mn54'
+        TotalLoopDistance, activity_volumetric("Fe59"), linestyle=None, marker='o', color='g',
+        label='Fe59'
         )
     
     ax1.set_xlabel('Distance (m)')
