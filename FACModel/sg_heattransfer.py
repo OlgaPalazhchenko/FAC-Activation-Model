@@ -4,7 +4,7 @@ import constants as nc
 import composition as c
 
 # select all the SG tubes to be run (by arc length)
-ubends = [0.385]#, 2.31, 3.09]
+ubends = [0.385]#, 1.52, 2.31, 3.09]
 ubends = [i * 100 for i in ubends]
 
 # searches through all u-bend arc lengths and chooses the one closest to input
@@ -31,6 +31,10 @@ for i in tube_number:
 T_sat_primary = 310 + 273.15
 T_PreheaterIn = 187 + 273.15
 T_PrimaryIn = 310 + 273.15
+
+YearStartup = 1983
+YearCPP = 1987
+YearSHTChemicalClean = 1995
 
 h_i = ld.SGParameters()
 h_o = ld.SGParameters()
@@ -93,16 +97,48 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
         return None
 
 
-def fouling_resistance(InnerAccumulation, OuterAccumulation, SecondarySidePressure):
-    # thickness/thermal conductivity [cm]/[W/cm K] = [cm^2 K/W]
-    # [g/cm^2]/[g/cm^3] = [cm]
+def fouling_resistance(side, Section, calendar_year, InnerAccumulation, OuterAccumulation, SecondarySidePressure):
 
-    InnerThickness = [i / nc.Fe3O4Density for i in InnerAccumulation]
-    OuterThickness = [i / nc.Fe3O4Density for i in OuterAccumulation]
-
-    # [cm]/ [W/cm K] =[cm^2 K/W]
-    InnerFouling = [i / 2 * thermal_conductivity(None, "magnetite", SecondarySidePressure) for i in InnerThickness]
-    OuterFouling = [i / thermal_conductivity(None, "magnetite", SecondarySidePressure) for i in OuterThickness]
+    if side == "PHT" or side == "PHTS":
+        # thickness/thermal conductivity [cm]/[W/cm K] = [cm^2 K/W]
+        # [g/cm^2]/[g/cm^3] = [cm]
+    
+        InnerThickness = [i / nc.Fe3O4Density for i in InnerAccumulation]
+        OuterThickness = [i / nc.Fe3O4Density for i in OuterAccumulation]
+    
+        # [cm]/ [W/cm K] =[cm^2 K/W]
+        # inner deposit is consolidated, predicted to have different thermal resistance than unconsolidated outer ox.
+        InnerFouling = [i / 2 * thermal_conductivity(None, "magnetite", SecondarySidePressure) for i in InnerThickness]
+        OuterFouling = [i / thermal_conductivity(None, "magnetite", SecondarySidePressure) for i in OuterThickness]
+    
+    elif side == "SHT" or side == "SHTS":
+        InnerFouling = [0] * Section.NodeNumber
+        
+        Initial_SHTSFouling = 0 # not "hot conditioning" here, so assumed 0 at start-up
+            
+        # 0.0024 is the slope of overall oxide growth (from plots) based on input (or FAC solver) corrosion rate
+        # between 1983 and 1986 (included)
+        if YearStartup <= calendar_year < YearCPP:
+            # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
+            SHTSFouling = Initial_SHTSFouling + (calendar_year - YearStartup) * 0.0017
+        
+        # CPP installation (late 1986) reduces secondary side crud by 50% 
+        # (assumed proportional red. in deposit formation)
+        elif YearCPP <= calendar_year < YearSHTChemicalClean: 
+            SHTSFouling = (Initial_SHTSFouling
+                           + ((YearCPP - 1) - YearStartup) * 0.0017
+                           + (calendar_year - 1983) * 0.000825) # + what deposited until this change
+            
+        # assumed that secondary side completely cleaned, new growth? 
+        elif calendar_year >= YearSHTChemicalClean:
+            SHTSFouling = (calendar_year - YearSHTChemicalClean) * 0.000825
+            
+        OuterFouling = [SHTSFouling] * Section.NodeNumber  
+        
+    else:
+        None
+    
+    # thermal resistances
     return [x + y for x, y in zip(InnerFouling, OuterFouling)]
 
 
@@ -307,22 +343,15 @@ def wall_temperature(
         RE1 = (T_PrimaryWall - WT_h)
         RE2 = (T_SecondaryWall - WT_c)
 
+        # if converged
         if abs(RE1) <= 0.01 and abs(RE2) <= 0.01:
             # [cm^2 K/W]
-            R_F_primary.magnitude = fouling_resistance(InnerAccumulation, OuterAccumulation, SecondarySidePressure)[i]  
+            R_F_primary.magnitude = fouling_resistance(
+                "PHT", Section, calendar_year, InnerAccumulation, OuterAccumulation, SecondarySidePressure
+                )[i] 
             
-            Initial_SHTSFouling = 0.0005 # [g/cm2] same as for PHT (~ 1 um/a)
-            
-            if 1983 <= calendar_year < 1987:
-                SHTSFouling = Initial_SHTSFouling + (calendar_year - 1983) * 0.0024
-                # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
-            else:
-                # CPP installation (late 1986) reduces secondary side crud by 50% 
-                # (assumed proportional red. in deposit formation)
-                SHTSFouling = Initial_SHTSFouling + (calendar_year - 1983) * 0.0012
-                
             R_F_secondary.magnitude = fouling_resistance(
-                [0]*Section.NodeNumber, [SHTSFouling]*Section.NodeNumber, SecondarySidePressure
+                "SHT", Section, calendar_year, InnerAccumulation, OuterAccumulation, SecondarySidePressure
                 )[i]
             
             PCR = primary_convection_resistance(
@@ -332,7 +361,7 @@ def wall_temperature(
                 Section, SecondaryT_film, T_SecondaryWall, x_in, SecondarySidePressure, i
                 )
              
-            # [cm^2 K/W]
+            # [cm^2 K/W] all resistances (convective, conductive, and fouling)
             inverseU_total = (PCR + conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i) + SCR) \
             * outer_area(Section)[i] + R_F_primary.magnitude + R_F_secondary.magnitude
 
@@ -344,6 +373,9 @@ def wall_temperature(
 def temperature_profile(
         Section, InnerAccumulation, OuterAccumulation, m_h_leakagecorrection, SecondarySidePressure, calendar_year
         ):
+    
+    # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
+    # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
     if SecondarySidePressure == 4.593: 
         T_sat_secondary = 260.1 + 273.15
     elif SecondarySidePressure < 4.593:
@@ -356,7 +388,7 @@ def temperature_profile(
 
     for i in range(Section.NodeNumber - 1):
         if i == 0:
-            # Temperatures entering SG --> not first node temps.
+            # Temperatures entering SG (0 m of SG)--> not first "node" temp (several m into SG hot leg)
             T_PrimaryBulkIn = T_PrimaryIn  # [K]
             T_SecondaryBulkIn = T_sat_secondary
             x_in = 0
@@ -366,7 +398,8 @@ def temperature_profile(
         T_wh, T_wc, U = wall_temperature(
             Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerAccumulation, OuterAccumulation, calendar_year,
             SecondarySidePressure)
-
+        
+        # all nodes other than preheater
         if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater" and \
                 Section.Length.label[i] != "thermal plate":
 
@@ -441,17 +474,28 @@ def temperature_profile(
 
 
 def station_events(calendar_year):
-    if calendar_year <= 1992:
-        # divider plate leakage rates estimated based on AECL work
-        InitialLeakage = 0.035 # fraction of total SG inlet mass flow
-        YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-        SHTPressure = 4.593  # MPa
-    else:
-        # PLNGS pressure reduction in 1992 + divider plate replacement
-        InitialLeakage = 0.02 
-        YearlyRateLeakage = 0
+    # Divider plate leakage and pressure changes 
+    
+    # divider plate leakage rates estimated based on AECL work
+    # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
+    # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
+    InitialLeakage = 0.035 
+    YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
+    
+    if calendar_year < 1992:
+        SHTPressure = 4.593   # MPa
+    
+    # PLNGS pressure reduction in 1992 by 125 kPa
+    elif 1992 <= calendar_year < 1995:
         SHTPressure = 4.593 - (125 / 1000) # MPa
     
+    # divider plate raplacement in 1995, assumed to stop increase in leak (2% constant going forward)
+    # boiler pressure increased back up to start-up 4.593 MPa
+    elif calendar_year >= 1995:
+        SHTPressure = 4.593
+        InitialLeakage = 0.02 
+        YearlyRateLeakage = 0
+        
     Leakage = InitialLeakage + (calendar_year - 1983) * YearlyRateLeakage
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
     m_h_leakagecorrection = MassFlow_h.magnitude - DividerPlateMassFlow

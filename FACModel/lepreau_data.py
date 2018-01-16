@@ -15,7 +15,6 @@ SecondarySidePressure = 4.593  # MPa
 
 SizingParameters = open('SizingParameters.txt', 'r')      
 SizingParametersReader = list(csv.reader(SizingParameters, delimiter=','))  
-# Assign file data to list, Reader[row][column], delimiter = comma 
 
 n_IAPWS = [
     0.14632971213167, -0.84548187169114, -0.37563603672040 * 10 ** 1, 0.33855169168385 * 10 ** 1, -0.95791963387872, 
@@ -233,9 +232,9 @@ def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, Ox
     # Converts corrosion rates from [g/cm^2 s] to micrometers per annum [um/yr]
     elif UnitInput == "Corrosion Rate Grams" and UnitOutput == "Corrosion Rate Micrometers":
     # ([g/cm^2 s] / [g/cm^3] *[10000 um/cm]) = ([cm/s] * [3600 s/h] * [24 h/d] * [365 d/yr]) = [um/yr]
-        if Section == Inlet or Section == Outlet:
+        if Section in InletSections or Section in OutletSections:
             return [i * ((1 / nc.FeDensity) * 3600 * 24 * 365 * 10000) for i in Rate]
-        elif Section in SGZones or Section in SGZones_2:
+        elif Section in SteamGenerator or Section in SteamGenerator_2:
             return [x * y for x, y in zip(Rate, [(1 / nc.Alloy800Density) * 3600 * 24 * 365 * 10000] 
                                           * Section.NodeNumber)]
         else:
@@ -451,14 +450,14 @@ def steam_generator_properties(SteamGenerator):
         
         Zone.Diameter = [1.368] * Zone.NodeNumber
         Zone.Velocity = [
-            533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 498, 494, 491, 489, 487, 484, 483, 481, 480, 479, 476, 
-            474
+            533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 498, 494, 491, 489, 487, 484, 483, 481, 480, 479,
+            476, 474
             ]
         
         Zone.SolubilityNi = [
-            1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 1.96011E-09, 
-            2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09, 2.60733E-09, 
-            2.62118E-09, 2.63802E-09, 2.66147E-09, 2.68978E-09, 2.71747E-09
+            1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09, 
+            1.96011E-09, 2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09,
+            2.60733E-09, 2.62118E-09, 2.63802E-09, 2.66147E-09, 2.68978E-09, 2.71747E-09
             ]
         Zone.SolubilityCo = [
             1.46729E-09, 1.46729E-09, 1.46729E-09, 1.49896E-09, 1.62443E-09, 1.75595E-09, 1.91821E-09, 2.06673E-09,
@@ -466,14 +465,15 @@ def steam_generator_properties(SteamGenerator):
             3.22305E-09, 3.2971E-09, 3.38716E-09, 3.51258E-09, 3.66401E-09, 3.81211E-09
             ]
         Zone.SolubilityCr = [
-            4.84E-11, 4.84E-11, 4.84E-11, 4.99E-11, 5.61E-11, 6.20E-11, 6.73E-11, 7.22E-11, 7.67E-11, 8.10E-11, 8.52E-11, 
-            8.88E-11, 9.18E-11, 9.46E-11, 9.71E-11, 9.94E-11, 1.01E-10, 1.03E-10, 1.00E-10, 9.62E-11, 9.15E-11, 8.70E-11
+            4.84E-11, 4.84E-11, 4.84E-11, 4.99E-11, 5.61E-11, 6.20E-11, 6.73E-11, 7.22E-11, 7.67E-11, 8.10E-11,
+            8.52E-11, 8.88E-11, 9.18E-11, 9.46E-11, 9.71E-11, 9.94E-11, 1.01E-10, 1.03E-10, 1.00E-10, 9.62E-11,
+            9.15E-11, 8.70E-11
                              ]
         
         Zone.PrimaryBulkTemperature = UnitConverter(
             Zone, "Celsius", "Kelvin", None, None, None, None, None, 
-            [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27, 279.43, 
-             277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03]
+            [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27,
+             279.43, 277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03]
             )
         
         Zone.Length.label = ["PHT boiling"] * 2 \

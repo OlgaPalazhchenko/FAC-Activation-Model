@@ -255,13 +255,13 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
                 x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.NiThickness, P[0], P[1], P[2], P[3])
                 ]
     
-    #     Layers = [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Section.CoThickness, Section.NiThickness]
+        Layers = [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Section.CoThickness, Section.NiThickness]
         # 4 different layers at each node. If any thicknesses are negative due to dissolution of respective layer, 
         # thickness = 0
-    #     for i in range(4):
-    #         for x in range(Section.NodeNumber):
-    #             if Layers[i][x] < 0:
-    #                 Layers[i][x] = 0
+        for i in range(4):
+            for x in range(Section.NodeNumber):
+                if Layers[i][x] < 0:
+                    Layers[i][x] = 0
         return None
     
 

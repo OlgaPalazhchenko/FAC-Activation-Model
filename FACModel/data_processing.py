@@ -17,7 +17,7 @@ rc('mathtext', default='regular')
 
 # preset corrosion rate instead of calculated from FAC model
 ConstantRate = "yes"
-Activation = "yes"
+Activation = "no"
 PlotOutput = "yes"
 OutputLogging = "yes"
 Loop = "half"
@@ -64,8 +64,8 @@ if OutputLogging == "yes":
     # StreamOutletTemperatures = [] # monitored with time 
     TemperatureProfile = []
 
-SimulationYears = 3  # years
-SimulationHours = SimulationYears * 50
+SimulationYears = 1  # years
+SimulationHours = SimulationYears * 100
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)
@@ -88,7 +88,10 @@ for j in range(SimulationHours):
     
     Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j)
     SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput)
-            
+    print (
+        ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
+    None, None, None, None)
+           )
     if Loop == "full":
         In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, ElementTracking, Activation, ConstantRate, j)
         Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, ElementTracking, Activation, ConstantRate, j)
@@ -100,7 +103,7 @@ for j in range(SimulationHours):
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )
     
-    if j % 4379 == 0:  # yearly  
+    if j % 8759 == 0:  # yearly  
         # parameters tracked with time 
         T_RIH = (SGHX.energy_balance(
             ld.SteamGenerator[Default_Tube].NodeNumber - 1, ld.SteamGenerator[Default_Tube].InnerOxThickness,
@@ -127,15 +130,12 @@ for j in range(SimulationHours):
                                )
                 OutletTemperatures2.append(Temperature2)
             
-            
-            Loading_time.append(ld.SteamGenerator[SGHX.tube_number[0]].SolutionOxide.FeSatFe3O4)
     else:
         None
 
           
 # FACRate = sum(
-#     ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
-#     None, None, None, None)
+#     
 #     ) / (Ou.Section1.NodeNumber)
 
 
@@ -182,9 +182,6 @@ with open(csvfile, "w") as output:
     writer.writerow(OutletTemperatures1)
     writer.writerow(OutletTemperatures2)
     
-    writer.writerow([''])
-    writer.writerow(['FeSat over time (mol/kg)'])
-    writer.writerows(Loading_time)
     
 end_time = time.time()
 delta_time = end_time - start_time

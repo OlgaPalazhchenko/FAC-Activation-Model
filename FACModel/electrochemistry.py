@@ -51,10 +51,10 @@ def ElectrochemicalAdjustment(
         Section, EqmPotentialFe3O4, SOMixedPotential, MOMixedPotential, FeTotal, FeSatFe3O4, BulkSatFe3O4,
         SOConcentrationH
         ):
-    
-    KpFe3O4electrochem = ElectrochemicalKineticConstant(
-        Section, [nc.KpFe3O4] * Section.NodeNumber, EqmPotentialFe3O4, "no", SOMixedPotential
-        )
+    KpFe3O4electrochem = [nc.KpFe3O4] * Section.NodeNumber
+#     KpFe3O4electrochem = ElectrochemicalKineticConstant(
+#         Section, [nc.KpFe3O4] * Section.NodeNumber, EqmPotentialFe3O4, "no", SOMixedPotential
+#         )
     KdFe3O4electrochem = ElectrochemicalKineticConstant(
         Section, [nc.KdFe3O4] * Section.NodeNumber, EqmPotentialFe3O4, "yes", SOMixedPotential
         )
