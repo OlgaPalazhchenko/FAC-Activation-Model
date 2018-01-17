@@ -41,8 +41,10 @@ def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPot
         Beta_prime = (-1) * nc.Beta
     else:
         Beta_prime = nc.Beta
-    
-    AdjustedSaturation = BulkSatFe3O4 * np.exp(Beta_prime * nc.n * nc.F * (MixedPotential - EqmPotentialFe3O4) / (nc.R * Kelvin)) 
+    if Section in ld.SteamGenerator and Dissolution == "yes":
+        print (MixedPotential - EqmPotentialFe3O4)
+    AdjustedSaturation = BulkSatFe3O4 * np.exp(Beta_prime * nc.n * nc.F * 1.2*(MixedPotential - EqmPotentialFe3O4) \
+                                        / (nc.R * Kelvin)) 
 
     return AdjustedSaturation
 

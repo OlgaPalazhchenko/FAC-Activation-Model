@@ -65,7 +65,7 @@ if OutputLogging == "yes":
     TemperatureProfile = []
 
 SimulationYears = 1  # years
-SimulationHours = SimulationYears * 100
+SimulationHours = SimulationYears * 50
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)
@@ -88,10 +88,10 @@ for j in range(SimulationHours):
     
     Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j)
     SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput)
-    print (
-        ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
-    None, None, None, None)
-           )
+#     print (
+#         ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
+#     None, None, None, None)
+#            )
     if Loop == "full":
         In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, ElementTracking, Activation, ConstantRate, j)
         Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, ElementTracking, Activation, ConstantRate, j)
