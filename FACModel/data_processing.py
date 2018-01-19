@@ -65,7 +65,7 @@ if OutputLogging == "yes":
     TemperatureProfile = []
 
 SimulationYears = 1  # years
-SimulationHours = SimulationYears * 50
+SimulationHours = SimulationYears * 100
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)
@@ -88,10 +88,10 @@ for j in range(SimulationHours):
     
     Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j)
     SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput)
-#     print (
-#         ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
-#     None, None, None, None)
-#            )
+    print (
+        ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
+    None, None, None, None)
+           )
     if Loop == "full":
         In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, ElementTracking, Activation, ConstantRate, j)
         Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, ElementTracking, Activation, ConstantRate, j)
@@ -201,14 +201,14 @@ def property_log10(Element, Interface):
     # only in main 4 PHTS sections, not counting SG Zones, can be changed to include all, if needed 
     for Section in [In.Section1, Co.Section1, Ou.Section1, SteamGeneratorTubes[0].Section1]:
         if Element == "Fe":
-            Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.Bulk.FeTotal, Section.SolutionOxide.FeTotal]
+            Concentrations = [Section.Bulk.FeSatFe3O4, Section.Bulk.FeTotal, Section.SolutionOxide.FeTotal]
         elif Element == "Ni":
-            Concentrations = [Section.SolutionOxide.NiSatFerrite, Section.Bulk.NiTotal, Section.SolutionOxide.NiTotal]
+            Concentrations = [Section.Bulk.NiSatFerrite, Section.Bulk.NiTotal, Section.SolutionOxide.NiTotal]
         elif Element == "Cr":
-            Concentrations = [Section.SolutionOxide.CrSat, Section.Bulk.CrTotal, Section.SolutionOxide.CrTotal]
+            Concentrations = [Section.Bulk.CrSat, Section.Bulk.CrTotal, Section.SolutionOxide.CrTotal]
         elif Element == "Co":
             Concentrations = [
-                Section.SolutionOxide.CoSatFerrite, Section.Bulk.CoTotal, Section.SolutionOxide.CoTotal
+                Section.Bulk.CoSatFerrite, Section.Bulk.CoTotal, Section.SolutionOxide.CoTotal
                 ]
         else:
             None

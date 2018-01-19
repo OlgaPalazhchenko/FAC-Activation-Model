@@ -79,7 +79,7 @@ def initial_chemistry(Loop):
             
             if Section in ld.OutletSections and Interface == Section.MetalOxide:
                 # from Cook's thesis - experimental corrosion rate measurements and calcs
-                Interface.FeTotal = [0.00000026] * Section.NodeNumber 
+                Interface.FeTotal = [0.00000016] * Section.NodeNumber 
             
             if Section not in ld.SteamGenerator and Section not in ld.SteamGenerator_2:
                 Interface.NiTotal = [0] * Section.NodeNumber
@@ -89,7 +89,7 @@ def initial_chemistry(Loop):
         if Section in ld.FuelSections:
             Section.CorrRate == [0] * Section.NodeNumber
         else:
-            Section.CorrRate, Section.MetalOxide.MixedPotential = it.FAC_solver(Section, ConstantRate="no")
+            Section.CorrRate, Section.MetalOxide.MixedPotential = it.FAC_solver(Section, ConstantRate="yes")
             
         [
             Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,

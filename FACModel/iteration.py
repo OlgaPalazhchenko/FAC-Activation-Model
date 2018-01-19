@@ -144,9 +144,10 @@ def SolutionOxide(
             # same expression for dissolution (Oxide >0) or precipitation, subbing out appropriate kinetic constant 
             if SolutionOxideConcentration[i] >= SaturationConcentration[i]:
                 y = (Diff[i] + OxideKinetics[i] + BTrans[i]) / (Section.KpFe3O4electrochem[i] + km[i])
-                
+#                 print(Section.NodeNumber, Diff[i], OxideKinetics[i], BTrans[i], Section.KdFe3O4electrochem[i] + km[i], y)
             else:  # SolutionOxideConcentration[i] < SaturationConcentration[i]:
                 y = (Diff[i] + OxideKinetics[i] + BTrans[i]) / (Section.KdFe3O4electrochem[i] + km[i])
+                
             if Oxide[i] == 0:  # Core 
                 y = (Diff[i] + BTrans[i]) / km[i]  # No contribution from oxide kinetics
  
@@ -243,7 +244,7 @@ def FAC_solver(Section, ConstantRate):
         rate = [0] * Section.NodeNumber
     # preset desired FAC rate
     elif Section in ld.OutletSections and ConstantRate == "yes":
-        rate = [3e-9] * Section.NodeNumber
+        rate = [6e-10] * Section.NodeNumber
     
     # corrosion current calculation not required of rate has been set as constant
     else:

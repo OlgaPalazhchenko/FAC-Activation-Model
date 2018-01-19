@@ -525,8 +525,9 @@ for Section in FullLoop:
     
 def ReynoldsNumber(Section, Diameter):
     # Diameter is an input due to difference in desired dimension (e.g., inner, outer, hydraulic, etc.)
-    Reynolds = [x * y / (z * q) 
-                for x, y, z, q in zip(Section.Velocity, Diameter, Section.ViscosityH2O, Section.DensityH2O)]    
+    # [cm/s][cm][g/cm^3]/([g/cm s]
+    Reynolds = [x * y * q / z  
+                for x, y, z, q in zip(Section.Velocity, Diameter, Section.ViscosityH2O, Section.DensityH2O)]
     return Reynolds
 
 
@@ -535,4 +536,6 @@ def MassTransfer(Section):
     Reynolds = ReynoldsNumber(Section, Section.Diameter)
     Sherwood = [0.0165 * (x ** 0.86) * (y ** 0.33) for x, y in zip(Reynolds, Schmidt)]  
     # Berger & Hau for straight pipe, single phase, fully developed (turbulent) flow
-    return [nc.FeDiffusivity * x / y for x, y in zip(Sherwood, Section.Diameter)] 
+    h_BH = [nc.FeDiffusivity * x / y for x, y in zip(Sherwood, Section.Diameter)] 
+  
+    return h_BH

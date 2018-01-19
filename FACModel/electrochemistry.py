@@ -25,6 +25,7 @@ def Potential(
     E = StandardPotential - NernstConstant * np.log10(Product / Reactant)
     return E
 
+
 def ElectrochemicalKineticConstant(Section, KineticConstant, EquilibriumPotential, Dissolution, MixedECP):
     if Dissolution == "yes":
         Beta_prime = nc.Beta * (-1)
@@ -37,14 +38,15 @@ def ElectrochemicalKineticConstant(Section, KineticConstant, EquilibriumPotentia
 
 
 def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPotential, Kelvin, Dissolution):
-    if Dissolution == "yes":
-        Beta_prime = (-1) * nc.Beta
-    else:
-        Beta_prime = nc.Beta
-    if Section in ld.SteamGenerator and Dissolution == "yes":
-        print (MixedPotential - EqmPotentialFe3O4)
-    AdjustedSaturation = BulkSatFe3O4 * np.exp(Beta_prime * nc.n * nc.F * 1.2*(MixedPotential - EqmPotentialFe3O4) \
-                                        / (nc.R * Kelvin)) 
+#     if Dissolution == "yes":
+#         Beta_prime = (-1) * nc.Beta
+#         Adj = 1.5
+#     else:
+#         Beta_prime = nc.Beta
+#         Adj = 0.9
+   
+    AdjustedSaturation = BulkSatFe3O4 #* np.exp(Beta_prime * nc.n * nc.F * Adj * (MixedPotential - EqmPotentialFe3O4) \
+                                        #/ (nc.R * Kelvin)) 
 
     return AdjustedSaturation
 
@@ -57,9 +59,10 @@ def ElectrochemicalAdjustment(
 #     KpFe3O4electrochem = ElectrochemicalKineticConstant(
 #         Section, [nc.KpFe3O4] * Section.NodeNumber, EqmPotentialFe3O4, "no", SOMixedPotential
 #         )
-    KdFe3O4electrochem = ElectrochemicalKineticConstant(
-        Section, [nc.KdFe3O4] * Section.NodeNumber, EqmPotentialFe3O4, "yes", SOMixedPotential
-        )
+    KdFe3O4electrochem = [nc.KdFe3O4] * Section.NodeNumber
+#     ElectrochemicalKineticConstant(
+#         Section, [nc.KdFe3O4] * Section.NodeNumber, EqmPotentialFe3O4, "yes", SOMixedPotential
+#         )
     
     AdjustedSaturation = []
     for i in range(Section.NodeNumber):
@@ -87,11 +90,20 @@ def ElectrochemicalAdjustment(
     
 
 def MixedPotential(Section, CathodeCurrent, CathodePotential, AnodeCurrent, AnodePotential):
-    Numerator = [x * np.exp((nc.Beta * nc.n * nc.F * y) / (nc.R * z)) + q * np.exp((nc.Beta * nc.n * nc.F * r) / (nc.R * z)) for x, y, z, q, r, in zip(CathodeCurrent, CathodePotential, Section.PrimaryBulkTemperature, AnodeCurrent, AnodePotential)]
+    Numerator = [
+        x * np.exp((nc.Beta * nc.n * nc.F * y) / (nc.R * z)) + q * np.exp((nc.Beta * nc.n * nc.F * r) / (nc.R * z)) for
+        x, y, z, q, r, in zip(
+            CathodeCurrent, CathodePotential, Section.PrimaryBulkTemperature, AnodeCurrent, AnodePotential
+            )
+                 ]
     
-    Denominator = [x * np.exp((-(1 - nc.Beta) * nc.n * nc.F * y) / (nc.R * z)) + q * np.exp((-(1 - nc.Beta) * nc.n * nc.F * r) / (nc.R * z)) for x, y, z, q, r, in zip(CathodeCurrent, CathodePotential, Section.PrimaryBulkTemperature, AnodeCurrent, AnodePotential)]
+    Denominator = [
+        x * np.exp((-(1 - nc.Beta) * nc.n * nc.F * y) / (nc.R * z)) + q * np.exp((-(1 - nc.Beta) * nc.n * nc.F * r) / (nc.R * z)) for
+        x, y, z, q, r, in zip(CathodeCurrent, CathodePotential, Section.PrimaryBulkTemperature, AnodeCurrent, AnodePotential)
+        ]
     
-    return  [(nc.R * x / (nc.n * nc.F)) * np.log(y / z) for x, y, z in zip(Section.PrimaryBulkTemperature, Numerator, Denominator)]
+    return  [(nc.R * x / (nc.n * nc.F)) * np.log(y / z)
+             for x, y, z in zip(Section.PrimaryBulkTemperature, Numerator, Denominator)]
     
 
 def exchangecurrentdensity(Section, ActivationE, Concentration, Potential, DensityH2O, Kelvin, Species):
