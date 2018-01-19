@@ -38,16 +38,15 @@ def ElectrochemicalKineticConstant(Section, KineticConstant, EquilibriumPotentia
 
 
 def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPotential, Kelvin, Dissolution):
-#     if Dissolution == "yes":
-#         Beta_prime = (-1) * nc.Beta
-#         Adj = 1.5
-#     else:
-#         Beta_prime = nc.Beta
-#         Adj = 0.9
-   
-    AdjustedSaturation = BulkSatFe3O4 #* np.exp(Beta_prime * nc.n * nc.F * Adj * (MixedPotential - EqmPotentialFe3O4) \
+    if Dissolution == "yes":
+        Beta_prime = (-1) * nc.Beta
+        Adj = 1.9
+    else:
+        Beta_prime = nc.Beta
+        Adj = 1.1
+        
+    AdjustedSaturation = BulkSatFe3O4 * Adj#* np.exp(Beta_prime * nc.n * nc.F * Adj * (MixedPotential - EqmPotentialFe3O4) \
                                         #/ (nc.R * Kelvin)) 
-
     return AdjustedSaturation
 
 

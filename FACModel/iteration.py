@@ -21,7 +21,7 @@ def Diffusion(Section, Element):
     if Section not in ld.FuelSections :
         if Element == "Fe":
             MetalRetainedInsideInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe") \
-            * (OxideDensity / AlloyDensity) * (1 - nc.Fe3O4Porosity_inner)  # [gFe/g CSlost] 
+            * (OxideDensity / AlloyDensity) * (1 - nc.Fe3O4Porosity_inner)  # [gFe/g CSlost]
         elif Element == "Ni":
             MetalRetainedInsideInnerOxide = c.fraction_metal_inner_oxide(Section, "Ni") \
             * (OxideDensity / AlloyDensity) * (1 - nc.Fe3O4Porosity_inner)
@@ -84,13 +84,15 @@ def TransfertoBulk(Section, BulkConcentration, MolarMass, km):  # [g/cm^2 s]
     Concentration = ld.UnitConverter(
         Section, "Mol per Kg", "Grams per Cm Cubed", BulkConcentration, None, None, None, MolarMass, None
         )
+    
     return [x * y for x, y in zip(km, Concentration)] 
     
 
 def InterfaceOxideKinetics (Section, KineticConstant, SaturationConcentration, MolarMass):    
     Concentration = ld.UnitConverter(
         Section, "Mol per Kg", "Grams per Cm Cubed", SaturationConcentration, None, None, None, MolarMass, None
-        ) 
+        )
+    
     SOTerm = [x * y for x, y in zip(KineticConstant, Concentration)]
     return SOTerm
     
@@ -99,7 +101,7 @@ def SolutionOxide(
         Section, BulkConcentration, SaturationConcentration, SolutionOxideConcentration, InnerIronOxThickness,
         OuterFe3O4Thickness, NiThickness, CoThickness, Element
         ):
-    
+
     km = ld.MassTransfer(Section)
     
     if Section in ld.FuelSections:
@@ -144,11 +146,11 @@ def SolutionOxide(
             # same expression for dissolution (Oxide >0) or precipitation, subbing out appropriate kinetic constant 
             if SolutionOxideConcentration[i] >= SaturationConcentration[i]:
                 y = (Diff[i] + OxideKinetics[i] + BTrans[i]) / (Section.KpFe3O4electrochem[i] + km[i])
-#                 print(Section.NodeNumber, Diff[i], OxideKinetics[i], BTrans[i], Section.KdFe3O4electrochem[i] + km[i], y)
+            
             else:  # SolutionOxideConcentration[i] < SaturationConcentration[i]:
                 y = (Diff[i] + OxideKinetics[i] + BTrans[i]) / (Section.KdFe3O4electrochem[i] + km[i])
-                
-            if Oxide[i] == 0:  # Core 
+            
+            if Oxide[i] == 0:  
                 y = (Diff[i] + BTrans[i]) / km[i]  # No contribution from oxide kinetics
  
         if Element == "Co":               

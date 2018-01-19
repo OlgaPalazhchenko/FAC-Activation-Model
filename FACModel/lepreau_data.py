@@ -505,11 +505,6 @@ for Section in FullLoop:
         Section.TubeThickness = 0.113
         Section.OuterDiameter = [x + 2 * Section.TubeThickness for x in Section.Diameter]
 
-    if Section in FuelSections:
-        Section.OuterFe3O4Thickness = [0] * Section.NodeNumber
-        Section.NiThickness = [0] * Section.NodeNumber
-        Section.OuterOxThickness = [i * 1 for i in Section.OuterFe3O4Thickness]
-
     if Section in OutletSections or Section in InletSections:
         Section.OuterFe3O4Thickness = [2.5E-4] * Section.NodeNumber
         Section.NiThickness = [0] * Section.NodeNumber
@@ -518,6 +513,13 @@ for Section in FullLoop:
     Section.InnerOxThickness = [2.5E-4] * Section.NodeNumber
     Section.InnerIronOxThickness = [i * 1 for i in Section.InnerOxThickness]
     Section.CoThickness = [0] * Section.NodeNumber
+    
+    if Section in FuelSections:
+        Section.InnerOxThickness = [0] * Section.NodeNumber
+        Section.OuterFe3O4Thickness = [0] * Section.NodeNumber
+        Section.NiThickness = [0] * Section.NodeNumber
+        Section.OuterOxThickness = [i * 1 for i in Section.OuterFe3O4Thickness]
+    
     Section.OxThickness = [x + y for x, y in zip(Section.InnerOxThickness, Section.OuterOxThickness)]
 
     Section.Distance = np.cumsum(Section.Length.magnitude)
