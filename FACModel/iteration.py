@@ -152,6 +152,9 @@ def SolutionOxide(
             
             if Oxide[i] == 0:  
                 y = (Diff[i] + BTrans[i]) / km[i]  # No contribution from oxide kinetics
+                
+            if Section in ld.FuelSections:  
+                y = BTrans[i] / km[i]  # No contribution from oxide kinetics
  
         if Element == "Co":               
             if Oxide[i] > 0:  # Precipitation within existing inner/outer layer or dissolution of Co from layer(s)
@@ -246,7 +249,7 @@ def FAC_solver(Section, ConstantRate):
         rate = [0] * Section.NodeNumber
     # preset desired FAC rate
     elif Section in ld.OutletSections and ConstantRate == "yes":
-        rate = [6e-10] * Section.NodeNumber
+        rate = [1e-9] * Section.NodeNumber
     
     # corrosion current calculation not required of rate has been set as constant
     else:
