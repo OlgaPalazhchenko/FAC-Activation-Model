@@ -3,6 +3,24 @@ import numpy as np
 import constants as nc
 import composition as c
 import electrochemistry as e
+import sg_heattransfer as SGHX
+
+
+# def plngs_kinetic_constants():
+#     for Zone in ld.SteamGenerator:
+#         
+#         T_avgcold = 
+        
+    
+
+def arrhenius_activaton_energy(ColdLegTemperature, HotLegTemperature):
+    T_cold = ColdLegTemperature
+    T_hot = HotLegTemperature
+    R = 8.314 # [J/K mol]
+    E_a = (R * T_cold * T_hot / (T_cold - T_hot)) * np.log(k_cold/k_hot) # natural logarithm, ln 
+    
+    return E_a
+
 
 def Diffusion(Section, Element):
     # Inner oxide density is determined as a weighted average of the densities of the 2 comprising oxides 
@@ -249,7 +267,7 @@ def FAC_solver(Section, ConstantRate):
         rate = [0] * Section.NodeNumber
     # preset desired FAC rate
     elif Section in ld.OutletSections and ConstantRate == "yes":
-        rate = [1e-9] * Section.NodeNumber
+        rate = [2.00e-09, 3.00e-09, 2.00e-09, 1.50e-09, 1.50e-09, 1.50e-09, 1.50e-09, 1.50e-09, 1.50e-09]
     
     # corrosion current calculation not required of rate has been set as constant
     else:
@@ -269,7 +287,7 @@ def FAC_solver(Section, ConstantRate):
             Constant = 0
             
         rate = [x * y for x, y in zip(CorrosionCurrent, Constant)]  # [g/cm^2*s] 
-    
+        
     return rate, MixedECP 
 
 

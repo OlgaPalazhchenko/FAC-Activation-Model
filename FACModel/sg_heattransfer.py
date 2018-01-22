@@ -3,29 +3,59 @@ import numpy as np
 import constants as nc
 import composition as c
 
+
 # select all the SG tubes to be run (by arc length)
 ubends = [0.385]#, 1.52, 2.31, 3.09]
 ubends = [i * 100 for i in ubends]
+tubelengths = [1980]
+
+
+def closest_tubelength(TubeLength):
+    difference = []
+    for Zone in ld.SteamGenerator:
+        difference.append(abs(TubeLength - Zone.Distance[Zone.NodeNumber - 1]))
+    return difference.index(min(difference))
+
 
 # searches through all u-bend arc lengths and chooses the one closest to input
-def closest(Number):
+def closest_ubend(UbendLength):
     difference = []
     for i in ld.u_bend_total:
         # calculates differences between input Number and all others in given list
-        difference.append(abs(Number-i))
+        difference.append(abs(UbendLength-i))
     
     # returns index of value that has smallest difference with input Number
     return difference.index(min(difference))
 
-tube_number = []
-for i in ubends:
-    x = closest(i)
-    tube_number.append(x)
 
-# selects class initializations based on desired u-bend tube arc lengths
-selected_tubes = []
-for i in tube_number:
-    selected_tubes.append(ld.SteamGenerator[i])
+def tube_picker(method):
+    tubes = []
+    tube_number = []
+    
+    # selects class initializations based on desired u-bend tube arc lengths
+    if method == "arc length": 
+        for k in ubends: # want multiple u-bends
+            x = closest_ubend(k)
+            tube_number.append(x)
+
+        for i in tube_number:
+            tubes.append(ld.SteamGenerator[i])
+            
+    elif method == "tube length":
+        for k in tubelengths:
+            x = closest_tubelength(k)
+            tube_number.append(x)
+        
+        for i in tube_number:
+            tubes.append(ld.SteamGenerator[i])
+    
+    else:
+        None
+        
+    return tubes, tube_number
+
+selected_tubes = tube_picker("tube length")[0]
+tube_number = tube_picker("tube length")[1] 
 
 # T_sat_secondary = 260.1 + 273.15
 T_sat_primary = 310 + 273.15

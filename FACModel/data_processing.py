@@ -24,7 +24,7 @@ Loop = "half"
 ElementTracking = "yes"
 
 # 1.52 m is the u-bend arc length of an average SG tube
-Default_Tube = SGHX.closest(1.52 * 100)
+Default_Tube = SGHX.closest_ubend(1.52 * 100)
 # SteamGeneratorTubes = []
 
 
@@ -132,14 +132,7 @@ for j in range(SimulationHours):
             
     else:
         None
-
           
-# FACRate = sum(
-#     
-#     ) / (Ou.Section1.NodeNumber)
-
-
-# parameters at the end of run 
 for Zone in SGHX.selected_tubes:
     x = ld.UnitConverter(
     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerIronOxThickness, None, None, None

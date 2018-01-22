@@ -48,8 +48,8 @@ NiDiffusivity = 0.00041
 CoDiffusivity = 0.00041
 
 # Kinetic precipitation/dissolution constants [cm/s]
-KpFe3O4 = 0.09
-KdFe3O4 = 1
+KpFe3O4 = 0.06
+KdFe3O4 = 0.05
 # KpFe_Ferrite = 0.014 #same as magnetite precipitation
 # KdFe_Ferrite  = 0.044 'same as magnetite dissolution
 
@@ -91,8 +91,8 @@ DissolutionActivationEnergyH2onFe3O4 = 285989.8292
 PrecipitationActivationEnergyFe3O4 = 179876.4692
 PrecipitationActivationEnergyH2onFe3O4 = 281688.6659
 
-ActivationEnergyAlloy800 = 293629.8906
-ActivationEnergyH2onAlloy800 = 282678.1124
+ActivationEnergyAlloy800 = 295843.8269
+ActivationEnergyH2onAlloy800 = 284892.0487
 
 SimulationDuration = 10  # Total runtime [h]
 TimeIncrement = 3600  # s  Based on desired time step (3600 s/h for 1h time step)

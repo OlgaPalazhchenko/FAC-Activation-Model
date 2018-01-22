@@ -444,7 +444,7 @@ number_tubes = [8, 11, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 26, 28, 28, 2
 def steam_generator_properties(SteamGenerator):
     
     for Zone, length, i in zip(SteamGenerator, u_bend_total, number_tubes):
-        # u-bend split into 4 nodes
+        # u-bend split into 4 nodes, but length is just a float 
         Zone.Length.magnitude = hot_leg_length + [length / 4] * 4 + cold_leg_length
         Zone.TubeNumber = i
         
@@ -482,7 +482,6 @@ def steam_generator_properties(SteamGenerator):
         + [None] * 5 \
         + ["preheater start"] \
         + ["preheater"] * 3
-
 
 steam_generator_properties(SteamGenerator)
 steam_generator_properties(SteamGenerator_2)
