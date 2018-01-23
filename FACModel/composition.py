@@ -30,9 +30,9 @@ def temperature_dependent_parameters(Section):
     
     return None
     
-#     Section.k_FeOH = 10 ** (np.polyval(nc.KFeOHPolynomial, Section.PrimaryBulkTemperature))
-#     Section.k_FeOH2 = 10 ** (np.polyval(nc.KFeOH2Polynomial, Section.PrimaryBulkTemperature))
-#     Section.k_FeOH3 = 10 ** (np.polyval(nc.KFeOH3Polynomial, Section.PrimaryBulkTemperature))
+    Section.k_FeOH_hydrolysis = 10 ** (np.polyval(nc.KFeOHPolynomial, Section.PrimaryBulkTemperature))
+    Section.k_FeOH2_hydrolysis = 10 ** (np.polyval(nc.KFeOH2Polynomial, Section.PrimaryBulkTemperature))
+    Section.k_FeOH3_hydrolysis = 10 ** (np.polyval(nc.KFeOH3Polynomial, Section.PrimaryBulkTemperature))
 #     Section.k_NiOH = 10 ** (np.polyval(nc.KNiOHPolynomial, Section.PrimaryBulkTemperature))
 #     Section.k_NiOH2 = 10 ** (np.polyval(nc.KNiOH2Polynomial, Section.PrimaryBulkTemperature))
 #     Section.k_NiOH3 = 10 ** (np.polyval(nc.KNiOH3Polynomial, Section.PrimaryBulkTemperature))
@@ -159,17 +159,17 @@ def hydrolysis(Section, FeTotal, NiTotal, ConcentrationH):
                                  + (t * z / ((r ** 2) * (s ** 2)))
                                  + (q * z / ((r ** 3) * (s ** 4)))) 
             for x, y, z, r, s, t, q in zip(
-                FeTotal, Section.k_FeOH, ActivityCoefficient2, ConcentrationH, ActivityCoefficient1, Section.k_FeOH2, 
-                Section.k_FeOH3
+                FeTotal, Section.k_FeOH_hydrolysis, ActivityCoefficient2, ConcentrationH, ActivityCoefficient1,
+                Section.k_FeOH2_hydrolysis, Section.k_FeOH3_hydrolysis
                 )]
         ConcentrationFeOH = [x * y * z / (q * (r ** 2)) for x, y, z, q, r in zip(
-            Section.k_FeOH, ActivityCoefficient2, ConcentrationFe2, ConcentrationH, ActivityCoefficient1
+            Section.k_FeOH_hydrolysis, ActivityCoefficient2, ConcentrationFe2, ConcentrationH, ActivityCoefficient1
             )]
         ConcentrationFeOH2 = [x * y * z / ((q ** 2) * (r ** 2)) for x, y, z, q, r in zip(
-            Section.k_FeOH2, ActivityCoefficient2, ConcentrationFe2, ConcentrationH, ActivityCoefficient1
+            Section.k_FeOH2_hydrolysis, ActivityCoefficient2, ConcentrationFe2, ConcentrationH, ActivityCoefficient1
             )] 
         ConcentrationFeOH3 = [x * y * z / ((q ** 3) * (r ** 4)) for x, y, z, q, r, in zip(
-            Section.k_FeOH3, ActivityCoefficient2, ConcentrationFe2, ConcentrationH, ActivityCoefficient1
+            Section.k_FeOH3_hydrolysis, ActivityCoefficient2, ConcentrationFe2, ConcentrationH, ActivityCoefficient1
             )]
 
 #         ConcentrationNi2 = [
