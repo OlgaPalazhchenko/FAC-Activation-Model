@@ -68,7 +68,9 @@ def iron_solubility(Section):
     # As temperature changes, constants (k_Li, k_w, etc. change), pH changes as well, 
     # both effecting solubility --> Bulk FeSatFe3O4
     Section.SolutionOxide.ConcentrationH = bulkpH_calculator(Section)
+    
     Section.k_Fe2 = 10 ** (np.polyval(nc.KFe2SchikorrPolynomial, Section.PrimaryBulkTemperature))
+    
     Section.k_FeOH3_Fe3 = 10 ** (np.polyval(nc.KFeOH3SchikorrPolynomial, Section.PrimaryBulkTemperature))
     Section.k_FeOH4_Fe3 = 10 ** (np.polyval(nc.KFeOH4SchikorrPolynomial, Section.PrimaryBulkTemperature))
    
@@ -77,7 +79,12 @@ def iron_solubility(Section):
         [nc.H2 * nc.H2Density / nc.H2MolarMass] * Section.NodeNumber, Section.DensityH2O, 
         Section.PrimaryBulkTemperature
         )]
-
+    # based on high temperature henry's law constant data for H2 (some taken from T&L ref. some from sol. program DHL
+    k_H2 = [-4.1991 * i + 2633.2 for i in Section.PrimaryBulkTemperature]
+    
+    # convert H2 conc. from cm^3/kg to mol/kg then concentration to P ("fugacity") using Henry's constant
+    P_H2 = [(nc.H2 * nc.H2Density / nc.H2MolarMass) * i for i in k_H2]
+    
     ActivityFe2 = [
         x * (y ** 2) * z ** (1 / 3) for x, y, z in zip(Section.k_Fe2, Section.SolutionOxide.ConcentrationH , P_H2)
         ]
