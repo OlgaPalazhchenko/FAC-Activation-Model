@@ -10,12 +10,32 @@ def temperature_dependent_parameters(Section):
     Section.DebyeHuckelConstant = (np.polyval(nc.DebyeHuckPolynomial, Celsius))
     Section.k_W = 10 ** (np.polyval(nc.KwPolynomial, Section.PrimaryBulkTemperature))
     Section.k_Li = 10 ** (np.polyval(nc.KLiPolynomial, Section.PrimaryBulkTemperature))
-    Section.k_FeOH = 10 ** (np.polyval(nc.KFeOHPolynomial, Section.PrimaryBulkTemperature))
-    Section.k_FeOH2 = 10 ** (np.polyval(nc.KFeOH2Polynomial, Section.PrimaryBulkTemperature))
-    Section.k_FeOH3 = 10 ** (np.polyval(nc.KFeOH3Polynomial, Section.PrimaryBulkTemperature))
-    Section.k_NiOH = 10 ** (np.polyval(nc.KNiOHPolynomial, Section.PrimaryBulkTemperature))
-    Section.k_NiOH2 = 10 ** (np.polyval(nc.KNiOH2Polynomial, Section.PrimaryBulkTemperature))
-    Section.k_NiOH3 = 10 ** (np.polyval(nc.KNiOH3Polynomial, Section.PrimaryBulkTemperature))
+    
+    Gibbs_Energies = [-62700, -4300, 56000, 127840, 74000, 128800] # [J/mol]
+    Entropies = [-51.63, -108.96, -102.35, -188.71, -66.60, -187.76] # [J/ K mol]
+    Delta_T = [i - 298 for i in Section.PrimaryBulkTemperature] # [K]
+    
+    Fe3O4_SolubilityConstants = []
+     
+    for x, y, z in zip(Gibbs_Energies, Entropies, Delta_T):
+        q = [np.exp(-(x - y * z) / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
+        Fe3O4_SolubilityConstants.append(q)
+        
+    Section.k_Fe2 = Fe3O4_SolubilityConstants[0]
+    Section.k_FeOH = Fe3O4_SolubilityConstants[1]
+    Section.k_FeOH2 = Fe3O4_SolubilityConstants[2]
+    Section.k_FeOH3 = Fe3O4_SolubilityConstants[3]
+    Section.k_FeOH3_Fe3 = Fe3O4_SolubilityConstants[4]
+    Section.k_FeOH4_Fe3 = Fe3O4_SolubilityConstants[5]
+    
+    return None
+    
+#     Section.k_FeOH = 10 ** (np.polyval(nc.KFeOHPolynomial, Section.PrimaryBulkTemperature))
+#     Section.k_FeOH2 = 10 ** (np.polyval(nc.KFeOH2Polynomial, Section.PrimaryBulkTemperature))
+#     Section.k_FeOH3 = 10 ** (np.polyval(nc.KFeOH3Polynomial, Section.PrimaryBulkTemperature))
+#     Section.k_NiOH = 10 ** (np.polyval(nc.KNiOHPolynomial, Section.PrimaryBulkTemperature))
+#     Section.k_NiOH2 = 10 ** (np.polyval(nc.KNiOH2Polynomial, Section.PrimaryBulkTemperature))
+#     Section.k_NiOH3 = 10 ** (np.polyval(nc.KNiOH3Polynomial, Section.PrimaryBulkTemperature))
 
 
 def bulkpH_calculator(Section):  # Bulk pH calculation
@@ -56,7 +76,7 @@ def bulkpH_calculator(Section):  # Bulk pH calculation
                 Section.DebyeHuckelConstant[i] * (1 ** 2) * (
                     ((IonicStrength ** 0.5) / (1 + (IonicStrength ** 0.5))) - 0.2 * IonicStrength
                     )
-                )
+                ) 
             # All entries in ConcentrationH list must meet error convergence requirement
             if RE < 0.0000001:
                 break 
@@ -69,44 +89,54 @@ def iron_solubility(Section):
     # both effecting solubility --> Bulk FeSatFe3O4
     Section.SolutionOxide.ConcentrationH = bulkpH_calculator(Section)
     
-    Section.k_Fe2 = 10 ** (np.polyval(nc.KFe2SchikorrPolynomial, Section.PrimaryBulkTemperature))
-    
-    Section.k_FeOH3_Fe3 = 10 ** (np.polyval(nc.KFeOH3SchikorrPolynomial, Section.PrimaryBulkTemperature))
-    Section.k_FeOH4_Fe3 = 10 ** (np.polyval(nc.KFeOH4SchikorrPolynomial, Section.PrimaryBulkTemperature))
-   
-
-    P_H2 = [x * y / (nc.kH2 * np.exp(-500 * ((1 / z) - (1 / 298.15)))) for x, y, z in zip(
-        [nc.H2 * nc.H2Density / nc.H2MolarMass] * Section.NodeNumber, Section.DensityH2O, 
-        Section.PrimaryBulkTemperature
-        )]
     # based on high temperature henry's law constant data for H2 (some taken from T&L ref. some from sol. program DHL
     k_H2 = [-4.1991 * i + 2633.2 for i in Section.PrimaryBulkTemperature]
     
     # convert H2 conc. from cm^3/kg to mol/kg then concentration to P ("fugacity") using Henry's constant
     P_H2 = [(nc.H2 * nc.H2Density / nc.H2MolarMass) * i for i in k_H2]
     
-    ActivityFe2 = [
-        x * (y ** 2) * z ** (1 / 3) for x, y, z in zip(Section.k_Fe2, Section.SolutionOxide.ConcentrationH , P_H2)
-        ]
-    ActivityFeOH = [x * y / z for x, y, z in zip(Section.k_FeOH, ActivityFe2, Section.SolutionOxide.ConcentrationH)]
+    gamma_1 = 0.97
+    gamma_2 = 0.85
     
-    ActivityFeOH2 = [
-        x * y / (z ** 2) for x, y, z in zip(Section.k_FeOH2, ActivityFe2, Section.SolutionOxide.ConcentrationH)
-        ]
-    ActivityFeOH3 = [
-        x * y / (z ** 3) for x, y, z in zip(Section.k_FeOH3, ActivityFe2, Section.SolutionOxide.ConcentrationH)
-        ]
-    ActivityFeOH3_Fe3 = [x / (y ** (1 / 6)) for x, y in zip(Section.k_FeOH3_Fe3, P_H2)]
+    b = [0, 1, 2, 3, 3, 4]
     
-    ActivityFeOH4_Fe3 = [
-        x / (y * (z ** (1 / 6))) for x, y, z in zip(Section.k_FeOH4_Fe3, Section.SolutionOxide.ConcentrationH , P_H2)
+    Activity = []
+    Constants = [
+        Section.k_Fe2, Section.k_FeOH, Section.k_FeOH2, Section.k_FeOH3, Section.k_FeOH3_Fe3, Section.k_FeOH4_Fe3
         ]
+    
+    for oxidation, k in zip (b, Constants):
+        if oxidation == 0:
+            gamma_oxidation = gamma_2
+        elif oxidation == 1 or oxidation == 3 or oxidation == 4: # -1 for Fe2+, +1 for Fe2+, -1 for Fe3+ species
+            gamma_oxidation = gamma_1
+        elif oxidation == 2 or oxidation == 4:
+            gamma_oxidation = 1 # 0 charge on Fe(OH)2^0 and Fe(OH)3^0 = electroneutrality, no gamma
+        else: 
+            None
+        
+        if k == Constants[4] or k == Constants[5]:
+            charge = 3 # ferric, Fe3+ species
+        else:
+            charge = 2 # ferrous, Fe2+ species
+
+        q = [x * ((y * gamma_1)**(charge - oxidation)) * (z**((4/3) - (charge / 2))) / (gamma_oxidation) for x, y, z in zip(
+            k, Section.SolutionOxide.ConcentrationH, P_H2)]
+        
+        Activity.append(q)
+    
+    [ActivityFe2, ActivityFeOH, ActivityFeOH2, ActivityFeOH3, ActivityFeOH3_Fe3, ActivityFeOH4_Fe3] = Activity
 
     FeTotalActivity = [
         x + y + z + q + w + t for x, y, z, q, t, w in zip (
             ActivityFe2, ActivityFeOH, ActivityFeOH2, ActivityFeOH3, ActivityFeOH3_Fe3, ActivityFeOH4_Fe3
             )
         ]
+    
+    if Section == ld.FuelChannel:
+        print (Section.PrimaryBulkTemperature, -np.log10(Section.SolutionOxide.ConcentrationH), FeTotalActivity)
+    if Section == ld.OutletFeeder:
+        print (Section.PrimaryBulkTemperature, -np.log10(Section.SolutionOxide.ConcentrationH), FeTotalActivity, "outlet")
     return FeTotalActivity
 
 

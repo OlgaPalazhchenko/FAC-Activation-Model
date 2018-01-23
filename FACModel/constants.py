@@ -49,7 +49,7 @@ CoDiffusivity = 0.00041
 
 # Kinetic precipitation/dissolution constants [cm/s]
 KpFe3O4 = 0.06
-KdFe3O4 = 0.05
+KdFe3O4 = 0.5
 # KpFe_Ferrite = 0.014 #same as magnetite precipitation
 # KdFe_Ferrite  = 0.044 'same as magnetite dissolution
 
@@ -58,7 +58,7 @@ FracFe_Fe3O4 = 0.723
 FracCr_Fe3O4 = 0.00019  # 0.0033
 FracCo_Fe3O4 = 0.000049
 
-ConcentrationLiTotal = 0.00022585  # 6.3095734E-4[mol/L]
+ConcentrationLiTotal = 0.00023095734 # [mol/L]
 
 # Temperature constants for equilibrium/hydrolysis constants
 DebyeHuckPolynomial = [3.29E-10, -1.709E-07, 0.00003315, -0.0009028, 0.5027]
