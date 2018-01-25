@@ -94,7 +94,7 @@ for i in [R_F_primary, R_F_secondary]:
 
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
 # 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow 
-MassFlow_c.magnitude = 240 * 1000
+MassFlow_c.magnitude = 258.25 * 1000
 MassFlow_h.magnitude = 1900 * 1000
 
 ShellDiameter.magnitude = 2.28 * 100
@@ -117,7 +117,7 @@ TubePitch.magnitude = 2.413
 
 def thermal_conductivity(Twall, material, SecondarySidePressure):
     if material == "Alloy-800" or material == "Alloy800" or material == "A800" or material == "Alloy 800":
-        return (11.450 + 0.0161 * Twall) / 100  # M.K.E thesis for Alloy-800 tubing [W/cm K]
+        return (11.450 + 0.0161 * (Twall - 273.15)) / 100  # M.K.E thesis for Alloy-800 tubing [W/cm K]
     elif material == "water":
         return ld.thermal_conductivityH2O("PHT", Twall, SecondarySidePressure)
     elif material == "magnetite":
@@ -237,12 +237,13 @@ def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySide
                 ) ** 0.33
 
     else:
+        # [cm]
         EquivalentDiameter.magnitude = 4 * \
         ((TubePitch.magnitude ** 2) - (np.pi * (Section.OuterDiameter[i] ** 2)) / 4) \
         / (np.pi * Section.OuterDiameter[i])
         
-        if i <= 9:
-            x = 0.65 * x_in * 100  
+        if i <= 10:
+            x = x_in * 100  
         else:
             x = 20 - (i/1)
        

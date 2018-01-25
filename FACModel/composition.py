@@ -16,11 +16,11 @@ def temperature_dependent_parameters(Section):
     Delta_T = [i - 298 for i in Section.PrimaryBulkTemperature] # [K]
     
     Fe3O4_SolubilityConstants = []
-     
-    for x, y, z in zip(Gibbs_Energies, Entropies, Delta_T):
-        q = [np.exp(-(x - y * z) / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
+    
+    for x, y in zip(Gibbs_Energies, Entropies):
+        q = [np.exp(-(x - y * k) / (nc.R * i)) for i, k in zip(Section.PrimaryBulkTemperature, Delta_T)]
         Fe3O4_SolubilityConstants.append(q)
-        
+
     Section.k_Fe2 = Fe3O4_SolubilityConstants[0]
     Section.k_FeOH = Fe3O4_SolubilityConstants[1]
     Section.k_FeOH2 = Fe3O4_SolubilityConstants[2]
@@ -28,14 +28,14 @@ def temperature_dependent_parameters(Section):
     Section.k_FeOH3_Fe3 = Fe3O4_SolubilityConstants[4]
     Section.k_FeOH4_Fe3 = Fe3O4_SolubilityConstants[5]
     
-    return None
-    
     Section.k_FeOH_hydrolysis = 10 ** (np.polyval(nc.KFeOHPolynomial, Section.PrimaryBulkTemperature))
     Section.k_FeOH2_hydrolysis = 10 ** (np.polyval(nc.KFeOH2Polynomial, Section.PrimaryBulkTemperature))
     Section.k_FeOH3_hydrolysis = 10 ** (np.polyval(nc.KFeOH3Polynomial, Section.PrimaryBulkTemperature))
 #     Section.k_NiOH = 10 ** (np.polyval(nc.KNiOHPolynomial, Section.PrimaryBulkTemperature))
 #     Section.k_NiOH2 = 10 ** (np.polyval(nc.KNiOH2Polynomial, Section.PrimaryBulkTemperature))
 #     Section.k_NiOH3 = 10 ** (np.polyval(nc.KNiOH3Polynomial, Section.PrimaryBulkTemperature))
+
+    return None
 
 
 def bulkpH_calculator(Section):  # Bulk pH calculation
@@ -91,12 +91,12 @@ def iron_solubility(Section):
     
     # based on high temperature henry's law constant data for H2 (some taken from T&L ref. some from sol. program DHL
     k_H2 = [-4.1991 * i + 2633.2 for i in Section.PrimaryBulkTemperature]
-    
+
     # convert H2 conc. from cm^3/kg to mol/kg then concentration to P ("fugacity") using Henry's constant
     P_H2 = [(nc.H2 * nc.H2Density / nc.H2MolarMass) * i for i in k_H2]
-    
-    gamma_1 = 0.97
-    gamma_2 = 0.85
+        
+    gamma_1 = 0.94
+    gamma_2 = 0.78
     
     b = [0, 1, 2, 3, 3, 4]
     
@@ -120,23 +120,19 @@ def iron_solubility(Section):
         else:
             charge = 2 # ferrous, Fe2+ species
 
-        q = [x * ((y * gamma_1)**(charge - oxidation)) * (z**((4/3) - (charge / 2))) / (gamma_oxidation) for x, y, z in zip(
-            k, Section.SolutionOxide.ConcentrationH, P_H2)]
+        q = [x * ((y * gamma_1)**(charge - oxidation)) * (z**((4/3) - (charge / 2))) / (gamma_oxidation) for
+             x, y, z in zip(k, Section.SolutionOxide.ConcentrationH, P_H2)]
         
         Activity.append(q)
     
     [ActivityFe2, ActivityFeOH, ActivityFeOH2, ActivityFeOH3, ActivityFeOH3_Fe3, ActivityFeOH4_Fe3] = Activity
-
+    
     FeTotalActivity = [
         x + y + z + q + w + t for x, y, z, q, t, w in zip (
             ActivityFe2, ActivityFeOH, ActivityFeOH2, ActivityFeOH3, ActivityFeOH3_Fe3, ActivityFeOH4_Fe3
             )
         ]
     
-    if Section == ld.FuelChannel:
-        print (Section.PrimaryBulkTemperature, -np.log10(Section.SolutionOxide.ConcentrationH), FeTotalActivity)
-    if Section == ld.OutletFeeder:
-        print (Section.PrimaryBulkTemperature, -np.log10(Section.SolutionOxide.ConcentrationH), FeTotalActivity, "outlet")
     return FeTotalActivity
 
 
@@ -212,8 +208,7 @@ def hydrolysis(Section, FeTotal, NiTotal, ConcentrationH):
         # print (gamma_1itr, ActivityCoefficient1,"lol")
         RE2 = [((x - y) / x) for x, y in zip(gamma_2itr, ActivityCoefficient2)]
         if RE < [0.00000001] * Section.NodeNumber and RE2 < [0.00000001] * Section.NodeNumber:
-            # print (i)
-            # break
+
             return ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2
 
 
