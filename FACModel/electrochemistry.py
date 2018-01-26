@@ -44,7 +44,7 @@ def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPot
         Beta_prime = nc.Beta
     
     #number of electrons needs to be averaged here for A-800
-    Adjustment = 1 # np.exp(Beta_prime * nc.n * nc.F * (MixedPotential - EqmPotentialFe3O4) / (nc.R * Kelvin))
+    Adjustment =  np.exp(Beta_prime * nc.n * nc.F * (MixedPotential - EqmPotentialFe3O4) / (nc.R * Kelvin))
      
     AdjustedSaturation = BulkSatFe3O4 * Adjustment
     

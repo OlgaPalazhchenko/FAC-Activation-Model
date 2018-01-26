@@ -267,7 +267,7 @@ def FAC_solver(Section, ConstantRate):
         rate = [0] * Section.NodeNumber
     # preset desired FAC rate
     elif Section in ld.OutletSections and ConstantRate == "yes":
-        rate = [1.75e-09, 2.6e-09, 1.75e-09, 1.50e-09, 1.50e-09, 1.50e-09, 1.350e-09, 3.00e-10, 1e-09]
+        rate = [1.8e-09, 2.6e-09, 1.8e-09, 1.50e-09, 1.50e-09, 1.50e-09, 1.50e-09, 8.00e-10, 1.5e-09]
 
     
     # corrosion current calculation not required of rate has been set as constant

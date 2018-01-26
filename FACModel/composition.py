@@ -94,9 +94,10 @@ def iron_solubility(Section):
 
     # convert H2 conc. from cm^3/kg to mol/kg then concentration to P ("fugacity") using Henry's constant
     P_H2 = [(nc.H2 * nc.H2Density / nc.H2MolarMass) * i for i in k_H2]
-        
-    gamma_1 = 0.93
-    gamma_2 = 0.78
+    
+    # need to put these in line with hydrolysis activity coeffs    
+    gamma_1 = 0.95
+    gamma_2 = 0.78 
     
     b = [0, 1, 2, 3, 3, 4]
     

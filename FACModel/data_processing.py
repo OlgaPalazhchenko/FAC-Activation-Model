@@ -65,7 +65,7 @@ if OutputLogging == "yes":
     TemperatureProfile = []
 
 SimulationYears = 1  # years
-SimulationHours = SimulationYears * 8760
+SimulationHours = SimulationYears * 100
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)
