@@ -11,7 +11,7 @@ class SGParameters():
         self.steam_quality = None
 
 PrimarySidePressure = 9.89  # MPa
-SecondarySidePressure = 4.593  # MPa
+# SecondarySidePressure = 4.593  # MPa
 
 SizingParameters = open('SizingParameters.txt', 'r')      
 SizingParametersReader = list(csv.reader(SizingParameters, delimiter=','))  
@@ -126,13 +126,18 @@ def Density(species, side, Temperature, SecondarySidePressure):
         return (1 / (R_IAPWS * Temperature * ratio_pressures * (Gibbs_p / (p * 1000)))) * 1000 / (100 ** 3)  # [g/cm^3] 
         
         
-def Viscosity(species, side, Temperature):
+def Viscosity(species, side, Temperature, SecondarySidePressure):
     T_ref = 647.096  # K
     rho_ref = ReferenceValues.rho_ref
     mu_ref = ReferenceValues.mu_ref
     
+    if side == "SHT" or side == "SHTS":
+        Pressure = SecondarySidePressure
+    else:
+        Pressure = PrimarySidePressure
+        
     T_rel = Temperature / T_ref
-    rho_rel = Density(species, side, Temperature, SecondarySidePressure) / rho_ref
+    rho_rel = Density(species, side, Temperature, Pressure) / rho_ref
     
     H_0 = [1.67752, 2.20462, 0.6366564, -0.241605]
     terms = [0, 1, 2, 3]

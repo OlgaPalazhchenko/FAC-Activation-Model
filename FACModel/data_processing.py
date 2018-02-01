@@ -65,7 +65,7 @@ if OutputLogging == "yes":
     TemperatureProfile = []
 
 SimulationYears = 1  # years
-SimulationHours = SimulationYears * 100
+SimulationHours = SimulationYears * 8760
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)
@@ -346,7 +346,7 @@ def plot_output():
     lines, labels = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax2.legend(lines + lines2, labels + labels2, loc=0)        
-    plt.axis([4, 69, 0, 0.01])
+    plt.axis([4, 71, 0, 1])
     plt.tight_layout()
     plt.show()
     

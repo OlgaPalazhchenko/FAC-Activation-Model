@@ -5,21 +5,34 @@ import composition as c
 import electrochemistry as e
 import sg_heattransfer as SGHX
 
-
-# def plngs_kinetic_constants():
-#     for Zone in ld.SteamGenerator:
+# 
+# def arrhenius_activaton_energy(ColdLegTemperature, HotLegTemperature):
+#     T_cold = ColdLegTemperature
+#     T_hot = HotLegTemperature
+#     R = 8.314 # [J/K mol]
+#     E_a = (R * T_cold * T_hot / (T_cold - T_hot)) * np.log(k_cold/k_hot) # natural logarithm, ln 
+#     
+#     return k_hot
+# 
+# def plngs_kinetic_constants(SteamGenerator):
+#     T_cold = []
+#     for Zone in SteamGenerator:
+#         for i in range(Zone.NodeNumber - 1):
+#             if Zone.Length.label[i] == "preheater" or Zone.Length.label[i] == "preheater start":
+#                 # preheater area
+#                 T_cold.append(Zone.PrimaryBulkTemperature[i])
 #         
-#         T_avgcold = 
-        
-    
+#         T_coldavg = sum(T_cold) / len(T_cold)
+#         
+#         arrhenius_activaton_energy(T_coldavg, HotLegTemperature)
+#         
+#         
+#     
+#     return None
 
-def arrhenius_activaton_energy(ColdLegTemperature, HotLegTemperature):
-    T_cold = ColdLegTemperature
-    T_hot = HotLegTemperature
-    R = 8.314 # [J/K mol]
-    E_a = (R * T_cold * T_hot / (T_cold - T_hot)) * np.log(k_cold/k_hot) # natural logarithm, ln 
-    
-    return E_a
+# plngs_kinetic_constants(ld.SteamGenerator)
+
+
 
 
 def Diffusion(Section, Element):

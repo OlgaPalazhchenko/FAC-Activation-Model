@@ -40,7 +40,7 @@ def tube_picker(method):
 
         for i in tube_number:
             tubes.append(ld.SteamGenerator[i])
-            
+    # selects class initializations based on desired overall tube lengths        
     elif method == "tube length":
         for k in tubelengths:
             x = closest_tubelength(k)
@@ -117,7 +117,8 @@ TubePitch.magnitude = 2.413
 
 def thermal_conductivity(Twall, material, SecondarySidePressure):
     if material == "Alloy-800" or material == "Alloy800" or material == "A800" or material == "Alloy 800":
-        return (11.450 + 0.0161 * (Twall - 273.15)) / 100  # M.K.E thesis for Alloy-800 tubing [W/cm K]
+#         Twall = Twall - 273.15 # oC in alloy thermal conductivity equatin 
+        return (11.450 + 0.0161 * Twall ) / 100  # M.K.E thesis for Alloy-800 tubing [W/cm K]
     elif material == "water":
         return ld.thermal_conductivityH2O("PHT", Twall, SecondarySidePressure)
     elif material == "magnetite":
@@ -150,21 +151,21 @@ def fouling_resistance(side, Section, calendar_year, InnerAccumulation, OuterAcc
         # between 1983 and 1986 (included)
         if YearStartup <= calendar_year < YearCPP:
             # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
-            SHTSFouling = Initial_SHTSFouling + (calendar_year - YearStartup) * 0.0017
+            SHTSFouling = Initial_SHTSFouling + (calendar_year - YearStartup) * 0.002
         
         # CPP installation (late 1986) reduces secondary side crud by 50% 
         # (assumed proportional red. in deposit formation)
         elif YearCPP <= calendar_year < YearSHTChemicalClean: 
             SHTSFouling = (Initial_SHTSFouling
-                           + ((YearCPP - 1) - YearStartup) * 0.0017
-                           + (calendar_year - 1983) * 0.000825) # + what deposited until this change
+                           + (YearCPP - YearStartup) * 0.0024 # what deposited until this change
+                           + (calendar_year - YearCPP) * 0.000825)
             
         # assumed that secondary side completely cleaned, new growth? 
         elif calendar_year >= YearSHTChemicalClean:
             SHTSFouling = (calendar_year - YearSHTChemicalClean) * 0.000825
             
         OuterFouling = [SHTSFouling] * Section.NodeNumber  
-        
+
     else:
         None
     
@@ -177,7 +178,7 @@ def conduction_resistance(Section, Twall, SecondarySidePressure, i):
     # A = area with shape factor correcrion factor for cylindrical pipe
     # R_conduction = ln(D_o/D_i)/(2pikl) [K/W]
     # l = length, k =thermal conductivity coefficient [W/cm K]
-
+    
     k_w = thermal_conductivity(Twall, "Alloy-800", SecondarySidePressure)  # [W/cm K]
 
     Rcyl_numerator = np.log(Section.OuterDiameter[i] / Section.Diameter[i])
@@ -209,9 +210,9 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
 
 def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySidePressure, i):
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 260.1 + 273.15
+        T_sat_secondary = 260.1 + 273.15 # 258.69
     elif SecondarySidePressure < 4.593:
-        T_sat_secondary = 258.1 + 273.15  
+        T_sat_secondary = 258.1 + 273.15  # 257
     
     # split into boiling and non-boiling (preheater) sections
     if Section.Length.label[i] == "preheater" or Section.Length.label[i] == "preheater start":  # from Silpsrikul thesis
@@ -230,10 +231,11 @@ def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySide
         # First two (raised to exponent) terms are unitless
         # [W/cm K]/[cm] = [W/cm^2 K]
         h_o = (thermal_conductivity(T_film, "water", SecondarySidePressure) * 0.25 / Section.OuterDiameter[i]) \
-            * ((Section.OuterDiameter[i] * G_e / ld.Viscosity("water", "SHT", T_film)) ** 0.6) \
+            * ((Section.OuterDiameter[i] * G_e / ld.Viscosity("water", "SHT", T_film, SecondarySidePressure)) ** 0.6) \
             * (
                 ld.HeatCapacity("SHT", T_film, SecondarySidePressure) \
-                * ld.Viscosity("water", "SHT", T_film) / thermal_conductivity(T_film, "water", SecondarySidePressure)
+                * ld.Viscosity("water", "SHT", T_film, SecondarySidePressure) \
+                / thermal_conductivity(T_film, "water", SecondarySidePressure)
                 ) ** 0.33
 
     else:
@@ -242,10 +244,10 @@ def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySide
         ((TubePitch.magnitude ** 2) - (np.pi * (Section.OuterDiameter[i] ** 2)) / 4) \
         / (np.pi * Section.OuterDiameter[i])
         
-        if i <= 10:
-            x = x_in * 100  
+        if i <= 11:
+            x = x_in * 100
         else:
-            x = 20 - (i/1)
+            x = 21 - i
        
         h_o = boiling_heat_transfer(
             x, "SHT", T_sat_secondary, MassFlux_c.magnitude, T_wall, EquivalentDiameter.magnitude, 
@@ -269,7 +271,7 @@ def boiling_heat_transfer(x, side, T_sat, MassFlux, T_wall, Diameter, SecondaryS
              * ((ld.Density("water", side, T_sat, SecondarySidePressure) / rho_v) - 1))
          ) ** 0.35
     
-    Re_D = Diameter * MassFlux / ld.Viscosity("water", side, T_sat)
+    Re_D = Diameter * MassFlux / ld.Viscosity("water", side, T_sat, SecondarySidePressure)
     
     # 4*MassFlow/((ld.Viscosity("water", "SHT", T_sat_secondary)/1000)*np.pi*Shell_ID)
     h_l = 0.023 * ld.thermal_conductivityH2O(side, T_sat, SecondarySidePressure) \
@@ -296,7 +298,9 @@ def nusseltnumber(Section, correlation, Temperature, SecondarySidePressure, i):
 
     # Re_D = Section.Velocity[i]*Section.Diameter[i]/(ViscosityH2O*DensityH2O)
     MassFlux_h.magnitude = MassFlow_h.magnitude / (nc.TotalSGTubeNumber * (np.pi / 4) * (Section.Diameter[i] ** 2))
-    Re_D = [(MassFlux_h.magnitude / ld.Viscosity("water", "PHT", Temperature)) * i for i in Section.Diameter]
+    
+    Re_D = [(MassFlux_h.magnitude / ld.Viscosity("water", "PHT", Temperature, SecondarySidePressure)) * i
+            for i in Section.Diameter]
     # print (Re_D[i], Re_[i])
 
     if correlation == "Dittus-Boelter":
@@ -314,7 +318,7 @@ def nusseltnumber(Section, correlation, Temperature, SecondarySidePressure, i):
 
 def prandtl(Temperature, SecondarySidePressure, i):
     # Need a better reference for Cp/viscosity data
-    ViscosityH2O = ld.Viscosity("water", "PHT", Temperature)
+    ViscosityH2O = ld.Viscosity("water", "PHT", Temperature, SecondarySidePressure)
     Pr = ld.HeatCapacity("PHT", Temperature, SecondarySidePressure) \
     * ViscosityH2O / ld.thermal_conductivityH2O("PHT", Temperature, SecondarySidePressure)
     return Pr
@@ -514,24 +518,25 @@ def station_events(calendar_year):
     YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
     
     if calendar_year < 1992:
-        SHTPressure = 4.593   # MPa
+        SecondarySidePressure = 4.593   # MPa
     
     # PLNGS pressure reduction in 1992 by 125 kPa
     elif 1992 <= calendar_year < 1995:
-        SHTPressure = 4.593 - (125 / 1000) # MPa
+        SecondarySidePressure = 4.593 - (125 / 1000) # MPa
     
     # divider plate raplacement in 1995, assumed to stop increase in leak (2% constant going forward)
     # boiler pressure increased back up to start-up 4.593 MPa
     elif calendar_year >= 1995:
-        SHTPressure = 4.593
+        SecondarySidePressure = 4.593
         InitialLeakage = 0.02 
         YearlyRateLeakage = 0
-        
+
     Leakage = InitialLeakage + (calendar_year - 1983) * YearlyRateLeakage
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
+    # decreases as divider (bypass) flow increases
     m_h_leakagecorrection = MassFlow_h.magnitude - DividerPlateMassFlow
-    
-    return SHTPressure, m_h_leakagecorrection, DividerPlateMassFlow
+
+    return SecondarySidePressure, m_h_leakagecorrection, DividerPlateMassFlow
 
 
 def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulation, j):
@@ -539,7 +544,7 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     calendar_year = year + 1983
     
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(calendar_year)
-
+    
     Balance = []
     for Zone in ld.SteamGenerator:
         if Zone in selected_tubes:
@@ -552,8 +557,8 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
         
         Zone.PrimaryBulkTemperature = temperature_profile(
             Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, calendar_year
-            )
-                
+            ) 
+        
         x = (Zone.TubeNumber / nc.TotalSGTubeNumber) * RemainingPHTMassFlow \
             * ld.Enthalpy("PHT", Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode], SecondarySidePressure)
 
@@ -565,5 +570,5 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
 
-# print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 1) - 273.15)
+print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 8760*1 ) - 273.15)
 
