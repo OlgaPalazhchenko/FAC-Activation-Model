@@ -117,7 +117,7 @@ TubePitch.magnitude = 2.413
 
 def thermal_conductivity(Twall, material, SecondarySidePressure):
     if material == "Alloy-800" or material == "Alloy800" or material == "A800" or material == "Alloy 800":
-#         Twall = Twall - 273.15 # oC in alloy thermal conductivity equatin 
+        Twall = Twall - 273.15 # oC in alloy thermal conductivity equatin 
         return (11.450 + 0.0161 * Twall ) / 100  # M.K.E thesis for Alloy-800 tubing [W/cm K]
     elif material == "water":
         return ld.thermal_conductivityH2O("PHT", Twall, SecondarySidePressure)
@@ -130,45 +130,43 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def fouling_resistance(side, Section, calendar_year, InnerAccumulation, OuterAccumulation, SecondarySidePressure):
 
-    if side == "PHT" or side == "PHTS":
-        # thickness/thermal conductivity [cm]/[W/cm K] = [cm^2 K/W]
-        # [g/cm^2]/[g/cm^3] = [cm]
-    
-        InnerThickness = [i / nc.Fe3O4Density for i in InnerAccumulation]
-        OuterThickness = [i / nc.Fe3O4Density for i in OuterAccumulation]
-    
-        # [cm]/ [W/cm K] =[cm^2 K/W]
-        # inner deposit is consolidated, predicted to have different thermal resistance than unconsolidated outer ox.
-        InnerFouling = [i / 2 * thermal_conductivity(None, "magnetite", SecondarySidePressure) for i in InnerThickness]
-        OuterFouling = [i / thermal_conductivity(None, "magnetite", SecondarySidePressure) for i in OuterThickness]
-    
-    elif side == "SHT" or side == "SHTS":
-        InnerFouling = [0] * Section.NodeNumber
+    if side == "SHT" or side == "SHTS":
+        InnerAccumulation = [0] * Section.NodeNumber
         
-        Initial_SHTSFouling = 0 # not "hot conditioning" here, so assumed 0 at start-up
+        Initial_SHTSAccumulation= 0 # not "hot conditioning" here, so assumed 0 at start-up
             
         # 0.0024 is the slope of overall oxide growth (from plots) based on input (or FAC solver) corrosion rate
         # between 1983 and 1986 (included)
         if YearStartup <= calendar_year < YearCPP:
             # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
-            SHTSFouling = Initial_SHTSFouling + (calendar_year - YearStartup) * 0.002
+            SHTSAccumulation = Initial_SHTSAccumulation + (calendar_year - YearStartup) * 0.0017
         
         # CPP installation (late 1986) reduces secondary side crud by 50% 
         # (assumed proportional red. in deposit formation)
         elif YearCPP <= calendar_year < YearSHTChemicalClean: 
-            SHTSFouling = (Initial_SHTSFouling
-                           + (YearCPP - YearStartup) * 0.0024 # what deposited until this change
+            SHTSAccumulation = (Initial_SHTSAccumulation
+                           + (YearCPP - YearStartup) * 0.0017 # what deposited until this change
                            + (calendar_year - YearCPP) * 0.000825)
             
         # assumed that secondary side completely cleaned, new growth? 
         elif calendar_year >= YearSHTChemicalClean:
-            SHTSFouling = (calendar_year - YearSHTChemicalClean) * 0.000825
+            SHTSAccumulation = (calendar_year - YearSHTChemicalClean) * 0.000825
             
-        OuterFouling = [SHTSFouling] * Section.NodeNumber  
+        OuterAccumulation = [SHTSAccumulation] * Section.NodeNumber  
 
     else:
         None
     
+    # thickness/thermal conductivity [cm]/[W/cm K] = [cm^2 K/W]
+        # [g/cm^2]/[g/cm^3] = [cm]
+    
+    InnerThickness = [i / nc.Fe3O4Density for i in InnerAccumulation]
+    OuterThickness = [i / nc.Fe3O4Density for i in OuterAccumulation]
+
+    # [cm]/ [W/cm K] =[cm^2 K/W]
+    # inner deposit is consolidated, predicted to have different thermal resistance than unconsolidated outer ox.
+    InnerFouling = [i / 2 * thermal_conductivity(None, "magnetite", SecondarySidePressure) for i in InnerThickness]
+    OuterFouling = [i / thermal_conductivity(None, "magnetite", SecondarySidePressure) for i in OuterThickness]
     # thermal resistances
     return [x + y for x, y in zip(InnerFouling, OuterFouling)]
 
@@ -244,10 +242,10 @@ def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySide
         ((TubePitch.magnitude ** 2) - (np.pi * (Section.OuterDiameter[i] ** 2)) / 4) \
         / (np.pi * Section.OuterDiameter[i])
         
-        if i <= 11:
+        if i <= 10:
             x = x_in * 100
         else:
-            x = 21 - i
+            x = 20 - i
        
         h_o = boiling_heat_transfer(
             x, "SHT", T_sat_secondary, MassFlux_c.magnitude, T_wall, EquivalentDiameter.magnitude, 
@@ -570,5 +568,5 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
 
-print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 8760*1 ) - 273.15)
+print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 1 ) - 273.15)
 

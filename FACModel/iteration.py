@@ -14,21 +14,21 @@ import sg_heattransfer as SGHX
 #     
 #     return k_hot
 # 
-# def plngs_kinetic_constants(SteamGenerator):
-#     T_cold = []
-#     for Zone in SteamGenerator:
-#         for i in range(Zone.NodeNumber - 1):
-#             if Zone.Length.label[i] == "preheater" or Zone.Length.label[i] == "preheater start":
-#                 # preheater area
-#                 T_cold.append(Zone.PrimaryBulkTemperature[i])
-#         
-#         T_coldavg = sum(T_cold) / len(T_cold)
-#         
-#         arrhenius_activaton_energy(T_coldavg, HotLegTemperature)
-#         
-#         
-#     
-#     return None
+def plngs_kinetic_constants(SteamGenerator):
+    T_cold = []
+    for Zone in SteamGenerator:
+        for i in range(Zone.NodeNumber - 1):
+            if Zone.Length.label[i] == "preheater" or Zone.Length.label[i] == "preheater start":
+                # preheater area
+                T_cold.append(Zone.PrimaryBulkTemperature[i])
+          
+        T_coldavg = sum(T_cold) / len(T_cold)
+          
+        arrhenius_activaton_energy(T_coldavg, HotLegTemperature)
+          
+          
+      
+    return None
 
 # plngs_kinetic_constants(ld.SteamGenerator)
 
