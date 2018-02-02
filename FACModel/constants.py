@@ -48,8 +48,8 @@ NiDiffusivity = 0.00041
 CoDiffusivity = 0.00041
 
 # Kinetic precipitation/dissolution constants [cm/s]
-KpFe3O4 = 0.09
-KdFe3O4 = .1
+KpFe3O4 = 0.07
+KdFe3O4 = .75
 # KpFe_Ferrite = 0.014 #same as magnetite precipitation
 # KdFe_Ferrite  = 0.044 'same as magnetite dissolution
 
@@ -58,7 +58,7 @@ FracFe_Fe3O4 = 0.723
 FracCr_Fe3O4 = 0.00019  # 0.0033
 FracCo_Fe3O4 = 0.000049
 
-ConcentrationLiTotal = 0.000625095734 # [mol/L]
+ConcentrationLiTotal = 0.000225095734 # [mol/L] #0.00063095734
 
 # Temperature constants for equilibrium/hydrolysis constants
 DebyeHuckPolynomial = [3.29E-10, -1.709E-07, 0.00003315, -0.0009028, 0.5027]
@@ -91,8 +91,8 @@ DissolutionActivationEnergyH2onFe3O4 = 285989.8292
 PrecipitationActivationEnergyFe3O4 = 179876.4692
 PrecipitationActivationEnergyH2onFe3O4 = 281688.6659
 
-ActivationEnergyAlloy800 = 294277.1255
-ActivationEnergyH2onAlloy800 = 283325.3473
+ActivationEnergyAlloy800 = 293629.8906
+ActivationEnergyH2onAlloy800 = 282678.1124
 
 SimulationDuration = 10  # Total runtime [h]
 TimeIncrement = 3600  # s  Based on desired time step (3600 s/h for 1h time step)

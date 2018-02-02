@@ -476,6 +476,6 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
         
         if Section not in ld.FuelSections:
             if Section.InnerIronOxThickness[i] <= 8e-6:
-                Section.InnerIronOxThickness[i] = 0.000025  # Resets to original thickness
+                Section.InnerIronOxThickness[i] = 0.0000025  # Resets to original thickness
 
     return ElapsedTime, SpallTime

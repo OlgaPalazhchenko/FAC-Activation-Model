@@ -5,32 +5,64 @@ import composition as c
 import electrochemistry as e
 import sg_heattransfer as SGHX
 
-# 
-# def arrhenius_activaton_energy(ColdLegTemperature, HotLegTemperature):
-#     T_cold = ColdLegTemperature
-#     T_hot = HotLegTemperature
-#     R = 8.314 # [J/K mol]
-#     E_a = (R * T_cold * T_hot / (T_cold - T_hot)) * np.log(k_cold/k_hot) # natural logarithm, ln 
-#     
-#     return k_hot
-# 
-def plngs_kinetic_constants(SteamGenerator):
+ 
+def arrhenius_activaton_energy(SteamGenerator, j):
+    year = (j / 8760) 
+    calendar_year = year + 1983
+    
+    R = 8.314 # [J/K mol]
+
+    Default_Tube = SGHX.closest_ubend(1.52 * 50)
+
+    if calendar_year < 2012:
+        # based on chemical clean (AECL) of plngs pulled tubes
+        # assumed this average growth rate applies to all tubes (data only available for 2 x 19.8 m long tubes)
+        DepositGrowth_coldavg = 37.8 / (100 ** 2) # preheater [g/m^2 /yr] --> [g/cm^2 /yr]
+    
+        DepositGrowth_hotavg = 16 / (100 ** 2)
+        
+        kp_cold = DepositGrowth_coldavg / (
+            SteamGenerator[Default_Tube].SolutionOxide.FeTotal[19]
+            - SteamGenerator[Default_Tube].SolutionOxide.FeSatFe3O4[19]
+            )
+        
+        kp_hot = DepositGrowth_hotavg / (
+            SteamGenerator[Default_Tube].SolutionOxide.FeTotal[7]
+            - SteamGenerator[Default_Tube].SolutionOxide.FeSatFe3O4[7]
+            )
+        
+        kp_cold = kp_cold * 365 * 24 * 3600 # [cm/yr] * 365 d/yr * 24 h/d * 3600 s/h = [cm/s]
+        kp_hot = kp_hot * 365 * 24 * 3600 
+        # assume first ~4 m of hot leg have minimal deposition 
+        DepositGrowth_hotavg = 1
+    
     T_cold = []
-    for Zone in SteamGenerator:
-        for i in range(Zone.NodeNumber - 1):
-            if Zone.Length.label[i] == "preheater" or Zone.Length.label[i] == "preheater start":
-                # preheater area
-                T_cold.append(Zone.PrimaryBulkTemperature[i])
-          
-        T_coldavg = sum(T_cold) / len(T_cold)
-          
-        arrhenius_activaton_energy(T_coldavg, HotLegTemperature)
-          
-          
-      
+    T_hot = []
+        
+    for i in range(SteamGenerator[Default_Tube].NodeNumber - 1):
+        if (SteamGenerator[Default_Tube].Length.label[i] == "preheater"
+            or SteamGenerator[Default_Tube].Length.label[i] == "preheater start"):
+            # preheater area
+            T_cold.append(SteamGenerator[Default_Tube].PrimaryBulkTemperature[i])
+            
+        if 3 < i < 12:
+            T_hot.append(SteamGenerator[Default_Tube].PrimaryBulkTemperature)
+            
+    T_coldavg = sum(T_cold) / len(T_cold)  # preheater
+    T_hotavg = sum(T_hot) / len(T_hot)  # hot leg not including preheater or first 4 m
+    
+    # natural logarithm, ln
+    ActivationEnergy = (R * T_coldavg * T_hotavg / (T_coldavg - T_hotavg)) * np.log(k_cold/k_hot)
+    
+    A = np.exp(np.log(kp_cold) + (ActivationEnergy / (R * T_coldavg))) 
+    
+    return E_a, A
+ 
+ 
+def plngs_kinetic_constants(SteamGenerator, j):
+    
     return None
 
-# plngs_kinetic_constants(ld.SteamGenerator)
 
 
 
@@ -301,7 +333,10 @@ def FAC_solver(Section, ConstantRate):
             Constant = 0
             
         rate = [x * y for x, y in zip(CorrosionCurrent, Constant)]  # [g/cm^2*s] 
-        
+#     if Section in ld.SteamGenerator:
+#         print (ld.UnitConverter(
+#             Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, rate, None, None, None, None
+#             ))    
     return rate, MixedECP 
 
 

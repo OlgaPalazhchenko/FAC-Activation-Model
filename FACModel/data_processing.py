@@ -9,6 +9,7 @@ import sg_heattransfer as SGHX
 import composition as c
 import numpy as np
 import csv
+import iteration as it
 
 import matplotlib.pyplot as plt
 from matplotlib import rc
@@ -69,6 +70,7 @@ SimulationHours = SimulationYears * 8760
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)
+print (it.arrhenius_activaton_energy(ld.SteamGenerator, 1))
 
 import time
 start_time = time.time()
@@ -79,16 +81,14 @@ for j in range(SimulationHours):
     Co = pht_model.PHT_FAC(ld.FuelChannel, ld.OutletFeeder, ElementTracking, Activation, ConstantRate, j)
     Ou = pht_model.PHT_FAC(
         ld.OutletFeeder, ld.SteamGenerator[Default_Tube], ElementTracking, Activation, ConstantRate, j
-        )
-    
+        ) 
     if Loop == "full":
         InletInput = ld.InletFeeder_2
     else:
         InletInput = ld.InletFeeder
     
     Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j)
-    if Loop == "full" or Loop == "half":
-        SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput)
+    SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput)
 #     print (
 #         ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
 #     None, None, None, None)
@@ -111,11 +111,10 @@ for j in range(SimulationHours):
             ld.SteamGenerator[Default_Tube].OuterOxThickness, j
             ) - 273.15)
         
-        for Zone in ld.SteamGenerator:
-            Zone.Bulk.FeSatFe3O4 = c.iron_solubility(Zone, None)
+        for Section in ld.HalfLoop:
+            Section.Bulk.FeSatFe3O4 = c.iron_solubility(Section, None)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
-        InletInput.Bulk.FeSatFe3O4 = c.iron_solubility(InletInput, None)
            
         if OutputLogging == "yes":
             RIHT.append(T_RIH)
@@ -164,14 +163,13 @@ with open(csvfile, "w") as output:
     writer.writerow(RIHT)
     writer.writerow([''])
     
-    if Loop == "full" or Loop == "half": 
-        for i, j in zip(Labels, Data):
-            writer.writerow([i])
-            if i == "U-bend length (m)":
-                writer.writerow(j)
-            else:
-                writer.writerows(j)
-            writer.writerow([''])
+    for i, j in zip(Labels, Data):
+        writer.writerow([i])
+        if i == "U-bend length (m)":
+            writer.writerow(j)
+        else:
+            writer.writerows(j)
+        writer.writerow([''])
         
     writer.writerow(['Outlet Streams (oC)'])
     writer.writerow(OutletTemperatures1)
@@ -361,7 +359,7 @@ def plot_output():
     lines, labels = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax2.legend(lines + lines2, labels + labels2, loc=0)        
-    plt.axis([4, 71, 0, 1])
+    plt.axis([4, 71, 0, 10])
     plt.tight_layout()
     plt.show()
     

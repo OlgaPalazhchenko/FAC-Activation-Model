@@ -239,9 +239,10 @@ def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, Ox
     # ([g/cm^2 s] / [g/cm^3] *[10000 um/cm]) = ([cm/s] * [3600 s/h] * [24 h/d] * [365 d/yr]) = [um/yr]
         if Section in InletSections or Section in OutletSections:
             return [i * ((1 / nc.FeDensity) * 3600 * 24 * 365 * 10000) for i in Rate]
+        
         elif Section in SteamGenerator or Section in SteamGenerator_2:
-            return [x * y for x, y in zip(Rate, [(1 / nc.Alloy800Density) * 3600 * 24 * 365 * 10000] 
-                                          * Section.NodeNumber)]
+            return [i * ((1 / nc.Alloy800Density) * 3600 * 24 * 365 * 10000) for i in Rate]
+        
         else:
             return None
     

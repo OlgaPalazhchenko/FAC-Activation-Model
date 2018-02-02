@@ -37,16 +37,16 @@ def ElectrochemicalKineticConstant(Section, KineticConstant, EquilibriumPotentia
         )] 
 
 
-def ElectrochemicalSaturation(Section, BulkSatFe3O4, i, EqmPotentialFe3O4, MixedPotential, Kelvin, Dissolution):
+def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPotential, Kelvin, Dissolution):
     if Dissolution == "yes":
         Beta_prime = (-1) * nc.Beta
     else:
         Beta_prime = nc.Beta
     
     #number of electrons needs to be averaged here for A-800
-    Adjustment = 1# np.exp(Beta_prime * nc.n * nc.F * (MixedPotential - EqmPotentialFe3O4) / (nc.R * Kelvin))
+    Adjustment = np.exp(Beta_prime * nc.n * nc.F * (MixedPotential - EqmPotentialFe3O4) / (nc.R * Kelvin))
      
-    AdjustedSaturation = c.iron_solubility(Section, None)[i] * Adjustment
+    AdjustedSaturation = BulkSatFe3O4 * Adjustment
     
     return AdjustedSaturation
 
@@ -69,12 +69,12 @@ def ElectrochemicalAdjustment(
         if FeTotal[i] >= FeSatFe3O4[i]:
             
             x = ElectrochemicalSaturation(
-                Section, BulkSatFe3O4[i], i, EqmPotentialFe3O4[i], SOMixedPotential[i],
+                Section, BulkSatFe3O4[i], EqmPotentialFe3O4[i], SOMixedPotential[i],
                 Section.PrimaryBulkTemperature[i], "no"
                 )
         else:
             x = ElectrochemicalSaturation(
-                Section, BulkSatFe3O4[i], i, EqmPotentialFe3O4[i], SOMixedPotential[i],
+                Section, BulkSatFe3O4[i], EqmPotentialFe3O4[i], SOMixedPotential[i],
                 Section.PrimaryBulkTemperature[i], "yes"
                 )
         AdjustedSaturation.append(x)    

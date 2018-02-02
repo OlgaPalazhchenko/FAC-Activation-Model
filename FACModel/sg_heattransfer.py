@@ -1,7 +1,7 @@
 import lepreau_data as ld
 import numpy as np
 import constants as nc
-import composition as c
+# import composition as c
 
 
 # select all the SG tubes to be run (by arc length)
@@ -132,21 +132,17 @@ def fouling_resistance(side, Section, calendar_year, InnerAccumulation, OuterAcc
 
     if side == "SHT" or side == "SHTS":
         InnerAccumulation = [0] * Section.NodeNumber
-        
-        Initial_SHTSAccumulation= 0 # not "hot conditioning" here, so assumed 0 at start-up
             
         # 0.0024 is the slope of overall oxide growth (from plots) based on input (or FAC solver) corrosion rate
         # between 1983 and 1986 (included)
         if YearStartup <= calendar_year < YearCPP:
             # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
-            SHTSAccumulation = Initial_SHTSAccumulation + (calendar_year - YearStartup) * 0.0017
+            SHTSAccumulation = (calendar_year - YearStartup) * 0.0017
         
         # CPP installation (late 1986) reduces secondary side crud by 50% 
         # (assumed proportional red. in deposit formation)
         elif YearCPP <= calendar_year < YearSHTChemicalClean: 
-            SHTSAccumulation = (Initial_SHTSAccumulation
-                           + (YearCPP - YearStartup) * 0.0017 # what deposited until this change
-                           + (calendar_year - YearCPP) * 0.000825)
+            SHTSAccumulation = (YearCPP - YearStartup) * 0.0017 + (calendar_year - YearCPP) * 0.000825
             
         # assumed that secondary side completely cleaned, new growth? 
         elif calendar_year >= YearSHTChemicalClean:
@@ -529,7 +525,7 @@ def station_events(calendar_year):
         InitialLeakage = 0.02 
         YearlyRateLeakage = 0
 
-    Leakage = InitialLeakage + (calendar_year - 1983) * YearlyRateLeakage
+    Leakage = InitialLeakage + (calendar_year - YearStartup) * YearlyRateLeakage
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
     # decreases as divider (bypass) flow increases
     m_h_leakagecorrection = MassFlow_h.magnitude - DividerPlateMassFlow
@@ -539,7 +535,7 @@ def station_events(calendar_year):
 
 def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulation, j):
     year = (j / 8760) 
-    calendar_year = year + 1983
+    calendar_year = year + YearStartup
     
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(calendar_year)
     
@@ -568,5 +564,5 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
 
-# print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 1 ) - 273.15)
+# print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 8760 ) - 273.15)
 
