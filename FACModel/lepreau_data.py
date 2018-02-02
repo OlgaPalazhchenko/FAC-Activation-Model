@@ -494,6 +494,7 @@ steam_generator_properties(SteamGenerator_2)
 # Combines PHT sections and SG Zones (in the event each zone will be tracked for oxide growth/heat transfer)
 FullLoop = InletSections + FuelSections + OutletSections + SteamGenerator + SteamGenerator_2
 HalfLoop = [InletSections[0], FuelSections[0], OutletSections[0]] + SteamGeneratorSections[0]
+SingleTubeLoop = [InletSections[0], FuelSections[0], OutletSections[0], SteamGenerator[57]]
 
 for Section in FullLoop:
     # Particulate #[mg/kg] (ppm)

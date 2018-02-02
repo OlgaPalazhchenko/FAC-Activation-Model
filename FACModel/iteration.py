@@ -220,7 +220,7 @@ def FAC_solver(Section, ConstantRate):
     # updates hydrolysis distribution of Fe species. Even if FAC rate kept constant, oxide thickness changes
     # M/O Fe total concentration changes w.r.t. thickness, so species cncentrations change too
     [ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2] = c.hydrolysis(
-        Section, Section.MetalOxide.FeTotal, Section.MetalOxide.NiTotal, Section.MetalOxide.ConcentrationH
+        Section, Section.MetalOxide.FeTotal, Section.MetalOxide.ConcentrationH
         )
     ProductConcentration = Section.MetalOxide.ConcentrationH2
     

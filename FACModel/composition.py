@@ -84,60 +84,7 @@ def bulkpH_calculator(Section):  # Bulk pH calculation
     return H
 
 
-def iron_solubility(Section):
-    # As temperature changes, constants (k_Li, k_w, etc. change), pH changes as well, 
-    # both effecting solubility --> Bulk FeSatFe3O4
-    Section.SolutionOxide.ConcentrationH = bulkpH_calculator(Section)
-    
-    # based on high temperature henry's law constant data for H2 (some taken from T&L ref. some from sol. program DHL
-    k_H2 = [-4.1991 * i + 2633.2 for i in Section.PrimaryBulkTemperature]
-
-    # convert H2 conc. from cm^3/kg to mol/kg then concentration to P ("fugacity") using Henry's constant
-    P_H2 = [(nc.H2 * nc.H2Density / nc.H2MolarMass) * i for i in k_H2]
-    
-    # need to put these in line with hydrolysis activity coeffs    
-    gamma_1 = 0.95
-    gamma_2 = 0.78 
-    
-    b = [0, 1, 2, 3, 3, 4]
-    
-    Activity = []
-    Constants = [
-        Section.k_Fe2, Section.k_FeOH, Section.k_FeOH2, Section.k_FeOH3, Section.k_FeOH3_Fe3, Section.k_FeOH4_Fe3
-        ]
-    
-    for oxidation, k in zip (b, Constants):
-        if oxidation == 0:
-            gamma_oxidation = gamma_2
-        elif oxidation == 1 or oxidation == 3 or oxidation == 4: # -1 for Fe2+, +1 for Fe2+, -1 for Fe3+ species
-            gamma_oxidation = gamma_1
-        elif oxidation == 2 or oxidation == 4:
-            gamma_oxidation = 1 # 0 charge on Fe(OH)2^0 and Fe(OH)3^0 = electroneutrality, no gamma
-        else: 
-            None
-        
-        if k == Constants[4] or k == Constants[5]:
-            charge = 3 # ferric, Fe3+ species
-        else:
-            charge = 2 # ferrous, Fe2+ species
-
-        q = [x * ((y * gamma_1)**(charge - oxidation)) * (z**((4/3) - (charge / 2))) / (gamma_oxidation) for
-             x, y, z in zip(k, Section.SolutionOxide.ConcentrationH, P_H2)]
-        
-        Activity.append(q)
-    
-    [ActivityFe2, ActivityFeOH, ActivityFeOH2, ActivityFeOH3, ActivityFeOH3_Fe3, ActivityFeOH4_Fe3] = Activity
-    
-    FeTotalActivity = [
-        x + y + z + q + w + t for x, y, z, q, t, w in zip (
-            ActivityFe2, ActivityFeOH, ActivityFeOH2, ActivityFeOH3, ActivityFeOH3_Fe3, ActivityFeOH4_Fe3
-            )
-        ]
-    
-    return FeTotalActivity
-
-
-def hydrolysis(Section, FeTotal, NiTotal, ConcentrationH):
+def hydrolysis(Section, FeTotal, ConcentrationH):
     ActivityCoefficient1 = [1.0] * Section.NodeNumber  # initial estimate for activities (+/- 1 charged ions)
     ActivityCoefficient2 = [1.0] * Section.NodeNumber  # (+/- 2 charged ions)
     # Concentration NiTotal <<FeTotal, so Ni species left out of ionic strength calcs
@@ -206,11 +153,69 @@ def hydrolysis(Section, FeTotal, NiTotal, ConcentrationH):
             )]
 
         RE = [((x - y) / x) for x, y in zip(gamma_1itr, ActivityCoefficient1)]
-        # print (gamma_1itr, ActivityCoefficient1,"lol")
+
         RE2 = [((x - y) / x) for x, y in zip(gamma_2itr, ActivityCoefficient2)]
         if RE < [0.00000001] * Section.NodeNumber and RE2 < [0.00000001] * Section.NodeNumber:
 
             return ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2
+
+
+def iron_solubility(Section, Condition):
+    # As temperature changes, constants (k_Li, k_w, etc. change), pH changes as well, 
+    # both effecting solubility --> Bulk FeSatFe3O4
+    Section.SolutionOxide.ConcentrationH = bulkpH_calculator(Section)
+    
+    # based on high temperature henry's law constant data for H2 (some taken from T&L ref. some from sol. program DHL
+    k_H2 = [-4.1991 * i + 2633.2 for i in Section.PrimaryBulkTemperature]
+
+    # convert H2 conc. from cm^3/kg to mol/kg then concentration to P ("fugacity") using Henry's constant
+    P_H2 = [(nc.H2 * nc.H2Density / nc.H2MolarMass) * i for i in k_H2]
+    
+    # need to put these in line with hydrolysis activity coeffs    
+    if Condition == "initial":
+        gamma_1 = [0.95] * Section.NodeNumber
+        gamma_2 = [0.78] * Section.NodeNumber
+    else:
+        gamma_1 = hydrolysis(Section, Section.SolutionOxide.FeTotal, Section.SolutionOxide.ConcentrationH)[2]
+        gamma_2 = hydrolysis(Section, Section.SolutionOxide.FeTotal, Section.SolutionOxide.ConcentrationH)[3]
+           
+    b = [0, 1, 2, 3, 3, 4]
+    
+    Activity = []
+    Constants = [
+        Section.k_Fe2, Section.k_FeOH, Section.k_FeOH2, Section.k_FeOH3, Section.k_FeOH3_Fe3, Section.k_FeOH4_Fe3
+        ]
+    
+    for oxidation, k in zip (b, Constants):
+        if oxidation == 0:
+            gamma_oxidation = gamma_2
+        elif oxidation == 1 or oxidation == 3 or oxidation == 4: # -1 for Fe2+, +1 for Fe2+, -1 for Fe3+ species
+            gamma_oxidation = gamma_1
+        elif oxidation == 2 or oxidation == 4:
+            # 0 charge on Fe(OH)2^0 and Fe(OH)3^0 = electroneutrality, no gamma
+            gamma_oxidation = [1] * Section.NodeNumber
+        else: 
+            None
+        
+        if k == Constants[4] or k == Constants[5]:
+            charge = 3 # ferric, Fe3+ species
+        else:
+            charge = 2 # ferrous, Fe2+ species
+
+        q = [x * ((y * g_1)**(charge - oxidation)) * (z**((4/3) - (charge / 2))) / (g_o) for
+             x, y, z, g_1, g_o in zip(k, Section.SolutionOxide.ConcentrationH, P_H2, gamma_1, gamma_oxidation)]
+        
+        Activity.append(q)
+    
+    [ActivityFe2, ActivityFeOH, ActivityFeOH2, ActivityFeOH3, ActivityFeOH3_Fe3, ActivityFeOH4_Fe3] = Activity
+    
+    FeTotalActivity = [
+        x + y + z + q + w + t for x, y, z, q, t, w in zip (
+            ActivityFe2, ActivityFeOH, ActivityFeOH2, ActivityFeOH3, ActivityFeOH3_Fe3, ActivityFeOH4_Fe3
+            )
+        ]
+    
+    return FeTotalActivity
 
 
 def cobalt_composition(Section):

@@ -24,7 +24,7 @@ Loop = "half"
 ElementTracking = "yes"
 
 # 1.52 m is the u-bend arc length of an average SG tube
-Default_Tube = SGHX.closest_ubend(1.52 * 100)
+Default_Tube = SGHX.closest_ubend(1.52 * 50)
 # SteamGeneratorTubes = []
 
 
@@ -87,7 +87,8 @@ for j in range(SimulationHours):
         InletInput = ld.InletFeeder
     
     Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j)
-    SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput)
+    if Loop == "full" or Loop == "half":
+        SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput)
 #     print (
 #         ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
 #     None, None, None, None)
@@ -111,10 +112,10 @@ for j in range(SimulationHours):
             ) - 273.15)
         
         for Zone in ld.SteamGenerator:
-            Zone.Bulk.FeSatFe3O4 = c.iron_solubility(Zone)
+            Zone.Bulk.FeSatFe3O4 = c.iron_solubility(Zone, None)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
-        InletInput.Bulk.FeSatFe3O4 = c.iron_solubility(InletInput)
+        InletInput.Bulk.FeSatFe3O4 = c.iron_solubility(InletInput, None)
            
         if OutputLogging == "yes":
             RIHT.append(T_RIH)
@@ -162,14 +163,15 @@ with open(csvfile, "w") as output:
     writer.writerow(['RIHT (oC)'])
     writer.writerow(RIHT)
     writer.writerow([''])
-     
-    for i, j in zip(Labels, Data):
-        writer.writerow([i])
-        if i == "U-bend length (m)":
-            writer.writerow(j)
-        else:
-            writer.writerows(j)
-        writer.writerow([''])
+    
+    if Loop == "full" or Loop == "half": 
+        for i, j in zip(Labels, Data):
+            writer.writerow([i])
+            if i == "U-bend length (m)":
+                writer.writerow(j)
+            else:
+                writer.writerows(j)
+            writer.writerow([''])
         
     writer.writerow(['Outlet Streams (oC)'])
     writer.writerow(OutletTemperatures1)
@@ -186,13 +188,20 @@ seconds = delta_time - 60 * minutes
 print('%d:%d:%d' % (hours, minutes, seconds))
 
 
+
+if Loop == "full" or Loop == "half":
+    Sections = [In.Section1, Co.Section1, Ou.Section1, SteamGeneratorTubes[0].Section1]
+else:
+    Sections = [In.Section1, Co.Section1, Ou.Section1, Sg.Section1]
+    
+    
 def property_log10(Element, Interface):
     Sat = []  # x
     Bulk = []  # y
     SolutionOxide = []  # z
     
     # only in main 4 PHTS sections, not counting SG Zones, can be changed to include all, if needed 
-    for Section in [In.Section1, Co.Section1, Ou.Section1, SteamGeneratorTubes[0].Section1]:
+    for Section in Sections:
         if Element == "Fe":
             Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.Bulk.FeTotal, Section.SolutionOxide.FeTotal]
         elif Element == "Ni":
@@ -231,7 +240,7 @@ def property_log10(Element, Interface):
 def oxide_loading(Layer):
     Oxide = []
     
-    for Section in [In.Section1, Co.Section1, Ou.Section1, SteamGeneratorTubes[0].Section1]:
+    for Section in Sections:
         if Layer == "Inner":
             x = Section.InnerOxThickness
         elif Layer == "Outer":
@@ -253,7 +262,8 @@ def oxide_loading(Layer):
 
 def activity_volumetric(Isotope):
     VolumetricActivity = []
-    for Section in [In.Section1, Co.Section1, Ou.Section1, SteamGeneratorTubes[0].Section1]:
+    
+    for Section in Sections:
         if Isotope == "Co60":
             x = Section.Bulk.Co60
         elif Isotope == "Co58":
@@ -279,7 +289,12 @@ def activity_volumetric(Isotope):
    
 def plot_output():
     LoopDistance = []
-    for Section in [ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder, SteamGeneratorTubes[0].Section1]:
+    if Loop == "full" or Loop == "half":
+        Sections = [ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder, SteamGeneratorTubes[0].Section1]
+    else:
+        Sections = [ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder, ld.SteamGenerator[Default_Tube]]
+    
+    for Section in Sections:
         x = Section.Length.magnitude
         LoopDistance.append(x)
     LoopDistance = [j for i in LoopDistance for j in i]

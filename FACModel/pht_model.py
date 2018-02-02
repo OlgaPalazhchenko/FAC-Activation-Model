@@ -13,20 +13,33 @@ def initial_chemistry(Loop):
     
     [SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(1983)
     # initial temperatures in steam generator(s)
-    for Zone in ld.SteamGenerator:
-        Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
-            Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
-            )
+    
     if Loop == "full":
         # if full loop selected, both steam generators iterated through for initial temperatures (87 bundles each)
         Sections = ld.FullLoop
-        for Zone in ld.SteamGenerator_2:
-            Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
-            Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
-            )       
+#         for Zone in ld.SteamGenerator_2:
+#             Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
+#             Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
+#             )       
     elif Loop == "half":
         Sections = ld.HalfLoop
     
+    elif Loop == "single tube":
+        Sections = ld.SingleTubeLoop
+    else:
+        None
+   
+    if Loop == "full" or Loop == "half":
+        for Zone in ld.SteamGenerator:
+            Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
+            Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
+            )
+    else:
+        ld.SteamGenerator[57].PrimaryBulkTemperature = SGHX.temperature_profile(
+            ld.SteamGenerator[57], ld.SteamGenerator[57].InnerOxThickness, ld.SteamGenerator[57].OuterOxThickness,
+            RemainingPHTMassFlow, SecondarySidePressure, 1983
+            )
+        
     # initial concentrations
     for Section in Sections:
         # temperature-dependent parameters            
@@ -49,7 +62,7 @@ def initial_chemistry(Loop):
             Interface.ConcentrationH = c.bulkpH_calculator(Section)  # from system pH calculation
             
             # concentration/Saturation Input [mol/kg]
-            Interface.FeTotal = c.iron_solubility(Section)
+            Interface.FeTotal = c.iron_solubility(Section, "initial")
             Interface.FeSatFe3O4 = [1 * i for i in Interface.FeTotal]
             Interface.NiTotal = [i * 1 for i in Section.SolubilityNi]
             Interface.NiSatFerrite = [i * 1 for i in Section.SolubilityNi]
@@ -74,14 +87,14 @@ def initial_chemistry(Loop):
             
             if Section not in ld.OutletSections:
                 if Interface == Section.SolutionOxide:
-                    Interface.FeTotal = [i * 0.8 for i in c.iron_solubility(Section)]
+                    Interface.FeTotal = [i * 1 for i in c.iron_solubility(Section, "initial")]
             
             if Section in ld.FuelSections and Interface == Section.MetalOxide:
                 Interface.FeTotal = [0] * Section.NodeNumber
             
             if Section in ld.OutletSections and Interface == Section.MetalOxide:
                 # from Cook's thesis - experimental corrosion rate measurements and calcs
-                Interface.FeTotal = [0.00000016] * Section.NodeNumber 
+                Interface.FeTotal = [0.00000026] * Section.NodeNumber 
             
             if Section not in ld.SteamGenerator and Section not in ld.SteamGenerator_2:
                 Interface.NiTotal = [0] * Section.NodeNumber

@@ -5,7 +5,7 @@ import composition as c
 
 
 # select all the SG tubes to be run (by arc length)
-ubends = [0.385]#, 1.52, 2.31, 3.09]
+ubends = [1.52]#, 1.52, 2.31, 3.09]
 ubends = [i * 100 for i in ubends]
 tubelengths = [1980]
 
@@ -568,5 +568,5 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     RIHT = ld.TemperaturefromEnthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
 
-print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 1 ) - 273.15)
+# print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 1 ) - 273.15)
 

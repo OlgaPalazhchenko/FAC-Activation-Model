@@ -37,16 +37,16 @@ def ElectrochemicalKineticConstant(Section, KineticConstant, EquilibriumPotentia
         )] 
 
 
-def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPotential, Kelvin, Dissolution):
+def ElectrochemicalSaturation(Section, BulkSatFe3O4, i, EqmPotentialFe3O4, MixedPotential, Kelvin, Dissolution):
     if Dissolution == "yes":
         Beta_prime = (-1) * nc.Beta
     else:
         Beta_prime = nc.Beta
     
     #number of electrons needs to be averaged here for A-800
-    Adjustment =  np.exp(Beta_prime * nc.n * nc.F * (MixedPotential - EqmPotentialFe3O4) / (nc.R * Kelvin))
+    Adjustment = 1# np.exp(Beta_prime * nc.n * nc.F * (MixedPotential - EqmPotentialFe3O4) / (nc.R * Kelvin))
      
-    AdjustedSaturation = BulkSatFe3O4 * Adjustment
+    AdjustedSaturation = c.iron_solubility(Section, None)[i] * Adjustment
     
     return AdjustedSaturation
 
@@ -69,13 +69,13 @@ def ElectrochemicalAdjustment(
         if FeTotal[i] >= FeSatFe3O4[i]:
             
             x = ElectrochemicalSaturation(
-                Section, BulkSatFe3O4[i], EqmPotentialFe3O4[i], SOMixedPotential[i], Section.PrimaryBulkTemperature[i],
-                "no"
+                Section, BulkSatFe3O4[i], i, EqmPotentialFe3O4[i], SOMixedPotential[i],
+                Section.PrimaryBulkTemperature[i], "no"
                 )
         else:
             x = ElectrochemicalSaturation(
-                Section, BulkSatFe3O4[i], EqmPotentialFe3O4[i], SOMixedPotential[i], Section.PrimaryBulkTemperature[i],
-                "yes"
+                Section, BulkSatFe3O4[i], i, EqmPotentialFe3O4[i], SOMixedPotential[i],
+                Section.PrimaryBulkTemperature[i], "yes"
                 )
         AdjustedSaturation.append(x)    
 
@@ -163,7 +163,7 @@ def ECP(Section):
 #             print ("Corrected, concentration reset to:", Section.SolutionOxide.FeTotal[i])
              
     ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2 = c.hydrolysis(
-        Section, Section.SolutionOxide.FeTotal, Section.SolutionOxide.NiTotal, Section.SolutionOxide.ConcentrationH
+        Section, Section.SolutionOxide.FeTotal, Section.SolutionOxide.ConcentrationH
         )
         
     ProductConcentration = Section.SolutionOxide.ConcentrationH2
