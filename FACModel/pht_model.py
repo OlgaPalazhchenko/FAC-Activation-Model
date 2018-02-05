@@ -85,9 +85,9 @@ def initial_chemistry(Loop):
                                          ld.SteamGenerator[0].OuterOxThickness, 0)] * Section.NodeNumber
                                                   )
             
-            if Section not in ld.OutletSections:
-                if Interface == Section.SolutionOxide:
-                    Interface.FeTotal = [i * 1 for i in c.iron_solubility(Section, "initial")]
+#             if Section not in ld.OutletSections:
+#                 if Interface == Section.SolutionOxide:
+#                     Interface.FeTotal = [i * 1 for i in c.iron_solubility(Section, "initial")]
             
             if Section in ld.FuelSections and Interface == Section.MetalOxide:
                 Interface.FeTotal = [0] * Section.NodeNumber
@@ -106,15 +106,18 @@ def initial_chemistry(Loop):
         else:
             Section.CorrRate, Section.MetalOxide.MixedPotential = it.FAC_solver(Section, ConstantRate="yes")
             
-        [
-            Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
-            Section.MetalOxide.ConcentrationH
-            ] \
-            = e.ElectrochemicalAdjustment(
-            Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
-            Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
-            Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
-            )
+        
+        Section.KpFe3O4electrochem = [nc.KpFe3O4] * Section.NodeNumber
+        Section.KdFe3O4electrochem = [nc.KdFe3O4] * Section.NodeNumber   
+#         [
+#             Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
+#             Section.MetalOxide.ConcentrationH
+#             ] \
+#             = e.ElectrochemicalAdjustment(
+#             Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
+#             Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
+#             Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
+#             )
 
 Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
 

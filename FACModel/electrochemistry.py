@@ -55,7 +55,9 @@ def ElectrochemicalAdjustment(
         Section, EqmPotentialFe3O4, SOMixedPotential, MOMixedPotential, FeTotal, FeSatFe3O4, BulkSatFe3O4,
         SOConcentrationH
         ):
-    KpFe3O4electrochem = [nc.KpFe3O4] * Section.NodeNumber
+
+    KpFe3O4electrochem = c.plngs_precipitation_kinetics(Section)
+    #[nc.KpFe3O4] * Section.NodeNumber
 #     KpFe3O4electrochem = ElectrochemicalKineticConstant(
 #         Section, [nc.KpFe3O4] * Section.NodeNumber, EqmPotentialFe3O4, "no", SOMixedPotential
 #         )
@@ -150,9 +152,13 @@ def Energy(Section, ExchangeCurrent, Concentration, Acceptor, EquilibriumPotenti
                                       Section.DensityH2O, EquilibriumPotential)]
         
     if Concentration == 1 and Acceptor == "yes":
-        return [nc.R * x * -np.log10(y * nc.hp / (nc.F * nc.kb * x * np.exp(-nc.Beta * nc.n * nc.F * w / (nc.R * x)))) for x, y, w in (Section.PrimaryBulkTemperature, ExchangeCurrent, EquilibriumPotential)]
+        E = [nc.R * x * -np.log10(y * nc.hp / (nc.F * nc.kb * x * np.exp(-nc.Beta * nc.n * nc.F * w / (nc.R * x))))
+             for x, y, w in (Section.PrimaryBulkTemperature, ExchangeCurrent, EquilibriumPotential)]
     elif Concentration == 1 and Acceptor == "no":
-        return [nc.R * x * -np.log10(y * nc.hp / (nc.F * nc.kb * x * np.exp(nc.Beta * nc.n * nc.F * w / (nc.R * x)))) for x, y, w in (Section.PrimaryBulkTemperature, ExchangeCurrent, EquilibriumPotential)]
+        E = [nc.R * x * -np.log10(y * nc.hp / (nc.F * nc.kb * x * np.exp(nc.Beta * nc.n * nc.F * w / (nc.R * x))))
+             for x, y, w in (Section.PrimaryBulkTemperature, ExchangeCurrent, EquilibriumPotential)]
+    
+    return E
 
 
 def ECP(Section):

@@ -9,7 +9,6 @@ import sg_heattransfer as SGHX
 import composition as c
 import numpy as np
 import csv
-import iteration as it
 
 import matplotlib.pyplot as plt
 from matplotlib import rc
@@ -70,7 +69,6 @@ SimulationHours = SimulationYears * 8760
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)
-print (it.arrhenius_activaton_energy(ld.SteamGenerator, 1))
 
 import time
 start_time = time.time()
@@ -105,16 +103,18 @@ for j in range(SimulationHours):
             )
     
     if j % 8759 == 0:  # yearly  
+        
         # parameters tracked with time 
         T_RIH = (SGHX.energy_balance(
             ld.SteamGenerator[Default_Tube].NodeNumber - 1, ld.SteamGenerator[Default_Tube].InnerOxThickness,
             ld.SteamGenerator[Default_Tube].OuterOxThickness, j
             ) - 273.15)
         
+        InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
         for Section in ld.HalfLoop:
             Section.Bulk.FeSatFe3O4 = c.iron_solubility(Section, None)
         
-        InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
+        
            
         if OutputLogging == "yes":
             RIHT.append(T_RIH)

@@ -1,7 +1,6 @@
 import lepreau_data as ld
 import numpy as np
 import constants as nc
-# import composition as c
 
 
 # select all the SG tubes to be run (by arc length)
@@ -119,10 +118,13 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
     if material == "Alloy-800" or material == "Alloy800" or material == "A800" or material == "Alloy 800":
         Twall = Twall - 273.15 # oC in alloy thermal conductivity equatin 
         return (11.450 + 0.0161 * Twall ) / 100  # M.K.E thesis for Alloy-800 tubing [W/cm K]
+    
     elif material == "water":
         return ld.thermal_conductivityH2O("PHT", Twall, SecondarySidePressure)
+    
     elif material == "magnetite":
         return 1.4 / 100  # [W/cm K]
+    
     else:
         print ("Error: material not specified")
         return None
@@ -188,7 +190,7 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
     # [W/cm K]/ [cm] = [W/K cm^2]
     
     if Section.Length.label[i] == "PHT boiling":
-        x = 4.4
+        x = 2.4
         MassFlux_h.magnitude = MassFlow_h.magnitude / (nc.TotalSGTubeNumber * (np.pi / 4) * (Section.Diameter[i] ** 2))
  
         h_i = boiling_heat_transfer(
@@ -241,7 +243,7 @@ def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySide
         if i <= 10:
             x = x_in * 100
         else:
-            x = 20 - i
+            x = 19 - i
        
         h_o = boiling_heat_transfer(
             x, "SHT", T_sat_secondary, MassFlux_c.magnitude, T_wall, EquivalentDiameter.magnitude, 
@@ -519,11 +521,15 @@ def station_events(calendar_year):
         SecondarySidePressure = 4.593 - (125 / 1000) # MPa
     
     # divider plate raplacement in 1995, assumed to stop increase in leak (2% constant going forward)
-    # boiler pressure increased back up to start-up 4.593 MPa
+    # return to full boiler secondary side pressure, 4.593 MPa
+    # partial mechanical clean of boiler tube primary side
     elif calendar_year >= 1995:
         SecondarySidePressure = 4.593
         InitialLeakage = 0.02 
         YearlyRateLeakage = 0
+    
+    elif calendar_year >= 1998:
+        SecondarySidePressure = 4.593 - (125 / 1000) # MPa
 
     Leakage = InitialLeakage + (calendar_year - YearStartup) * YearlyRateLeakage
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
