@@ -1,7 +1,7 @@
 import lepreau_data as ld
 import iteration as it
 import numpy as np
-import constants as nc
+import thermochemistry_and_constants as nc
 import rk_4
     
 # Molecular weights of specific isotopes [g/mol]
@@ -21,7 +21,7 @@ ABUNDANCENi62 = 0.0363
 ABUNDANCECr50 = 0.0435
 ABUNDANCECo59 = 1
 
-# Decay constants [h^-1]
+# Decay thermochemistry_and_constants [h^-1]
 LAMBDAFe59 = 0.000650476
 LAMBDAFe55 = 0.0000288782
 LAMBDACo58 = 0.00040735
@@ -38,14 +38,14 @@ CROSS_SECTIONNi62 = 1.46E-23
 CROSS_SECTIONCr50 = 1.59E-23
 CROSS_SECTIONCo59 = 3.7E-23
 
-# General nuclear constants
+# General nuclear thermochemistry_and_constants
 NEUTRON_FLUX = 50000000000000  # [neutrons/cm^2 s]
 AVOGADRO = 6.022E+23  # [atoms/mol]
 
-# Kinetic deposition/release constants [kg_coolant/m^2 s] (All from Burrill paper)
+# Kinetic deposition/release thermochemistry_and_constants [kg_coolant/m^2 s] (All from Burrill paper)
 PARTICULATE_DISSOLUTION = 0.0000018  # [s^-1]
 
-# In-core deposition constants
+# In-core deposition thermochemistry_and_constants
 VAPORIZATION_COEFFICIENT = 0.1
 ENRICHMENT = 1
 

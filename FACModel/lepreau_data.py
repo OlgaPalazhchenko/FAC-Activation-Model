@@ -1,212 +1,6 @@
-import numpy as np
-import csv 
-import constants as nc
-
-
-class SGParameters():
-    def __init__(self):
-        self.magnitude = None
-        self.label = None
-        self.unit = None
-        self.steam_quality = None
-
-PrimarySidePressure = 9.89  # MPa
-# SecondarySidePressure = 4.593  # MPa
-
-SizingParameters = open('SizingParameters.txt', 'r')      
-SizingParametersReader = list(csv.reader(SizingParameters, delimiter=','))  
-
-n_IAPWS = [
-    0.14632971213167, -0.84548187169114, -0.37563603672040 * 10 ** 1, 0.33855169168385 * 10 ** 1, -0.95791963387872,
-    0.15772038513228, -0.16616417199501 * 10 ** (-1), 0.81214629983568 * 10 ** (-3),
-    0.28319080123804 * 10 ** (-3), -0.60706301565874 * 10 ** (-3), -0.18990068218419 * 10 ** (-1),
-    - 0.32529748770505 * 10 ** (-1), -0.21841717175414 * 10 ** (-1), -0.52838357969930 * 10 ** (-4),
-    - 0.47184321073267 * 10 ** (-3), -0.30001780793026 * 10 ** (-3), 0.47661393906987 * 10 ** (-4),
-    - 0.44141845330846 * 10 ** (-5), -0.72694996297594 * 10 ** (-15), -0.31679644845054 * 10 ** (-4),
-    - 0.28270797985312 * 10 ** (-5), -0.85205128120103 * 10 ** (-9), -0.22425281908000 * 10 ** (-5),
-    - 0.65171222895601 * 10 ** (-6), -0.14341729937924 * 10 ** (-12), -0.40516996860117 * 10 ** (-6),
-    - 0.12734301741641 * 10 ** (-8), -0.17424871230634 * 10 ** (-9), -0.68762131295531 * 10 ** (-18),
-    0.14478307828521 * 10 ** (-19), 0.26335781662795 * 10 ** (-22), -0.11947622640071 * 10 ** (-22),
-    0.18228094581404 * 10 ** (-23), -0.93537087292458 * 10 ** (-25)
-    ]
-
-I_IAPWS = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 8, 8, 21, 23, 29, 30, 31, 32]
-J_IAPWS = [
-    - 2, -1, 0, 1, 2, 3, 4, 5, -9, -7, -1, 0, 1, 3 , -3, 0, 1, 3, 17, -4, 0, 6, -5, -2, 10, -8, -11, -6, -29, -31, -38,
-    - 39, -40, -41
-    ]
-
-n_backwards_IAPWS = [
-    - 0.23872489924521 * 10 ** 3, 0.40421188637945 * 10 ** 3, 0.11349746881718 * 10 ** 3, -0.58457616048039 * 10 ** 1,
-    - 0.15285482413140 * 10 ** (-3), -0.10866707695377 * 10 ** (-5), -0.13391744872602 * 10 ** 2,
-    0.43211039183559 * 10 ** 2, -0.54010067170506 * 10 ** 2, 0.30535892203916 * 10 ** 2, -0.65964749423638 * 10 ** 1,
-    0.93965400878363 * 10 ** (-2), 0.11573647505340 * 10 ** (-6), -0.25858641282073 * 10 ** (-4),
-    - 0.40644363084799 * 10 ** (-8), 0.66456186191635 * 10 ** (-7), 0.80670734103027 * 10 ** (-10),
-    - 0.93477771213947 * 10 ** (-12), 0.58265442020601 * 10 ** (-14), -0.15020185953503 * 10 ** (-16)
-    ]
-
-I_backwards_IAPWS = [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 5, 6]
-
-J_backwards_IAPWS = [0, 1, 2, 6, 22, 32, 0, 1, 2, 3, 4, 10, 32, 10, 32, 10, 32, 32, 32, 32] 
-
-R_IAPWS = 0.461526  # [kJ/kg K] 
-
-i_1 = [0, 1, 2, 3, 0, 1, 2, 3, 5, 0, 1, 2, 3, 4, 0, 1, 0, 3, 4, 3, 5]
-j_1 = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4, 4, 5, 6, 6]
-H_1 = [
-    0.520094, 0.0850895, -1.08374, -0.289555, 0.222531, 0.999115, 1.88797, 1.26613, 0.120573, -0.281378, -0.906851,
-    - 0.772479, -0.489837, -0.25704, 0.161913, 0.257399, -0.0325372, 0.0698452, 0.00872102, -0.00435673, -5.93E-04
-    ]
-
-
-class ThermoDimensionlessInput():
-    def __init__(self):
-        self.p_ref = 16.53  # [MPa] reducing pressure [MPa]
-        self.T_ref = 1386  # [K] reducing temperature [K]
-        self.rho_ref = 0.3220  # [g/cm^3]
-        self.mu_ref = 1  # [micro Pa s]
-        self.lambda_ref = 1  # [mW/mK]
-        self.enthalpy = 2500  # [J/g]
-
-
-ReferenceValues = ThermoDimensionlessInput()
-
-
-def Enthalpy(side, Temperature, SecondarySidePressure):
-    if side == "PHT" or side == "PHTS" or side == "phts" or side == "pht":
-        p = PrimarySidePressure  # MPa
-    else:
-        p = SecondarySidePressure  # MPa secondary side
-
-    ratio_pressures = p / ReferenceValues.p_ref  # p/p*, reduced pressure [unitless]
-    ratio_temperatures = ReferenceValues.T_ref / Temperature  # T/T*, reduced temperature [unitless]
-
-    Gibbs_T = sum(
-        [x * ((7.1 - ratio_pressures) ** y) * z * ((ratio_temperatures - 1.222) ** (z - 1))
-        for x, y, z in zip(n_IAPWS, I_IAPWS, J_IAPWS)]
-        )
-    return ratio_temperatures * Gibbs_T * R_IAPWS * Temperature  # [J/g mol]*[K] = [J/g]
-
-
-def TemperaturefromEnthalpy(side, Enthalpy, SecondarySidePressure):
-    if side == "PHT" or side == "PHTS" or side == "phts" or side == "pht":
-        p = PrimarySidePressure
-    else:
-        p = SecondarySidePressure  # MPa secondary side
-    p_ref = 1  # MPa
-    T_ref = 1  # K
-    
-    ratio_pressures = p / p_ref  # p/p*, reduced pressure [unitless]
-    ratio_enthalpies = Enthalpy / ReferenceValues.enthalpy
-    
-    ratio_temmperatures = sum(
-        [x * ((ratio_pressures) ** y) * (ratio_enthalpies + 1) ** z
-        for x, y, z in zip(n_backwards_IAPWS, I_backwards_IAPWS, J_backwards_IAPWS)]
-        )
-    
-    return ratio_temmperatures * T_ref
-
-    
-def Density(species, side, Temperature, SecondarySidePressure):
-    if side == "phts" or side == "PHTS" or side == "PHT":
-        p = PrimarySidePressure
-    elif side == "shts" or side == "SHTS" or side == "SHT":
-        p = SecondarySidePressure 
-    else: print ("Error: HTS side not specified")
-        
-    ratio_pressures = p / ReferenceValues.p_ref
-    ratio_temperatures = ReferenceValues.T_ref / Temperature  # ratio is reverse here from all other functions 
-    
-    if species == "water":    
-        Gibbs_p = sum(
-            [-x * y * ((7.1 - ratio_pressures) ** (y - 1)) * (ratio_temperatures - 1.222) ** z
-            for x, y, z in zip(n_IAPWS, I_IAPWS, J_IAPWS)]
-            )
-      
-        return (1 / (R_IAPWS * Temperature * ratio_pressures * (Gibbs_p / (p * 1000)))) * 1000 / (100 ** 3)  # [g/cm^3] 
-        
-        
-def Viscosity(species, side, Temperature, SecondarySidePressure):
-    T_ref = 647.096  # K
-    rho_ref = ReferenceValues.rho_ref
-    mu_ref = ReferenceValues.mu_ref
-    
-    if side == "SHT" or side == "SHTS":
-        Pressure = SecondarySidePressure
-    else:
-        Pressure = PrimarySidePressure
-        
-    T_rel = Temperature / T_ref
-    rho_rel = Density(species, side, Temperature, Pressure) / rho_ref
-    
-    H_0 = [1.67752, 2.20462, 0.6366564, -0.241605]
-    terms = [0, 1, 2, 3]
-    summation = sum([x / (T_rel) ** y for x, y in zip(H_0, terms)])
-    
-    mu_0 = 100 * np.sqrt(T_rel) / summation
-    
-    summation1 = sum([x * (((1 / T_rel) - 1) ** y) * ((rho_rel - 1) ** z) for x, y, z in zip(H_1, i_1, j_1)])
-    mu_1 = np.exp(rho_rel * summation1)
-    mu_2 = 1
-    # [microPa s] --> [g/cm s]
-    return (mu_ref * (mu_0 * mu_1 * mu_2) / 1000000) * 10  # [g/cm s]
-
-
-def HeatCapacity(side, Temperature, SecondarySidePressure):
-    if side == "PHT" or side == "PHTS" or side == "phts" or side == "pht":
-        p = PrimarySidePressure
-    else:
-        p = SecondarySidePressure
-    
-    ratio_pressures = p / ReferenceValues.p_ref  # p/p*, reduced pressure [unitless]
-    ratio_temperatures = ReferenceValues.T_ref / Temperature  # T/T*, reduced temperature [unitless]
-    
-    Gibbs_TT = sum(
-        [x * ((7.1 - ratio_pressures) ** y) * z * (z - 1) * ((ratio_temperatures - 1.222) ** (z - 2))
-        for x, y, z in zip(n_IAPWS, I_IAPWS, J_IAPWS)]
-        )
-    
-    return (-ratio_temperatures ** 2) * Gibbs_TT * R_IAPWS  # [kJ/kg K] ([J/g K] or *nc.H2OMolarMass for [J/mol K]
- 
- 
-def thermal_conductivityH2O(side, Temperature, SecondarySidePressure):
-#     if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
-#         p = PrimarySidePressure
-#     else:
-#         p = SecondarySidePressure
-    T_ref = 647.096  # [K]
-#     p_ref = 22.064 #[MPa]
-
-    ratio_densities = Density("water", side, Temperature, SecondarySidePressure) / ReferenceValues.rho_ref
-    ratio_temperatures = Temperature / T_ref
-    # ratio_pressures = p/p_ref
-
-    L_IAPWS = [2.443221E-03, 1.323095E-02, 6.770357E-03, -3.454586E-03, 4.096266E-04]
-    k_IAPWS = [0, 1, 2, 3, 4]
-    summation = sum([x / (ratio_temperatures ** y) for x, y in zip(L_IAPWS, k_IAPWS)])
-
-    lambda_0 = np.sqrt(ratio_temperatures) / summation
-
-    i_IAPWS = [0, 1, 2, 3, 4]
-    j_IAPWS = [0, 1, 2, 3, 4, 5]
-    L1_IAPWS = [
-        [1.60397357, -0.646013523, 0.111443906, 0.102997357, -0.050412363, 0.006098593],
-        [2.33771842, -2.78843778, 1.53616167, -0.463045512, 0.083282702, -0.007192012],
-        [2.19650529, -4.54580785, 3.55777244, -1.40944978, 0.275418278, -0.020593882],
-        [-1.21051378, 1.60812989, -0.621178141, 0.071637322, 0, 0],
-        [-2.720337, 4.57586331, -3.18369245, 1.1168348, -0.19268305, 0.012913842]
-        ]
-
-    summation1 = []
-    for row in L1_IAPWS:
-        y = sum([x * (ratio_densities - 1) ** y for x, y in zip(row, j_IAPWS)])
-        summation1.append(y)
-
-    lambda_1 = np.exp(
-        ratio_densities * sum([(((1 / ratio_temperatures) - 1) ** x) * y for x, y in zip(i_IAPWS, summation1)])
-        )
-
-    return ((lambda_0 * lambda_1 * ReferenceValues.lambda_ref) / 1000) / 100  # [W/m K] 
+import numpy as np 
+import thermochemistry_and_constants as nc
+import csv
 
 
 def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, OxideDensity, MolarMass, Temperature):
@@ -253,6 +47,9 @@ def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, Ox
 
     else:
         None
+
+SizingParameters = open('SizingParameters.txt', 'r')      
+SizingParametersReader = list(csv.reader(SizingParameters, delimiter=','))  
 
 
 class Interface():
@@ -304,7 +101,7 @@ class Section():  # Defining each primary heat transport section as a class
         self.OuterDiameter = None
         self.TubeThickness = None
         self.Velocity = None
-        self.Length = SGParameters() 
+        self.Length = nc.SGParameters() 
         self.Distance = None 
         self.PrimaryBulkTemperature = None
         # self.PrimaryWallTemperature = None

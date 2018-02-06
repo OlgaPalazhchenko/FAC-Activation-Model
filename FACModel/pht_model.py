@@ -1,4 +1,4 @@
-import constants as nc
+import thermochemistry_and_constants as nc
 import lepreau_data as ld
 import composition as c
 import rk_4
@@ -46,10 +46,10 @@ def initial_chemistry(Loop):
         Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
         
         Section.DensityH2O = [
-            ld.Density("water", "PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
+            nc.density("PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
             ]
         Section.ViscosityH2O = [
-            ld.Viscosity("water", "PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
+            nc.Viscosity("PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
             ]
         
         Section.FractionFeInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe")

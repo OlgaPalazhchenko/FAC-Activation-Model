@@ -1,10 +1,18 @@
 import lepreau_data as ld
-import constants as nc
+import thermochemistry_and_constants as nc
 import composition as c
 import numpy as np
 import iteration as it
 import electrochemistry as e
 import random
+
+# Spalling thermochemistry_and_constants depend heavily on particle size distribution
+OUTLET_OUTER_SPALL_CONSTANT = 7000
+OUTLET_INNER_SPALL_CONSTANT = 1000
+INLET_OUTER_SPALL_CONSTANT = 1.00E+18  # Different units for inlet versus outlet (different functions)
+INLET_INNER_SPALL_CONSTANT = 1.00E+5
+
+TIME_INCREMENT = 3600  # s  Based on desired time step (3600 s/h for 1h time step)
 
 
 def oxide_composition(
@@ -180,15 +188,15 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
                 )
         # uniform oxide growth (preset corrosion rate)
         Section.InnerIronOxThickness = [
-            x + y * nc.TimeIncrement for x, y in zip(Section.InnerIronOxThickness, GrowthInnerIronOxide)
+            x + y * TIME_INCREMENT for x, y in zip(Section.InnerIronOxThickness, GrowthInnerIronOxide)
             ]
         Section.OuterFe3O4Thickness = [
-            x + y * nc.TimeIncrement for x, y in zip(Section.OuterFe3O4Thickness, GrowthOuterMagnetite)
+            x + y * TIME_INCREMENT for x, y in zip(Section.OuterFe3O4Thickness, GrowthOuterMagnetite)
             ]
         
         if ElementTracking == "yes":
-            Section.NiThickness = [x + y * nc.TimeIncrement for x, y in zip(Section.NiThickness, GrowthNickel)]
-            Section.CoThickness = [x + y * nc.TimeIncrement for x, y in zip(Section.CoThickness, GrowthCobalt)]
+            Section.NiThickness = [x + y * TIME_INCREMENT for x, y in zip(Section.NiThickness, GrowthNickel)]
+            Section.CoThickness = [x + y * TIME_INCREMENT for x, y in zip(Section.CoThickness, GrowthCobalt)]
     
     else:
     # FAC solver for rate   
@@ -272,7 +280,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
     
 
 def RK4(Section, InitialThickness, GrowthFunction, approximation):
-    x = [i * nc.TimeIncrement for i in GrowthFunction]  # f(t)*delta t
+    x = [i * TIME_INCREMENT for i in GrowthFunction]  # f(t)*delta t
     if approximation < 2:
         thickness = [a + b / 2 for a, b in zip(InitialThickness, x)]
     elif approximation == 2:
@@ -341,18 +349,20 @@ def spalling_time(
 
     if SolutionOxideFeSat > SolutionOxideFeTotal:  # Outlet 
         if OuterOxThickness > 0:
-            SpTime = (nc.OutletOuterSpallConstant * Particle / 3600) / (
-                (Velocity ** 2) * nc.Fe3O4Porosity_outer * KdFe3O4electrochem * (SolutionOxideFeSat - SolutionOxideFeTotal)
+            SpTime = (OUTLET_OUTER_SPALL_CONSTANT * Particle / 3600) / (
+                (Velocity ** 2) * nc.Fe3O4Porosity_outer * KdFe3O4electrochem\
+                 * (SolutionOxideFeSat - SolutionOxideFeTotal)
                 )
         else:  # no outer oxide layer 
-            SpTime = (nc.OutletInnerSpallConstant * Particle / 3600) / (
-                (Velocity ** 2) * nc.Fe3O4Porosity_inner * KdFe3O4electrochem * (SolutionOxideFeSat - SolutionOxideFeTotal)
+            SpTime = (OUTLET_INNER_SPALL_CONSTANT * Particle / 3600) / (
+                (Velocity ** 2) * nc.Fe3O4Porosity_inner * KdFe3O4electrochem\
+                 * (SolutionOxideFeSat - SolutionOxideFeTotal)
                 )
     else:  # Inlet 
         if OuterOxThickness > 0:
-            SpTime = (nc.InletOuterSpallConstant * Particle / 3600) / (Velocity ** 2)
+            SpTime = (INLET_OUTER_SPALL_CONSTANT * Particle / 3600) / (Velocity ** 2)
         else:  # no outer oxide layer 
-            SpTime = (nc.InletInnerSpallConstant * Particle / 3600) / (Velocity ** 2)
+            SpTime = (INLET_INNER_SPALL_CONSTANT * Particle / 3600) / (Velocity ** 2)
 
     return SpTime
 
@@ -466,7 +476,7 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
                     )
 
             else:  # not enough time has passed
-                ElapsedTime[i] = ElapsedTime[i] + 1 * (nc.TimeIncrement / 3600)
+                ElapsedTime[i] = ElapsedTime[i] + 1 * (TIME_INCREMENT / 3600)
 
     for i in range(Section.NodeNumber):
         

@@ -65,7 +65,7 @@ if OutputLogging == "yes":
     TemperatureProfile = []
 
 SimulationYears = 1  # years
-SimulationHours = SimulationYears * 8760
+SimulationHours = SimulationYears * 100
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)
@@ -151,7 +151,7 @@ for Zone in SGHX.selected_tubes:
     Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
     TemperatureProfile.append(Temperature_C)
     
-Data = [SGHX.ubends, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration, TemperatureProfile]
+Data = [SGHX.UBends, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration, TemperatureProfile]
 Labels = [
     "U-bend length (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Solubility (mol/kg)", "S/O [Fe] (mol/kg)",
     "Temperature Profile (oC)"]

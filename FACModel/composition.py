@@ -1,7 +1,27 @@
-import constants as nc
+import thermochemistry_and_constants as nc
 import lepreau_data as ld
 import numpy as np
 import sg_heattransfer as SGHX
+
+CONCENTRATION_LITHIUM = 0.000225095734 # [mol/L] #0.00063095734
+
+# Temperature thermochemistry_and_constants for equilibrium/hydrolysis thermochemistry_and_constants
+DEBYE_HUCKEL_POLYNOMIAL = [3.29E-10, -1.709E-07, 0.00003315, -0.0009028, 0.5027]
+KwPOLYNOMIAL = [-7.226E-10, 1.32661E-06, -0.000959311, 0.32765297, -55.86334915]
+KLiPOLYNOMIAL = [0.00000675, -0.0048, -0.7532]
+
+# KFe2SchikorrPOLYNOMIAL = [6.66667E-11, -2.128E-07, 2.52E-04, -0.142254891, 35.94096367]
+KFeOHPOLYNOMIAL = [-4E-10, 8.1013E-07, -0.00062963, 0.230763, -41.5545]
+KFeOH2POLYNOMIAL = [-4E-10, 8.63467E-07, -0.00073731, 0.311499, -67.8248]
+KFeOH3POLYNOMIAL = [-4.667E-10, 1.0496E-06, -0.000935775, 0.413186, -97.4709]
+# Fe3+
+# KFeOH3SchikorrPOLYNOMIAL = [-1.35525E-20, 5.33333E-08, -0.00010368, 0.074951307, -27.34968224]
+# KFeOH4SchikorrPOLYNOMIAL = [2.46667E-09, -4.72693E-06, 0.003334163, -1.007239881, 89.37956761]
+ 
+# KNiOHPOLYNOMIAL = [3.10167E-09, -5.8294E-06, 0.004039757, -1.201661204, 119.296086]
+# KNiOH2POLYNOMIAL = [-3.04309E-10, 6.66757E-07, -0.000580137, 0.255160282, -60.03240922]
+# KNiOH3POLYNOMIAL = [8.49674E-10, -1.5126E-06, 0.000945292, -0.211217025, -16.71117746]
+
 
 def arrhenius_activaton_energy():
     SteamGenerator = ld.SteamGenerator
@@ -81,11 +101,11 @@ def plngs_precipitation_kinetics(Section):
 
 def temperature_dependent_parameters(Section):
     Celsius = [i - 273.15 for i in Section.PrimaryBulkTemperature]
-    # Equilibrium and Debye-Huckel constants - polynomials as a function of temperature
+    # Equilibrium and Debye-Huckel thermochemistry_and_constants - POLYNOMIALs as a function of temperature
     # Coeff1*x^4 + Coeff2*x^3 + Coeff3*x^2 + Coeff4*x + Coeff5, depends on # elements in coeff list
-    Section.DebyeHuckelConstant = (np.polyval(nc.DebyeHuckPolynomial, Celsius))
-    Section.k_W = 10 ** (np.polyval(nc.KwPolynomial, Section.PrimaryBulkTemperature))
-    Section.k_Li = 10 ** (np.polyval(nc.KLiPolynomial, Section.PrimaryBulkTemperature))
+    Section.DebyeHuckelConstant = (np.polyval(DEBYE_HUCKEL_POLYNOMIAL, Celsius))
+    Section.k_W = 10 ** (np.polyval(KwPOLYNOMIAL, Section.PrimaryBulkTemperature))
+    Section.k_Li = 10 ** (np.polyval(KLiPOLYNOMIAL, Section.PrimaryBulkTemperature))
     
     Gibbs_Energies = [-62700, -4300, 56000, 127840, 74000, 128800] # [J/mol]
     Entropies = [-51.63, -108.96, -102.35, -188.71, -66.60, -187.76] # [J/ K mol]
@@ -104,12 +124,12 @@ def temperature_dependent_parameters(Section):
     Section.k_FeOH3_Fe3 = Fe3O4_SolubilityConstants[4]
     Section.k_FeOH4_Fe3 = Fe3O4_SolubilityConstants[5]
     
-    Section.k_FeOH_hydrolysis = 10 ** (np.polyval(nc.KFeOHPolynomial, Section.PrimaryBulkTemperature))
-    Section.k_FeOH2_hydrolysis = 10 ** (np.polyval(nc.KFeOH2Polynomial, Section.PrimaryBulkTemperature))
-    Section.k_FeOH3_hydrolysis = 10 ** (np.polyval(nc.KFeOH3Polynomial, Section.PrimaryBulkTemperature))
-#     Section.k_NiOH = 10 ** (np.polyval(nc.KNiOHPolynomial, Section.PrimaryBulkTemperature))
-#     Section.k_NiOH2 = 10 ** (np.polyval(nc.KNiOH2Polynomial, Section.PrimaryBulkTemperature))
-#     Section.k_NiOH3 = 10 ** (np.polyval(nc.KNiOH3Polynomial, Section.PrimaryBulkTemperature))
+    Section.k_FeOH_hydrolysis = 10 ** (np.polyval(KFeOHPOLYNOMIAL, Section.PrimaryBulkTemperature))
+    Section.k_FeOH2_hydrolysis = 10 ** (np.polyval(KFeOH2POLYNOMIAL, Section.PrimaryBulkTemperature))
+    Section.k_FeOH3_hydrolysis = 10 ** (np.polyval(KFeOH3POLYNOMIAL, Section.PrimaryBulkTemperature))
+#     Section.k_NiOH = 10 ** (np.polyval(KNiOHPOLYNOMIAL, Section.PrimaryBulkTemperature))
+#     Section.k_NiOH2 = 10 ** (np.polyval(KNiOH2POLYNOMIAL, Section.PrimaryBulkTemperature))
+#     Section.k_NiOH3 = 10 ** (np.polyval(KNiOH3POLYNOMIAL, Section.PrimaryBulkTemperature))
 
     return None
 
@@ -124,8 +144,8 @@ def bulkpH_calculator(Section):  # Bulk pH calculation
 
         # At high temp, LiOH doesn't dissociate 100% - eq'm established: LiOH(aq) <-> Li+(aq) + OH-(aq)
         # KLi = ([Li+]gamma_1 *[OH-]gamma_1)/[LiOH]; 
-        # ConcentrationLiTotal = ConcentrationLi  + LiConcentrationOH (sub in eq'm expression for LiConcentrationOH
-        ConcentrationLi = Section.k_Li[i] * nc.ConcentrationLiTotal / (
+        # CONCENTRATION_LITHIUM = ConcentrationLi  + LiConcentrationOH (sub in eq'm expression for LiConcentrationOH
+        ConcentrationLi = Section.k_Li[i] * CONCENTRATION_LITHIUM / (
             Section.k_Li[i] + ((gamma_1 ** 2) * ConcentrationOH)
             )
         # k_W = ConcentrationH*gamma_1*ConcentrationOH*gamma_1;   ConcentrationOH = k_W/ConcentrationH*gamma_1**2
@@ -143,7 +163,7 @@ def bulkpH_calculator(Section):  # Bulk pH calculation
             ConcentrationH = NewConcentrationH
 
             ConcentrationOH = Section.k_W[i] / ((gamma_1 ** 2) / ConcentrationH)
-            ConcentrationLi = (Section.k_Li[i] * nc.ConcentrationLiTotal) / (
+            ConcentrationLi = (Section.k_Li[i] * CONCENTRATION_LITHIUM) / (
                 Section.k_Li[i] + ((gamma_1 ** 2) * ConcentrationOH)
                 )
             IonicStrength = ((1 ** 2) * ConcentrationH + (1 ** 2) * ConcentrationLi + (1 ** 2) * ConcentrationOH) / 2
@@ -170,7 +190,7 @@ def hydrolysis(Section, FeTotal, ConcentrationH):
 
         # ConcentrationFe/NiTotal and ConcentrationH are not re-evaluated here, thus  not used for them
         ConcentrationOH = [x / (y * (z ** 2)) for x, y, z in zip(Section.k_W, ConcentrationH, ActivityCoefficient1)]
-        ConcentrationLi = [nc.ConcentrationLiTotal * x / (x + (y * (z ** 2))) for x, y, z in zip(
+        ConcentrationLi = [CONCENTRATION_LITHIUM * x / (x + (y * (z ** 2))) for x, y, z in zip(
             Section.k_Li, ConcentrationOH, ActivityCoefficient1
             )]
         
@@ -237,7 +257,7 @@ def hydrolysis(Section, FeTotal, ConcentrationH):
 
 
 def iron_solubility(Section, Condition):
-    # As temperature changes, constants (k_Li, k_w, etc. change), pH changes as well, 
+    # As temperature changes, thermochemistry_and_constants (k_Li, k_w, etc. change), pH changes as well, 
     # both effecting solubility --> Bulk FeSatFe3O4
     Section.SolutionOxide.ConcentrationH = bulkpH_calculator(Section)
     

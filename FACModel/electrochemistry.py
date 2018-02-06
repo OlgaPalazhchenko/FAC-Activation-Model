@@ -1,9 +1,17 @@
 import lepreau_data as ld
-import constants as nc
+import thermochemistry_and_constants as nc
 import numpy as np
 import composition as c
 
-def Potential(
+
+DISSOLUTION_ACTIVATION_ENERGY_Fe3O4 = 131838.7907
+DISSOLUTION_ACTIVATION_ENERGY_H2onFe3O4 = 285989.8292
+
+PRECIPITATION_ACTIVATION_ENERGY_Fe3O4 = 179876.4692
+PRECIPITATION_ACTIVATION_ENERGY_H2onFe3O4 = 281688.6659
+
+
+def potential(
         Section, StandardPotential, ProductConcentration, ProductGamma, ProductStoich, ReactantConcentration,
         ReactantGamma, ReactantStoich, DensityH2O, NernstConstant, Phase
         ):
@@ -51,7 +59,7 @@ def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPot
     return AdjustedSaturation
 
 
-def ElectrochemicalAdjustment(
+def electrochemical_adjustment(
         Section, EqmPotentialFe3O4, SOMixedPotential, MOMixedPotential, FeTotal, FeSatFe3O4, BulkSatFe3O4,
         SOConcentrationH
         ):
@@ -91,7 +99,7 @@ def ElectrochemicalAdjustment(
     return KpFe3O4electrochem, KdFe3O4electrochem, AdjustedSaturation, MOConcentrationH                                                                      
     
 
-def MixedPotential(Section, CathodeCurrent, CathodePotential, AnodeCurrent, AnodePotential):
+def mixed_potential(Section, CathodeCurrent, CathodePotential, AnodeCurrent, AnodePotential):
     Numerator = [
         x * np.exp((nc.Beta * nc.n * nc.F * y) / (nc.R * z)) + q * np.exp((nc.Beta * nc.n * nc.F * r) / (nc.R * z)) for
         x, y, z, q, r, in zip(
@@ -100,8 +108,11 @@ def MixedPotential(Section, CathodeCurrent, CathodePotential, AnodeCurrent, Anod
                  ]
     
     Denominator = [
-        x * np.exp((-(1 - nc.Beta) * nc.n * nc.F * y) / (nc.R * z)) + q * np.exp((-(1 - nc.Beta) * nc.n * nc.F * r) / (nc.R * z)) for
-        x, y, z, q, r, in zip(CathodeCurrent, CathodePotential, Section.PrimaryBulkTemperature, AnodeCurrent, AnodePotential)
+        x * np.exp((-(1 - nc.Beta) * nc.n * nc.F * y) / (nc.R * z))\
+        + q * np.exp((-(1 - nc.Beta) * nc.n * nc.F * r) / (nc.R * z)) for
+        x, y, z, q, r, in zip(
+            CathodeCurrent, CathodePotential, Section.PrimaryBulkTemperature, AnodeCurrent, AnodePotential
+            )
         ]
     
     return  [(nc.R * x / (nc.n * nc.F)) * np.log(y / z)
@@ -127,16 +138,18 @@ def exchangecurrentdensity(Section, ActivationE, Concentration, Potential, Densi
     else:
         Beta_prime = nc.Beta
     if Concentration == 1:
-        io = ((nc.F * nc.kb * Kelvin) / nc.hp) * np.exp(-ActivationE / (nc.R * Kelvin)) * np.exp((Beta_prime * nc.n * nc.F * Potential) / (nc.R * Kelvin)) 
+        io = ((nc.F * nc.kb * Kelvin) / nc.hp) * np.exp(-ActivationE / (nc.R * Kelvin))\
+         * np.exp((Beta_prime * nc.n * nc.F * Potential) / (nc.R * Kelvin)) 
     else:  
         io = ((nc.F * nc.kb * Kelvin) / nc.hp) * np.exp(-ActivationE / (nc.R * Kelvin)) * \
-            ((Concentration * DensityH2O / 1000) ** (2 / 3)) * np.exp((Beta_prime * nc.n * nc.F * Potential) / (nc.R * Kelvin))    
+            ((Concentration * DensityH2O / 1000) ** (2 / 3))\
+             * np.exp((Beta_prime * nc.n * nc.F * Potential) / (nc.R * Kelvin))    
     # Convert concentrations from mol/kg to mol/cm^2 for io eq'n: 
     # [mol/kg]/1000 -> [mol/g]*[g/cm^3] -> [mol/cm^3]^(2/3) -> mol^(2/3)/cm^2
     return io
         
 
-def Energy(Section, ExchangeCurrent, Concentration, Acceptor, EquilibriumPotential):
+def energy(Section, ExchangeCurrent, Concentration, Acceptor, EquilibriumPotential):
     E = nc.Beta * nc.n * nc.F
     if Acceptor == "yes":
         return [nc.R * x * -np.log10(
@@ -180,40 +193,40 @@ def ECP(Section):
     EqmPotentialH2 = []  # q
     
     for i in range (Section.NodeNumber): 
-        q = Potential(
+        q = potential(
             Section, Section.StandardEqmPotentialH2[i], ProductConcentration[i], 1, 1, 
             Section.SolutionOxide.ConcentrationH[i], ActivityCoefficient1[i], 2, Section.DensityH2O[i], 
             Section.NernstConstant[i], "gas"
             )
         
         if Section.SolutionOxide.FeTotal[i] >= Section.SolutionOxide.FeSatFe3O4[i]:
-            x = Potential(
+            x = potential(
                 Section, Section.StandardEqmPotentialFe3O4oxid[i], 1, 1, 1, Section.SolutionOxide.ConcentrationH[i],
                 ActivityCoefficient1[i], 2, Section.DensityH2O[i], Section.NernstConstant[i], "aqueous"
                 )
             
             y = exchangecurrentdensity(
-                Section, nc.PrecipitationActivationEnergyFe3O4, 1, x, Section.DensityH2O[i],
+                Section, PRECIPITATION_ACTIVATION_ENERGY_Fe3O4, 1, x, Section.DensityH2O[i],
                 Section.PrimaryBulkTemperature[i], "Donor"
                 )
             
             z = exchangecurrentdensity(
-                Section, nc.PrecipitationActivationEnergyH2onFe3O4, Section.SolutionOxide.ConcentrationH[i], q,
+                Section, PRECIPITATION_ACTIVATION_ENERGY_H2onFe3O4, Section.SolutionOxide.ConcentrationH[i], q,
                 Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor"
                 )
         
         if Section.SolutionOxide.FeSatFe3O4[i] > Section.SolutionOxide.FeTotal[i]:
-            x = Potential(
+            x = potential(
                 Section, Section.StandardEqmPotentialFe3O4red[i], ConcentrationFeOH2[i], 1, 3, 
                 Section.SolutionOxide.ConcentrationH[i], ActivityCoefficient1[i], 2, Section.DensityH2O[i], 
                 Section.NernstConstant[i], "aqueous"
                 )
             y = exchangecurrentdensity(
-                Section, nc.DissolutionActivationEnergyFe3O4, ConcentrationFeOH2[i], x, Section.DensityH2O[i],
+                Section, DISSOLUTION_ACTIVATION_ENERGY_Fe3O4, ConcentrationFeOH2[i], x, Section.DensityH2O[i],
                 Section.PrimaryBulkTemperature[i], "Donor"
                 ) 
             z = exchangecurrentdensity(
-                Section, nc.DissolutionActivationEnergyH2onFe3O4, Section.SolutionOxide.ConcentrationH[i], q, 
+                Section, DISSOLUTION_ACTIVATION_ENERGY_H2onFe3O4, Section.SolutionOxide.ConcentrationH[i], q, 
                 Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor"
                 )
         
@@ -222,7 +235,7 @@ def ECP(Section):
         ExchangeCurrentH2onFe3O4.append(z) 
         EqmPotentialH2.append(q)
          
-    MixedECP = MixedPotential(
+    MixedECP = mixed_potential(
         Section, ExchangeCurrentFe3O4, EqmPotentialFe3O4, ExchangeCurrentH2onFe3O4, EqmPotentialH2
         )    
     

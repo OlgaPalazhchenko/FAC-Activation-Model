@@ -1,8 +1,15 @@
 import lepreau_data as ld
 import numpy as np
-import constants as nc
+import thermochemistry_and_constants as nc
 import composition as c
 import electrochemistry as e
+
+# Activation Energies [J/mol]
+ACTIVATION_ENERGY_Fe = 263509.1314  # at 80 um/a = 266254.4854
+ACTIVATION_ENERGY_H2onFe = 263164.1035  # at 80 um/a = 265246.0692
+
+ACTIVATION_ENERGY_ALLOY800 = 293629.8906
+ACTIVATION_ENERGYH2onALLOY800 = 282678.1124
 
  
 def Diffusion(Section, Element):
@@ -201,41 +208,41 @@ def FAC_solver(Section, ConstantRate):
     
     for i in range(Section.NodeNumber):
         
-        x = e.Potential(
+        x = e.potential(
             Section, Section.StandardEqmPotentialH2[i], ProductConcentration[i], 1, 1,
             Section.MetalOxide.ConcentrationH[i], ActivityCoefficient1[i], 2, Section.DensityH2O[i],
             Section.NernstConstant[i], "gas"
             )
         
-        y = e.Potential(
+        y = e.potential(
             Section, Section.StandardEqmPotentialFe[i], 1, 1, 1, ConcentrationFe2[i], ActivityCoefficient2[i], 1,
             Section.DensityH2O[i], Section.NernstConstant[i], "aqueous"
             )
         
         if Section in ld.InletSections or Section in ld.OutletSections:
             w = e.exchangecurrentdensity(
-                Section, nc.ActivationEnergyH2onFe, Section.MetalOxide.ConcentrationH[i], x, Section.DensityH2O[i],
+                Section, ACTIVATION_ENERGY_H2onFe, Section.MetalOxide.ConcentrationH[i], x, Section.DensityH2O[i],
                 Section.PrimaryBulkTemperature[i], "Acceptor"
                 )
             z = e.exchangecurrentdensity(
-                Section, nc.ActivationEnergyFe, ConcentrationFe2[i], y, Section.DensityH2O[i],
+                Section, ACTIVATION_ENERGY_Fe, ConcentrationFe2[i], y, Section.DensityH2O[i],
                 Section.PrimaryBulkTemperature[i], "Acceptor"
                 )
             
         if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
-            # EqmPotentialNi = e.Potential(
+            # EqmPotentialNi = e.potential(
             # Section, Section.StandardEqmPotentialNi, [1]*Section.NodeNumber, 1, 1, composition.ConcentrationNi2,
             # composition.ActivityCoefficient2, 1, "aqueous"
             # )
             
             # assumed that different activation energies for half-cells if redox occurs on Alloy-800 vs. carbon steel
             w = e.exchangecurrentdensity(
-                Section, nc.ActivationEnergyH2onAlloy800, Section.MetalOxide.ConcentrationH[i], x,
+                Section, ACTIVATION_ENERGYH2onALLOY800, Section.MetalOxide.ConcentrationH[i], x,
                 Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor"
                 )
             
             z = e.exchangecurrentdensity(
-                Section, nc.ActivationEnergyAlloy800, ConcentrationFe2[i], y, Section.DensityH2O[i],
+                Section, ACTIVATION_ENERGY_ALLOY800, ConcentrationFe2[i], y, Section.DensityH2O[i],
                 Section.PrimaryBulkTemperature[i], "Acceptor"
                 )
             
@@ -244,7 +251,7 @@ def FAC_solver(Section, ConstantRate):
         ExchangeCurrentFe.append(z)
         ExchangeCurrentH2onFe.append(w)
         
-    MixedECP = e.MixedPotential(Section, ExchangeCurrentH2onFe, EqmPotentialH2, ExchangeCurrentFe, EqmPotentialFe)
+    MixedECP = e.mixed_potential(Section, ExchangeCurrentH2onFe, EqmPotentialH2, ExchangeCurrentFe, EqmPotentialFe)
     
     if Section in ld.FuelSections:
         rate = [0] * Section.NodeNumber
@@ -330,7 +337,7 @@ def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturati
     [
         Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
         Section.MetalOxide.ConcentrationH
-        ] = e.ElectrochemicalAdjustment(
+        ] = e.electrochemical_adjustment(
         Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
         Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
         Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
