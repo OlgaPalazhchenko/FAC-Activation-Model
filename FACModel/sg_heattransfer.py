@@ -21,10 +21,23 @@ UBends = [1.52]#, 1.52, 2.31, 3.09]
 UBends = [i * 100 for i in UBends]
 TubeLengths = [1980]
 
-# CleanedTubes = []
-# for i in range()
-# for Zone in ld.SteamGenerator:
-#     None
+
+def cleaned_tubes():
+    # chooses tube bundles until 60% of total sg tube number reached, adds all chosen to "cleaned" tube list
+    Cleaned = []
+    NumberTubes = []
+    
+    for i in range(len(ld.SteamGenerator)):
+        x = random.randint(0, 86)
+        NumberTubes.append(ld.SteamGenerator[x].TubeNumber)
+        
+        # siva blast used on only 60% of tubes due to time/spacial constraints
+        if sum(NumberTubes) < (0.6 * TotalSGTubeNumber):
+            Cleaned.append(ld.SteamGenerator[x])
+        else:
+            break
+    
+    return Cleaned
 
 
 def closest_tubelength(TubeLength):
@@ -125,57 +138,77 @@ TubePitch.magnitude = 2.413
 
 def thermal_conductivity(Twall, material, SecondarySidePressure):
     if material == "Alloy-800" or material == "Alloy800" or material == "A800" or material == "Alloy 800":
-        Twall = Twall - 273.15 # oC in alloy thermal conductivity equatin 
-        return (11.450 + 0.0161 * Twall ) / 100  # M.K.E thesis for Alloy-800 tubing [W/cm K]
+        Twall_C = Twall - 273.15 # oC in alloy thermal conductivity equatin 
+        conductivity = (11.450 + 0.0161 * Twall_C) / 100  # M.K.E thesis for Alloy-800 tubing [W/cm K] 
+        return conductivity
     
     elif material == "water":
         return nc.thermal_conductivityH2O("PHT", Twall, SecondarySidePressure)
     
-    elif material == "magnetite":
-        return 1.4 / 100  # [W/cm K]
+    elif material == "inner magnetite":
+        return 2.2 / 100  # [W/cm K]
     
+    elif material == "outer magnetite":
+        return 1.4 / 100  # [W/cm K]
     else:
         print ("Error: material not specified")
         return None
 
 
-def fouling_resistance(side, Section, calendar_year, InnerAccumulation, OuterAccumulation, SecondarySidePressure):
-
-    if side == "SHT" or side == "SHTS":
-        InnerAccumulation = [0] * Section.NodeNumber
-            
-        # 0.0024 is the slope of overall oxide growth (from plots) based on input (or FAC solver) corrosion rate
-        # between 1983 and 1986 (included)
-        if YearStartup <= calendar_year < YearCPP:
-            # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
-            SHTSAccumulation = (calendar_year - YearStartup) * 0.0017
+def sludge_fouling_resistance(Section, i, calendar_year):
+    
+    TubeGrowth = 0.0024 # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.00085 # [g/cm^2] /year = 3.25 um/year
+    
+    if (i == 0 or i == 21) and calendar_year < 1995:
+        SludgePileGrowth = 4 * TubeGrowth
+    
+    elif 0 < i < 21:
+        SludgePileGrowth = 0
         
-        # CPP installation (late 1986) reduces secondary side crud by 50% 
-        # (assumed proportional red. in deposit formation)
-        elif YearCPP <= calendar_year < YearSHTChemicalClean: 
-            SHTSAccumulation = (YearCPP - YearStartup) * 0.0017 + (calendar_year - YearCPP) * 0.000825
-            
-        # assumed that secondary side completely cleaned, new growth? 
-        elif calendar_year >= YearSHTChemicalClean:
-            SHTSAccumulation = (calendar_year - YearSHTChemicalClean) * 0.000825
-            
-        OuterAccumulation = [SHTSAccumulation] * Section.NodeNumber  
-
     else:
         None
+        
+    # between 1983 and 1986 (included)
+    if YearStartup <= calendar_year < YearCPP:
+        # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
+        Accumulation = (calendar_year - YearStartup) * (TubeGrowth + SludgePileGrowth)
     
+    # CPP installation (late 1986) reduces secondary side crud by 50% 
+    # (assumed proportional red. in deposit formation)
+    # between 1987 and 1995, not including
+    elif YearCPP <= calendar_year < YearSHTChemicalClean: 
+        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth)
+                        + (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth / 2))
+        
+    # tubes completely cleaned, sludge pile reduced along with its growth rate 
+    # after and including 1995
+    elif calendar_year >= YearSHTChemicalClean:
+        Accumulation = (((YearSHTChemicalClean - YearStartup) * SludgePileGrowth / 2)
+                            + (calendar_year - YearSHTChemicalClean) * ReducedTubeGrowth
+                            + (calendar_year - YearSHTChemicalClean) * SludgePileGrowth / 2)
+        
+    
+    Thickness = Accumulation / nc.Fe3O4Density
+    
+    Fouling = Thickness / thermal_conductivity(None, "outer magnetite", None)
+    
+    return Fouling
+    
+
+def pht_fouling_resistance(Section, i, calendar_year, InnerAccumulation, OuterAccumulation):
+
+    # [g/cm^2]/[g/cm^3] = [cm]
     # thickness/thermal conductivity [cm]/[W/cm K] = [cm^2 K/W]
-        # [g/cm^2]/[g/cm^3] = [cm]
-    
-    InnerThickness = [i / nc.Fe3O4Density for i in InnerAccumulation]
-    OuterThickness = [i / nc.Fe3O4Density for i in OuterAccumulation]
+    InnerThickness = InnerAccumulation / nc.Fe3O4Density
+    OuterThickness = OuterAccumulation / nc.Fe3O4Density 
 
     # [cm]/ [W/cm K] =[cm^2 K/W]
     # inner deposit is consolidated, predicted to have different thermal resistance than unconsolidated outer ox.
-    InnerFouling = [i / 2 * thermal_conductivity(None, "magnetite", SecondarySidePressure) for i in InnerThickness]
-    OuterFouling = [i / thermal_conductivity(None, "magnetite", SecondarySidePressure) for i in OuterThickness]
-    # thermal resistances
-    return [x + y for x, y in zip(InnerFouling, OuterFouling)]
+    InnerFouling = InnerThickness / thermal_conductivity(None, "inner magnetite", None)
+    OuterFouling = OuterThickness / thermal_conductivity(None, "outer magnetite", None)
+    # total pht thermal resistance
+    return InnerFouling + OuterFouling # [cm^2 K/W]
 
 
 def conduction_resistance(Section, Twall, SecondarySidePressure, i):
@@ -186,6 +219,7 @@ def conduction_resistance(Section, Twall, SecondarySidePressure, i):
     
     k_w = thermal_conductivity(Twall, "Alloy-800", SecondarySidePressure)  # [W/cm K]
 
+    # small conductivity = big resistance
     Rcyl_numerator = np.log(Section.OuterDiameter[i] / Section.Diameter[i])
     Rcyl_denominator = 2 * np.pi * k_w * Section.Length.magnitude[i]
 
@@ -385,13 +419,11 @@ def wall_temperature(
         # if converged
         if abs(RE1) <= 0.01 and abs(RE2) <= 0.01:
             # [cm^2 K/W]
-            R_F_primary.magnitude = fouling_resistance(
-                "PHT", Section, calendar_year, InnerAccumulation, OuterAccumulation, SecondarySidePressure
-                )[i] 
+            R_F_primary.magnitude = pht_fouling_resistance(
+                Section, i, calendar_year, InnerAccumulation[i], OuterAccumulation[i]
+                ) 
             
-            R_F_secondary.magnitude = fouling_resistance(
-                "SHT", Section, calendar_year, InnerAccumulation, OuterAccumulation, SecondarySidePressure
-                )[i]
+            R_F_secondary.magnitude = sludge_fouling_resistance(Section, i, calendar_year)
             
             PCR = primary_convection_resistance(
                 Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, i
@@ -399,7 +431,7 @@ def wall_temperature(
             SCR = secondary_convection_resistance(
                 Section, SecondaryT_film, T_SecondaryWall, x_in, SecondarySidePressure, i
                 )
-             
+            
             # [cm^2 K/W] all resistances (convective, conductive, and fouling)
             inverseU_total = (PCR + conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i) + SCR) \
             * outer_area(Section)[i] + R_F_primary.magnitude + R_F_secondary.magnitude
@@ -528,7 +560,7 @@ def station_events(calendar_year):
     # divider plate leakage rates estimated based on AECL work
     # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
     # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-    InitialLeakage = 0.035 
+    InitialLeakage = 0.032 
     YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
     
     if calendar_year < 1992:
@@ -540,11 +572,16 @@ def station_events(calendar_year):
     
     # divider plate raplacement in 1995, assumed to stop increase in leak (2% constant going forward)
     # return to full boiler secondary side pressure, 4.593 MPa
-    # partial mechanical clean of boiler tube primary side
+    # partial mechanical clean of boiler tube primary side (67 % efficiency for the 60 % of tubes accessed)
     
     elif calendar_year == 1995:
-        None
-        
+        Cleaned = cleaned_tubes()
+        for Zone in Cleaned:
+            for i in range(Zone.NodeNumber - 1):
+                if Zone.OuterOxThickness > 0:
+                    None
+                else:
+                    None
         
     elif calendar_year >= 1995:
         SecondarySidePressure = 4.593
@@ -593,5 +630,5 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     RIHT = nc.temperature_from_enthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
 
-print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 1 ) - 273.15)
+print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 8760 ) - 273.15)
 
