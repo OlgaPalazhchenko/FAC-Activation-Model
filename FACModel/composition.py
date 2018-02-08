@@ -93,9 +93,9 @@ def arrhenius_activaton_energy():
 def plngs_precipitation_kinetics(Section):
     
     [ActivationEnergy, A] = arrhenius_activaton_energy()
-    
+            
     kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
-
+    
     return kp
 
 

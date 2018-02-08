@@ -64,7 +64,7 @@ if OutputLogging == "yes":
     # StreamOutletTemperatures = [] # monitored with time 
     TemperatureProfile = []
 
-SimulationYears = 1  # years
+SimulationYears = 2  # years
 SimulationHours = SimulationYears * 8760
 
 # load initial chemistry for full/half loop
@@ -102,12 +102,12 @@ for j in range(SimulationHours):
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )
     
-    if j % 8759 == 0:  # yearly  
+    if j % 8759 == 0:  # yearly 4379  
         
         # parameters tracked with time 
         T_RIH = (SGHX.energy_balance(
             ld.SteamGenerator[Default_Tube].NodeNumber - 1, ld.SteamGenerator[Default_Tube].InnerOxThickness,
-            ld.SteamGenerator[Default_Tube].OuterOxThickness, j
+            ld.SteamGenerator[Default_Tube].OuterOxThickness, 583, j
             ) - 273.15)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
@@ -115,7 +115,6 @@ for j in range(SimulationHours):
             Section.Bulk.FeSatFe3O4 = c.iron_solubility(Section, None)
         
         
-           
         if OutputLogging == "yes":
             RIHT.append(T_RIH)
             
@@ -135,10 +134,10 @@ for j in range(SimulationHours):
           
 for Zone in SGHX.selected_tubes:
     x = ld.UnitConverter(
-    Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerIronOxThickness, None, None, None
+    Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerOxThickness, None, None, None
     )
     y = ld.UnitConverter(
-    Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterFe3O4Thickness, None, None, None
+    Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterOxThickness, None, None, None
     )
     
 #     totalloading = [i + j for i, j in zip(x, y)]
@@ -151,9 +150,9 @@ for Zone in SGHX.selected_tubes:
     Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
     TemperatureProfile.append(Temperature_C)
     
-Data = [SGHX.UBends, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration, TemperatureProfile]
+Data = [SGHX.TubeLengths, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration, TemperatureProfile]
 Labels = [
-    "U-bend length (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Solubility (mol/kg)", "S/O [Fe] (mol/kg)",
+    "U-bend length (cm)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Solubility (mol/kg)", "S/O [Fe] (mol/kg)",
     "Temperature Profile (oC)"]
     
 csvfile = "RIHTOutput.csv"

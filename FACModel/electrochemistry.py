@@ -61,10 +61,10 @@ def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPot
 
 def electrochemical_adjustment(
         Section, EqmPotentialFe3O4, SOMixedPotential, MOMixedPotential, FeTotal, FeSatFe3O4, BulkSatFe3O4,
-        SOConcentrationH
+        SOConcentrationH, j
         ):
 
-    KpFe3O4electrochem = c.plngs_precipitation_kinetics(Section)
+    KpFe3O4electrochem = c.plngs_precipitation_kinetics(Section, j)
     #[nc.KpFe3O4] * Section.NodeNumber
 #     KpFe3O4electrochem = ElectrochemicalKineticConstant(
 #         Section, [nc.KpFe3O4] * Section.NodeNumber, EqmPotentialFe3O4, "no", SOMixedPotential

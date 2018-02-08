@@ -286,7 +286,7 @@ def FAC_solver(Section, ConstantRate):
 
 
 def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturations, RK4_InnerIronOxThickness,
-                                  RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness):
+                                  RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness, j):
         
     #Solves S/O elemental concentrations at current approximation of oxide thickness(es)
     # (needed inside SolutionOxideBalance function to determine if <> saturation)
@@ -333,14 +333,15 @@ def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturati
 #         MetalOxideCo = MetalOxideInterfaceConcentration(
 #         Section, "Co", SolutionOxideCoTotal, InnerOxThickness, OuterOxThickness, CorrRate
 #         )
-
+    
+    
     [
         Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
         Section.MetalOxide.ConcentrationH
         ] = e.electrochemical_adjustment(
         Section, Section.SolutionOxide.EqmPotentialFe3O4, Section.SolutionOxide.MixedPotential,
         Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
-        Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
+        Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH, j
         )
     
     return None

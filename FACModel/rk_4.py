@@ -173,13 +173,13 @@ def oxide_growth(
     return GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt
     
 
-def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking):
+def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j):
     
     if ConstantRate == "yes":
         # updates M/O and S/O concentrations based on oxide thickness
         it.interface_concentrations(
             Section, ConstantRate, BulkConcentrations, Saturations, Section.InnerIronOxThickness,
-            Section.OuterFe3O4Thickness, Section.NiThickness, Section.CoThickness
+            Section.OuterFe3O4Thickness, Section.NiThickness, Section.CoThickness, j
             )
         # oxide growth functions based on S/O and M/O concentrations
         [GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt] = oxide_growth(
@@ -218,7 +218,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
             
             it.interface_concentrations(
                 Section, ConstantRate, BulkConcentrations, Saturations, RK4_InnerIronOxThickness,
-                RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness
+                RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness, j
                 )
             
             GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt = oxide_growth(
