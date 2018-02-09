@@ -90,12 +90,15 @@ def arrhenius_activaton_energy():
     return ActivationEnergy, A
  
 
-def plngs_precipitation_kinetics(Section):
+def plngs_precipitation_kinetics(Section, j):
+    if j < 200:
+        [ActivationEnergy, A] = arrhenius_activaton_energy()
+                
+        kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
     
-    [ActivationEnergy, A] = arrhenius_activaton_energy()
-            
-    kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
-    
+    else:
+        kp = Section.KpFe3O4electrochem
+
     return kp
 
 

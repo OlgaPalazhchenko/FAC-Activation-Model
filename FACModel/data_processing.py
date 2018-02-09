@@ -64,7 +64,7 @@ if OutputLogging == "yes":
     # StreamOutletTemperatures = [] # monitored with time 
     TemperatureProfile = []
 
-SimulationYears = 2  # years
+SimulationYears = 1  # years
 SimulationHours = SimulationYears * 8760
 
 # load initial chemistry for full/half loop
@@ -102,7 +102,7 @@ for j in range(SimulationHours):
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )
     
-    if j % 8759 == 0:  # yearly 4379  
+    if j % 4379 == 0:  # twice a year  
         
         # parameters tracked with time 
         T_RIH = (SGHX.energy_balance(
@@ -164,7 +164,7 @@ with open(csvfile, "w") as output:
     
     for i, j in zip(Labels, Data):
         writer.writerow([i])
-        if i == "U-bend length (m)":
+        if i == "U-bend length (cm)":
             writer.writerow(j)
         else:
             writer.writerows(j)
