@@ -32,12 +32,13 @@ def initial_chemistry(Loop):
     if Loop == "full" or Loop == "half":
         for Zone in ld.SteamGenerator:
             Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
-            Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 583, 1983
+            Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure,
+            T_primary_in=583, x_pht=0.2, calendar_year=1983
             )
     else:
         ld.SteamGenerator[57].PrimaryBulkTemperature = SGHX.temperature_profile(
             ld.SteamGenerator[57], ld.SteamGenerator[57].InnerOxThickness, ld.SteamGenerator[57].OuterOxThickness,
-            RemainingPHTMassFlow, SecondarySidePressure, 1983
+            RemainingPHTMassFlow, SecondarySidePressure, T_primary_in=583, x_pht=0.2, calendar_year=1983
             )
         
     # initial concentrations
@@ -82,12 +83,9 @@ def initial_chemistry(Loop):
             if Section in ld.InletSections:
                 Section.PrimaryBulkTemperature = (
                     [SGHX.energy_balance(21, ld.SteamGenerator[0].InnerOxThickness,
-                                         ld.SteamGenerator[0].OuterOxThickness, 583, 0)] * Section.NodeNumber
+                                         ld.SteamGenerator[0].OuterOxThickness, T_primary_in=583, x_pht=0.2, j=0)] \
+                                                  * Section.NodeNumber
                                                   )
-            
-#             if Section not in ld.OutletSections:
-#                 if Interface == Section.SolutionOxide:
-#                     Interface.FeTotal = [i * 1 for i in c.iron_solubility(Section, "initial")]
             
             if Section in ld.FuelSections and Interface == Section.MetalOxide:
                 Interface.FeTotal = [0] * Section.NodeNumber

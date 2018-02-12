@@ -102,13 +102,18 @@ for j in range(SimulationHours):
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )
     
+    if j < 4379: 
+        x_pht = 0.2 * 100
+    
     if j % 4379 == 0:  # twice a year  
         
         # parameters tracked with time 
         T_RIH = (SGHX.energy_balance(
             ld.SteamGenerator[Default_Tube].NodeNumber - 1, ld.SteamGenerator[Default_Tube].InnerOxThickness,
-            ld.SteamGenerator[Default_Tube].OuterOxThickness, 583, j
+            ld.SteamGenerator[Default_Tube].OuterOxThickness, 583, x_pht, j
             ) - 273.15)
+        
+        x_pht = SGHX.pht_steam_quality(T_RIH)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
         for Section in ld.HalfLoop:

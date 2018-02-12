@@ -225,17 +225,16 @@ def conduction_resistance(Section, Twall, SecondarySidePressure, i):
     return R_cond
 
 
-def primary_convection_resistance(Section, correlation, T_film, T_wall, SecondarySidePressure, i):
+def primary_convection_resistance(Section, correlation, T_film, T_wall, SecondarySidePressure, x_pht, i):
     # R_1,Convective = 1/(h_1,convectove *A)
     # A = inner area (based on inner diameter)
     # [W/cm K]/ [cm] = [W/K cm^2]
     
     if Section.Length.label[i] == "PHT boiling":
-        x = 0.4
         MassFlux_h.magnitude = MassFlow_h.magnitude / (TotalSGTubeNumber * (np.pi / 4) * (Section.Diameter[i] ** 2))
  
         h_i = boiling_heat_transfer(
-            x, "PHT", T_sat_primary, MassFlux_h.magnitude, T_wall, Section.Diameter[i], SecondarySidePressure, i
+            x_pht, "PHT", T_sat_primary, MassFlux_h.magnitude, T_wall, Section.Diameter[i], SecondarySidePressure, i
             )
          
     else:
@@ -389,11 +388,10 @@ def pht_steam_quality(Temperature):
     
     return x * 100, Power, Temperature - 273.15
 
-print(pht_steam_quality(539.15))
     
 def wall_temperature(
-        Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerAccumulation, OuterAccumulation, calendar_year, 
-        SecondarySidePressure):
+        Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation,
+        calendar_year, SecondarySidePressure):
     
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
@@ -407,7 +405,7 @@ def wall_temperature(
         SecondaryT_film = (T_SecondaryBulkIn + T_SecondaryWall) / 2
 
         h_i.magnitude = 1 / (primary_convection_resistance(
-            Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, i
+            Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, x_pht, i
             ) * inner_area(Section)[i])
         
         h_o.magnitude = 1 / (secondary_convection_resistance(
@@ -424,7 +422,7 @@ def wall_temperature(
 
         U_c1 = outer_area(Section)[i] * conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)
         U_c2 = outer_area(Section)[i] * primary_convection_resistance(
-            Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, i
+            Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, x_pht, i
             ) 
         U_c.magnitude = 1 / (U_c1 + U_c2)  # [W/cm^2 K]
 
@@ -447,7 +445,7 @@ def wall_temperature(
             R_F_secondary.magnitude = sludge_fouling_resistance(Section, i, calendar_year)
             
             PCR = primary_convection_resistance(
-                Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, i
+                Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, x_pht, i
                 )
             SCR = secondary_convection_resistance(
                 Section, SecondaryT_film, T_SecondaryWall, x_in, SecondarySidePressure, i
@@ -467,7 +465,7 @@ def wall_temperature(
 
 def temperature_profile(
         Section, InnerAccumulation, OuterAccumulation, m_h_leakagecorrection, SecondarySidePressure, T_primary_in,
-        calendar_year):
+        x_pht, calendar_year):
     
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
@@ -491,7 +489,7 @@ def temperature_profile(
         Cp_h = nc.HeatCapacity("PHT", T_PrimaryBulkIn, SecondarySidePressure)
         Cp_c = nc.HeatCapacity("SHT", T_SecondaryBulkIn, SecondarySidePressure)
         T_wh, T_wc, U = wall_temperature(
-            Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerAccumulation, OuterAccumulation, calendar_year,
+            Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation, calendar_year,
             SecondarySidePressure)
         
         # all nodes other than preheater
@@ -624,9 +622,10 @@ def station_events(calendar_year):
     return SecondarySidePressure, m_h_leakagecorrection, DividerPlateMassFlow
 
 
-def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulation, T_primary_in, j):
+def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulation, T_primary_in, x_pht, j):
     year = (j / 8760) 
     calendar_year = year + YearStartup
+    
    
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(calendar_year)
     
@@ -641,7 +640,7 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
             OuterOx = OuterAccumulation
         
         Zone.PrimaryBulkTemperature = temperature_profile(
-            Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, T_primary_in, calendar_year
+            Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, T_primary_in, x_pht, calendar_year
             ) 
         
         x = (Zone.TubeNumber / TotalSGTubeNumber) * RemainingPHTMassFlow \
@@ -655,5 +654,6 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     RIHT = nc.temperature_from_enthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
 
-print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 583, 0) - 273.15)
+print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness,
+                      T_primary_in=583, x_pht=0.2, j=0) - 273.15)
 
