@@ -129,7 +129,7 @@ MassFlux_c.magnitude = MassFlow_c.magnitude / ((np.pi / 4) * (ShellDiameter.magn
 for i in [MassFlux_c, MassFlux_h]:
     i.unit = "g/cm^2 s"
     
-EnthalpySaturatedSteam.magnitude = 2800.4
+EnthalpySaturatedSteam.magnitude = 2733.2
 EnthalpySaturatedSteam.unit = "J/g"
 
 TubePitch.magnitude = 2.413
@@ -372,20 +372,24 @@ def outer_area(Section):
     return [np.pi * x * y for x, y in zip(Section.OuterDiameter, Section.Length.magnitude)]
 
 
-def thermal_power():
-#     CoreMassFlow = MassFlow_h.magnitude * 4 # [g /s]
-#     Delta_T = 310 - 261 # [K]
-#     C_p_cold = nc.HeatCapacity("PHT", 262 + 273, SecondarySidePressure = None)
-#     C_p_hot = nc.HeatCapacity("PHT", 310 + 273, SecondarySidePressure = None)
-#     C_p_avg = (C_p_cold + C_p_hot) / 2
-#     
-#     Power = (CoreMassFlow * C_p_avg * Delta_T) * 10**(-6) # [MW]
+def pht_steam_quality(Temperature):
+    CoreMassFlow = (MassFlow_h.magnitude / 1000) * 4 # [kg /s]
+    Delta_T = T_sat_primary - (261 + 273) # [K]
+    C_p_cold = nc.HeatCapacity("PHT", Temperature, SecondarySidePressure = None)
+    C_p_hot = nc.HeatCapacity("PHT", T_sat_primary, SecondarySidePressure = None)
+    C_p_avg = (C_p_cold + C_p_hot) / 2
+     
+    Power = CoreMassFlow * C_p_avg * Delta_T # [kW]
+    # core inlet enthalpy at RIHT + that added from fuel
+    H_fromfuel = Power / CoreMassFlow # [kJ/kg]
+    H_total = nc.enthalpy("PHT", Temperature, None) + H_fromfuel 
+    
+    H_satliq = nc.enthalpy("PHT", T_sat_primary, None)
+    x = (H_total - H_satliq) / (EnthalpySaturatedSteam.magnitude - H_satliq)
+    
+    return x * 100, Power, Temperature - 273.15
 
-# with loses:
-    Power = 2064 # [MW]
-    return Power
-
-print (thermal_power())
+print(pht_steam_quality(539.15))
     
 def wall_temperature(
         Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerAccumulation, OuterAccumulation, calendar_year, 
