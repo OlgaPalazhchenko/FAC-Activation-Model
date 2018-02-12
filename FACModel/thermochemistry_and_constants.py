@@ -78,7 +78,7 @@ class SGParameters():
         self.unit = None
         self.steam_quality = None
 
-PrimarySidePressure = 9.89  # MPa
+PrimarySidePressure = 10  # MPa
 # SecondarySidePressure = 4.593  # MPa
 
 
@@ -190,7 +190,12 @@ def density(side, Temperature, SecondarySidePressure):
         )
   
     return (1 / (R_IAPWS * Temperature * ratio_pressures * (Gibbs_p / (p * 1000)))) * 1000 / (100 ** 3)  # [g/cm^3] 
+
         
+def D2O_density(Temperature):
+    T = Temperature - 273
+    return -0.0023 * T + 1.4646
+
 
 def D2O_viscosity(Temperature):
     rho_ref = 0.3580  # [g/cm^3]
@@ -198,7 +203,7 @@ def D2O_viscosity(Temperature):
     mu_ref = 10 * 55.2651 / 1000000
     
     # D2O is in primary side only, don't need to carry through SHT pressure
-    rho_rel = density("PHT", Temperature, None) / rho_ref
+    rho_rel = D2O_density(Temperature) / rho_ref
 
     no = [1.0, 0.940695, 0.578377, -0.202044]
     fi0 = T_ref ** 0.5 / sum([n / T_ref ** i for i, n in enumerate(no)])
@@ -214,8 +219,8 @@ def D2O_viscosity(Temperature):
     fi1 = np.exp(rho_rel * sum(arr))
     
     return mu_ref * fi0 * fi1 #[g/cm s]
-
-
+    
+    
 def viscosity(side, Temperature, SecondarySidePressure):
     
     T_ref = 647.096  # K
@@ -228,14 +233,9 @@ def viscosity(side, Temperature, SecondarySidePressure):
     0.520094, 0.0850895, -1.08374, -0.289555, 0.222531, 0.999115, 1.88797, 1.26613, 0.120573, -0.281378, -0.906851,
     - 0.772479, -0.489837, -0.25704, 0.161913, 0.257399, -0.0325372, 0.0698452, 0.00872102, -0.00435673, -5.93E-04
     ]
-    
-    if side == "SHT" or side == "SHTS":
-        Pressure = SecondarySidePressure
-    else:
-        Pressure = PrimarySidePressure
         
     T_rel = Temperature / T_ref
-    rho_rel = density(side, Temperature, Pressure) / rho_ref
+    rho_rel = density(side, Temperature, SecondarySidePressure) / rho_ref
     
     H_0 = [1.67752, 2.20462, 0.6366564, -0.241605]
     terms = [0, 1, 2, 3]

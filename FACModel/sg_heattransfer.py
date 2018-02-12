@@ -113,8 +113,8 @@ for i in [R_F_primary, R_F_secondary]:
     i.unit = "cm^2 K/W"
 
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
-# 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow 
-MassFlow_c.magnitude = 252.25 * 1000
+# 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
+MassFlow_c.magnitude = 240.25 * 1000
 MassFlow_h.magnitude = 1900 * 1000
 
 ShellDiameter.magnitude = 2.28 * 100
@@ -247,9 +247,9 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
 
 def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySidePressure, i):
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 259.69 + 273.15 # 258.69
+        T_sat_secondary = 258.69 + 273.15 # 258.69
     elif SecondarySidePressure < 4.593:
-        T_sat_secondary = 258 + 273.15  # 257
+        T_sat_secondary = 257 + 273.15  # 257
     
     # split into boiling and non-boiling (preheater) sections
     if Section.Length.label[i] == "preheater" or Section.Length.label[i] == "preheater start":  # from Silpsrikul thesis
@@ -298,21 +298,22 @@ def boiling_heat_transfer(x, side, T_sat, MassFlux, T_wall, Diameter, SecondaryS
       
     if side == "SHT":
         rho_v = 1000 * 23.187 / (100 ** 3)  # [g/cm^3]
+        Density = nc.density(side, T_sat, SecondarySidePressure)
+        Viscosity = nc.viscosity(side, T_sat, SecondarySidePressure)
     else:
         rho_v = 1000 * 55.462/ (100 ** 3)  # [g/cm^3]
+        Density = nc.D2O_density(T_sat)
+        Viscosity = nc.D2O_viscosity(T_sat)
     
     p_crit = 22.0640  # [MPa]
    
-    F = (
-        1 + (x * prandtl(T_sat, SecondarySidePressure, i) \
-             * ((nc.density(side, T_sat, SecondarySidePressure) / rho_v) - 1))
-         ) ** 0.35
+    F = (1 + (x * prandtl(side, T_sat, SecondarySidePressure, i) * ((Density / rho_v) - 1))) ** 0.35
     
-    Re_D = Diameter * MassFlux / nc.viscosity(side, T_sat, SecondarySidePressure)
+    Re_D = Diameter * MassFlux / Viscosity
     
     # 4*MassFlow/((nc.viscosity("SHT", T_sat_secondary)/1000)*np.pi*Shell_ID)
     h_l = 0.023 * nc.thermal_conductivityH2O(side, T_sat, SecondarySidePressure) \
-    * ((Re_D) ** 0.8) * (prandtl(T_sat, SecondarySidePressure, i) ** 0.4) / Diameter  # [W/cm^2 K]
+    * ((Re_D) ** 0.8) * (prandtl(side, T_sat, SecondarySidePressure, i) ** 0.4) / Diameter  # [W/cm^2 K]
     
     Q_prime = F * h_l * (abs(T_wall - T_sat))  # [W/cm^2]
     
@@ -335,8 +336,8 @@ def nusseltnumber(Section, correlation, Temperature, SecondarySidePressure, i):
     # Re_D = Section.Velocity[i]*Section.Diameter[i]/(ViscosityH2O*DensityH2O)
     MassFlux_h.magnitude = MassFlow_h.magnitude / (TotalSGTubeNumber * (np.pi / 4) * (Section.Diameter[i] ** 2))
     
-    Re_D = [(MassFlux_h.magnitude / nc.viscosity("PHT", Temperature, SecondarySidePressure)) * i
-            for i in Section.Diameter]
+    #only primary side heat transfer correlation uses Nu number
+    Re_D = [(MassFlux_h.magnitude / nc.D2O_viscosity(Temperature)) * i for i in Section.Diameter]
     # print (Re_D[i], Re_[i])
 
     if correlation == "Dittus-Boelter":
@@ -348,13 +349,16 @@ def nusseltnumber(Section, correlation, Temperature, SecondarySidePressure, i):
     C = 0.023
     m = 4 / 5
 
-    Nu = C * (Re_D[i] ** m) * ((prandtl(Temperature, SecondarySidePressure, i)) ** n)
+    Nu = C * (Re_D[i] ** m) * ((prandtl("PHT", Temperature, SecondarySidePressure, i)) ** n)
     return Nu
 
 
-def prandtl(Temperature, SecondarySidePressure, i):
-    # Need a better reference for Cp/viscosity data
-    Viscosity = nc.viscosity("PHT", Temperature, SecondarySidePressure)
+def prandtl(side, Temperature, SecondarySidePressure, i):
+    if side == "PHT":
+        Viscosity = nc.D2O_viscosity(Temperature)
+    else:
+        Viscosity = nc.viscosity("SHT", Temperature, SecondarySidePressure)
+        
     Pr = nc.HeatCapacity("PHT", Temperature, SecondarySidePressure) \
     * Viscosity / nc.thermal_conductivityH2O("PHT", Temperature, SecondarySidePressure)
     return Pr
@@ -369,15 +373,19 @@ def outer_area(Section):
 
 
 def thermal_power():
-    CoreMassFlow = MassFlow_h.magnitude * 4 # [g /s]
-    Delta_T = 310 - 261 # [K]
-    C_p_cold = nc.HeatCapacity("PHT", 262 + 273, SecondarySidePressure = None)
-    C_p_hot = nc.HeatCapacity("PHT", 310 + 273, SecondarySidePressure = None)
-    C_p_avg = (C_p_cold + C_p_hot) / 2
-    
-    Power = (CoreMassFlow * C_p_avg * Delta_T) * 10**(-6) # [MW]
+#     CoreMassFlow = MassFlow_h.magnitude * 4 # [g /s]
+#     Delta_T = 310 - 261 # [K]
+#     C_p_cold = nc.HeatCapacity("PHT", 262 + 273, SecondarySidePressure = None)
+#     C_p_hot = nc.HeatCapacity("PHT", 310 + 273, SecondarySidePressure = None)
+#     C_p_avg = (C_p_cold + C_p_hot) / 2
+#     
+#     Power = (CoreMassFlow * C_p_avg * Delta_T) * 10**(-6) # [MW]
+
+# with loses:
+    Power = 2064 # [MW]
     return Power
-    
+
+print (thermal_power())
     
 def wall_temperature(
         Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, InnerAccumulation, OuterAccumulation, calendar_year, 
@@ -460,9 +468,9 @@ def temperature_profile(
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 259.69 + 273.15 # 258.69
+        T_sat_secondary = 258.69 + 273.15 # 258.69
     elif SecondarySidePressure < 4.593:
-        T_sat_secondary = 258 + 273.15  # 257
+        T_sat_secondary = 257 + 273.15  # 257
     
     PrimaryWall = []
     PrimaryBulk = []
