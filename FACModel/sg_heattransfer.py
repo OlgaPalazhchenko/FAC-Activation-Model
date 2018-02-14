@@ -12,7 +12,7 @@ T_sat_primary = 310 + 273.15
 T_PreheaterIn = 187 + 273.15
 
 YearStartup = 1983
-YearCPP = 1987
+YearCPP = 1986.5
 YearSHTChemicalClean = 1995.5
 
 # select all the SG tubes to be run (by arc length)
@@ -114,7 +114,7 @@ for i in [R_F_primary, R_F_secondary]:
 
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
 # 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
-MassFlow_c.magnitude = 240.25 * 1000
+MassFlow_c.magnitude = 255.25 * 1000
 MassFlow_h.magnitude = 1900 * 1000
 
 ShellDiameter.magnitude = 2.28 * 100
@@ -156,8 +156,8 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.0028 # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.00085 # [g/cm^2] /year = 3.25 um/year
+    TubeGrowth = 0.0027 # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.0008 # [g/cm^2] /year = 3.25 um/year
     
     if i == 0 or i == 21:
         SludgePileGrowth = 4 * TubeGrowth
@@ -167,30 +167,26 @@ def sludge_fouling_resistance(Section, i, calendar_year):
         
     else:
         None
-    
     # between 1983 and 1986 (included)
-    if YearStartup <= calendar_year < YearCPP:
+    if YearStartup <= calendar_year <= YearCPP:
         # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
         Accumulation = (calendar_year - YearStartup) * (TubeGrowth + SludgePileGrowth)
      
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     # (assumed proportional red. in deposit formation)
     # between 1987 and 1995, not including
-    elif YearCPP <= calendar_year < YearSHTChemicalClean: 
+    elif YearCPP < calendar_year < YearSHTChemicalClean: 
         Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth)
                         + (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth * (1 - 0.7)))
-        
     # tubes completely cleaned, sludge removed along with reduction in its growth rate (by 70%)
     # after and including 1995
     elif calendar_year >= YearSHTChemicalClean:
         Accumulation = ((calendar_year - YearSHTChemicalClean) * ReducedTubeGrowth
                         + (calendar_year - YearSHTChemicalClean) * SludgePileGrowth * (1 - 0.7))
         
-    
     Thickness = Accumulation / nc.Fe3O4Density
     
     Fouling = Thickness / thermal_conductivity(None, "outer magnetite", None)
-#     print (calendar_year, Accumulation, Thickness, Fouling)
     return Fouling
     
 
@@ -232,7 +228,7 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
     
     if Section.Length.label[i] == "PHT boiling":
         MassFlux_h.magnitude = MassFlow_h.magnitude / (TotalSGTubeNumber * (np.pi / 4) * (Section.Diameter[i] ** 2))
- 
+        
         h_i = boiling_heat_transfer(
             x_pht, "PHT", T_sat_primary, MassFlux_h.magnitude, T_wall, Section.Diameter[i], SecondarySidePressure, i
             )
@@ -246,7 +242,7 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
 
 def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySidePressure, i):
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 258.69 + 273.15 # 258.69
+        T_sat_secondary = 259.69 + 273.15 # 258.69
     elif SecondarySidePressure < 4.593:
         T_sat_secondary = 257 + 273.15  # 257
     
@@ -385,10 +381,9 @@ def pht_steam_quality(Temperature):
     
     H_satliq = nc.enthalpy("PHT", T_sat_primary, None)
     x = (H_total - H_satliq) / (EnthalpySaturatedSteam.magnitude - H_satliq)
-    
-    return x * 100, Power, Temperature - 273.15
+    return x * 100
 
-    
+
 def wall_temperature(
         Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation,
         calendar_year, SecondarySidePressure):
@@ -470,7 +465,7 @@ def temperature_profile(
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 258.69 + 273.15 # 258.69
+        T_sat_secondary = 259.69 + 273.15 # 258.69
     elif SecondarySidePressure < 4.593:
         T_sat_secondary = 257 + 273.15  # 257
     
@@ -489,8 +484,8 @@ def temperature_profile(
         Cp_h = nc.HeatCapacity("PHT", T_PrimaryBulkIn, SecondarySidePressure)
         Cp_c = nc.HeatCapacity("SHT", T_SecondaryBulkIn, SecondarySidePressure)
         T_wh, T_wc, U = wall_temperature(
-            Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation, calendar_year,
-            SecondarySidePressure)
+            Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation,
+            calendar_year, SecondarySidePressure)
         
         # all nodes other than preheater
         if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater" and \
@@ -583,27 +578,18 @@ def station_events(calendar_year):
     # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
     # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
     InitialLeakage = 0.035 
-    YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
+    YearlyRateLeakage = 0.0066 # yearly increase to fraction of total SG inlet mass flow
     
     if calendar_year < 1992:
         SecondarySidePressure = 4.593   # MPa
     
-    # PLNGS pressure reduction in 1992 by 125 kPa
+    # PLNGS pressure reduction in 1992 (september) by 125 kPa
     elif 1992 <= calendar_year < 1995:
         SecondarySidePressure = 4.593 - (125 / 1000) # MPa
     
     # divider plate raplacement in 1995, assumed to stop increase in leak (2% constant going forward)
     # return to full boiler secondary side pressure, 4.593 MPa
     # partial mechanical clean of boiler tube primary side (67 % efficiency for the 60 % of tubes accessed)
-    
-    elif calendar_year == 1995:
-        Cleaned = cleaned_tubes()
-        for Zone in Cleaned:
-            for i in range(Zone.NodeNumber - 1):
-                if Zone.OuterOxThickness[i] > 0:
-                    Zone.OuterOxThickness[i] = Zone.OuterOxThickness[i] * (1 - 0.67)
-                else:
-                    Zone.InnerOxThickness[i] = Zone.InnerOxThickness[i] * (1 - 0.67)
         
     elif calendar_year >= 1995:
         SecondarySidePressure = 4.593
@@ -613,7 +599,15 @@ def station_events(calendar_year):
     elif calendar_year >= 1998.5:
         SecondarySidePressure = 4.593 - (125 / 1000) # MPa
         
-
+    elif calendar_year == 1995:
+        Cleaned = cleaned_tubes()
+        for Zone in Cleaned:
+            for i in range(Zone.NodeNumber - 1):
+                if Zone.OuterOxThickness[i] > 0:
+                    Zone.OuterOxThickness[i] = Zone.OuterOxThickness[i] * (1 - 0.67)
+                else:
+                    Zone.InnerOxThickness[i] = Zone.InnerOxThickness[i] * (1 - 0.67)
+        
     Leakage = InitialLeakage + (calendar_year - YearStartup) * YearlyRateLeakage
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
     # decreases as divider (bypass) flow increases
@@ -654,6 +648,6 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     RIHT = nc.temperature_from_enthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
 
-print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness,
-                      T_primary_in=583, x_pht=0.2, j=0) - 273.15)
+# print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness,
+#                       583, 0.2, 0) - 273.15)
 
