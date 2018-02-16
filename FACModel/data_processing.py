@@ -64,7 +64,7 @@ if OutputLogging == "yes":
     # StreamOutletTemperatures = [] # monitored with time 
     TemperatureProfile = []
 
-SimulationYears = 12  # years
+SimulationYears = 13  # years
 SimulationHours = SimulationYears * 8760
 
 # load initial chemistry for full/half loop

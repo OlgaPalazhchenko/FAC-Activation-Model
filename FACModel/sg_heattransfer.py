@@ -242,7 +242,7 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
 
 def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySidePressure, i):
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 259.69 + 273.15 # 258.69
+        T_sat_secondary = 259.29 + 273.15 # 258.69
     elif SecondarySidePressure < 4.593:
         T_sat_secondary = 257 + 273.15  # 257
     
@@ -465,7 +465,7 @@ def temperature_profile(
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 259.69 + 273.15 # 258.69
+        T_sat_secondary = 259.29 + 273.15 # 258.69
     elif SecondarySidePressure < 4.593:
         T_sat_secondary = 257 + 273.15  # 257
     
@@ -572,34 +572,41 @@ def temperature_profile(
 
 
 def station_events(calendar_year):
-    # Divider plate leakage and pressure changes 
+    # Divider plate leakage, mechanical cleaning, and pressure changes 
     
-    # divider plate leakage rates estimated based on AECL work
-    # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
-    # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-    InitialLeakage = 0.035 
-    YearlyRateLeakage = 0.0066 # yearly increase to fraction of total SG inlet mass flow
-    
+    # Pressure changes only:
     if calendar_year < 1992:
         SecondarySidePressure = 4.593   # MPa
-    
     # PLNGS pressure reduction in 1992 (september) by 125 kPa
-    elif 1992 <= calendar_year < 1995:
+    elif 1992 <= calendar_year <= 1995.5:
         SecondarySidePressure = 4.593 - (125 / 1000) # MPa
-    
-    # divider plate raplacement in 1995, assumed to stop increase in leak (2% constant going forward)
     # return to full boiler secondary side pressure, 4.593 MPa
-    # partial mechanical clean of boiler tube primary side (67 % efficiency for the 60 % of tubes accessed)
-        
-    elif calendar_year >= 1995:
+    # pressure restored shortly after reactor back online from refurb.
+    elif 1996 <= calendar_year <= 1998:
         SecondarySidePressure = 4.593
-        InitialLeakage = 0.02 
-        YearlyRateLeakage = 0
     
     elif calendar_year >= 1998.5:
         SecondarySidePressure = 4.593 - (125 / 1000) # MPa
-        
-    elif calendar_year == 1995:
+    else:
+        None
+
+    
+    # divider plate raplacement in 1995, assumed to stop increase in leak (2% constant going forward)
+    if calendar_year < 1995.5:
+        # divider plate leakage rates estimated based on AECL work
+        # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
+        # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
+        InitialLeakage = 0.035 
+        YearlyRateLeakage = 0.0066 # yearly increase to fraction of total SG inlet mass flow
+         
+    elif calendar_year >= 1995.5:
+        InitialLeakage = 0.02 
+        YearlyRateLeakage = 0
+    else:
+        None
+    
+    # partial mechanical clean of boiler tube primary side (67 % efficiency for the 60 % of tubes accessed)        
+    if calendar_year == 1995.5:
         Cleaned = cleaned_tubes()
         for Zone in Cleaned:
             for i in range(Zone.NodeNumber - 1):
@@ -612,6 +619,7 @@ def station_events(calendar_year):
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
     # decreases as divider (bypass) flow increases
     m_h_leakagecorrection = MassFlow_h.magnitude - DividerPlateMassFlow
+    print (SecondarySidePressure, calendar_year)
 
     return SecondarySidePressure, m_h_leakagecorrection, DividerPlateMassFlow
 
@@ -619,7 +627,6 @@ def station_events(calendar_year):
 def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulation, T_primary_in, x_pht, j):
     year = (j / 8760) 
     calendar_year = year + YearStartup
-    
    
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(calendar_year)
     
@@ -649,5 +656,5 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     return RIHT
 
 # print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness,
-#                       583, 0.2, 0) - 273.15)
+#                       583, 0.2, 8760*15.5) - 273.15)
 
