@@ -106,23 +106,12 @@ for j in range(SimulationHours):
     if j % 4380 == 0:  # twice a year  
         
         if j ==0:
-            x_pht = 0.2 # %
+            x_pht = 0.002 # %
         
-        if j == 8760 * 12.5:
-            # partial mechanical clean of boiler tube primary side (67 % efficiency for the 60 % of tubes accessed)        
-            for Zone in ld.SteamGenerator:
-                if Zone in SGHX.Cleaned:
-                    for i in range(Zone.NodeNumber - 1):
-                        if Zone.OuterOxThickness[i] > 0:
-                            Zone.OuterOxThickness[i] = Zone.OuterOxThickness[i] * (1 - 0.67)
-                        else:
-                            Zone.InnerOxThickness[i] = Zone.InnerOxThickness[i] * (1 - 0.67)
-        for Zone in ld.SteamGenerator:
-            print (Zone.OuterOxThickness)
         # parameters tracked with time 
         T_RIH = (SGHX.energy_balance(
             ld.SteamGenerator[Default_Tube].NodeNumber - 1, ld.SteamGenerator[Default_Tube].InnerOxThickness,
-            ld.SteamGenerator[Default_Tube].OuterOxThickness, 583, x_pht, 8760*12.5
+            ld.SteamGenerator[Default_Tube].OuterOxThickness, 583, x_pht, j
             ) - 273.15)
         
         x_pht = SGHX.pht_steam_quality(T_RIH + 273.15)
