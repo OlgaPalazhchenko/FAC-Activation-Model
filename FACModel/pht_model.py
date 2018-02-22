@@ -11,7 +11,7 @@ from operator import itemgetter
 
 def initial_chemistry(Loop):
     
-    [SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(1983)
+    [SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(1983, x_pht= 0.002)
     # initial temperatures in steam generator(s)
     
     if Loop == "full":

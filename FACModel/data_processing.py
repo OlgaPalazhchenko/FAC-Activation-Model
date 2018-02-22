@@ -59,13 +59,15 @@ if OutputLogging == "yes":
     TotalInnerLoading = []
     TotalOuterLoading = []
     RIHT = [] # monitored with time 
-    OutletTemperatures1 = []
+    OutletTemperatures1 = [] 
     OutletTemperatures2 = []
     # StreamOutletTemperatures = [] # monitored with time 
     TemperatureProfile = []
 
-SimulationYears = 14  # years
+SimulationYears = 8  # years
 SimulationHours = SimulationYears * 8760
+
+
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)
