@@ -64,8 +64,8 @@ if OutputLogging == "yes":
     # StreamOutletTemperatures = [] # monitored with time 
     TemperatureProfile = []
 
-SimulationYears = 8  # years
-SimulationHours = SimulationYears * 8760
+SimulationYears = 2  # years
+SimulationHours = SimulationYears * 100
 
 
 

@@ -30,6 +30,7 @@ def Diffusion(Section, Element):
         if Element == "Fe":
             MetalRetainedInsideInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe") \
             * (OxideDensity / AlloyDensity) * (1 - nc.Fe3O4Porosity_inner)  # [gFe/g CSlost]
+            
         elif Element == "Ni":
             MetalRetainedInsideInnerOxide = c.fraction_metal_inner_oxide(Section, "Ni") \
             * (OxideDensity / AlloyDensity) * (1 - nc.Fe3O4Porosity_inner)
@@ -40,6 +41,7 @@ def Diffusion(Section, Element):
     if Element == "Co":
         return FractionCo - MetalRetainedInsideInnerOxide
     elif Element == "Ni" or Element == "Fe":
+        
         return 1 - MetalRetainedInsideInnerOxide  # [g metal/ g alloy lost]
 
 

@@ -83,7 +83,7 @@ def initial_chemistry(Loop):
             if Section in ld.InletSections:
                 Section.PrimaryBulkTemperature = (
                     [SGHX.energy_balance(21, ld.SteamGenerator[0].InnerOxThickness,
-                                         ld.SteamGenerator[0].OuterOxThickness, T_primary_in=583, x_pht=0.2, j=0)] \
+                                         ld.SteamGenerator[0].OuterOxThickness, T_primary_in=583, x_pht=0.002, j=0)] \
                                                   * Section.NodeNumber
                                                   )
             
@@ -195,7 +195,7 @@ class PHT_FAC():
             # Inlet header purification system
             if self.Section1 in ld.InletSections and i == 3:      
                 for x in BulkConcentrations: 
-                    x[i] = 0.59 * x[i - 1]
+                    x[i] = 1 * x[i - 1]
                 if Activation == "yes":
                     for y in BulkActivities:
                         y[i] = 0.59 * y[i - 1]

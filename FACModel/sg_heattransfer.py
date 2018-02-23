@@ -389,18 +389,20 @@ def outer_area(Section):
 
 def pht_steam_quality(Temperature):
     CoreMassFlow = (MassFlow_h.magnitude / 1000) * 4 # [kg /s]
-    Delta_T = T_sat_primary - (262.4 + 273.15) # [K]
+    Delta_T = T_sat_primary - (262.5 + 273.15) # [K]
     C_p_cold = nc.HeatCapacity("PHT", Temperature, SecondarySidePressure = None)
     C_p_hot = nc.HeatCapacity("PHT", T_sat_primary, SecondarySidePressure = None)
-    C_p_avg = (C_p_cold + C_p_hot) / 2
-     
+    C_p_avg = (C_p_cold + C_p_hot) / 2 # [kJ/kg K]
     Power = CoreMassFlow * C_p_avg * Delta_T # [kW]
-    # core inlet enthalpy at RIHT + that added from fuel
-    H_fromfuel = Power / CoreMassFlow # [kJ/kg]
-    H_total = nc.enthalpy("PHT", Temperature, None) + H_fromfuel 
     
-    H_satliq = nc.enthalpy("PHT", T_sat_primary, None)
-    x = (H_total - H_satliq) / (EnthalpySaturatedSteam.magnitude - H_satliq)
+    # core inlet enthalpy at RIHT + that added from fuel
+    # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
+    H_pht = Power / CoreMassFlow
+    H_satliq_outlet = nc.enthalpy("PHT", T_sat_primary, None)
+    
+    # no quality in return primary flow
+    H_current = nc.enthalpy("PHT", Temperature, None) + H_pht
+    x = (H_current - H_satliq_outlet) / (EnthalpySaturatedSteam.magnitude - H_satliq_outlet)
     return x
 
 
@@ -661,7 +663,7 @@ def station_events(calendar_year, x_pht):
 def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulation, T_primary_in, x_pht, j):
     year = (j / 8760) 
     calendar_year = year + YearStartup
-    print (x_pht)
+    
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(
         calendar_year, x_pht
         )
@@ -706,6 +708,6 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
 
     RIHT = nc.temperature_from_enthalpy("PHT", Enthalpy, SecondarySidePressure)
     return RIHT
- 
-print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness,
-                      583, 0.003, 0) - 273.15)
+  
+# print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness,
+#                       583, 0, 0) - 273.15)
