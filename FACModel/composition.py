@@ -78,7 +78,7 @@ def arrhenius_activaton_energy():
             
         if 3 < i < 12:
             T_hot.append(SteamGenerator[Tube].PrimaryBulkTemperature[i])
-            
+#     print (kp_cold, kp_hot)       
     T_coldavg = sum(T_cold) / len(T_cold)  # preheater
     T_hotavg = sum(T_hot) / len(T_hot)  # hot leg not including preheater or first 4 m
 #     print (kp_cold, kp_hot)
@@ -95,7 +95,6 @@ def plngs_precipitation_kinetics(Section, j):
         [ActivationEnergy, A] = arrhenius_activaton_energy()
                 
         kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
-    
     else:
         kp = Section.KpFe3O4electrochem
 

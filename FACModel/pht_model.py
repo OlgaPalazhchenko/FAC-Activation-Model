@@ -33,7 +33,7 @@ def initial_chemistry(Loop):
         for Zone in ld.SteamGenerator:
             Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
             Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure,
-            T_primary_in=583, x_pht=0.2, calendar_year=1983
+            T_primary_in=583, x_pht=0.002, calendar_year=1983
             )
     else:
         ld.SteamGenerator[57].PrimaryBulkTemperature = SGHX.temperature_profile(
@@ -195,7 +195,7 @@ class PHT_FAC():
             # Inlet header purification system
             if self.Section1 in ld.InletSections and i == 3:      
                 for x in BulkConcentrations: 
-                    x[i] = 1 * x[i - 1]
+                    x[i] = 0.59 * x[i - 1]
                 if Activation == "yes":
                     for y in BulkActivities:
                         y[i] = 0.59 * y[i - 1]

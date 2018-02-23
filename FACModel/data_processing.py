@@ -64,10 +64,8 @@ if OutputLogging == "yes":
     # StreamOutletTemperatures = [] # monitored with time 
     TemperatureProfile = []
 
-SimulationYears = 2  # years
-SimulationHours = SimulationYears * 100
-
-
+SimulationYears = 10  # years
+SimulationHours = SimulationYears * 8760
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)

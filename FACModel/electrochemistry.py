@@ -54,7 +54,7 @@ def ElectrochemicalSaturation(Section, BulkSatFe3O4, EqmPotentialFe3O4, MixedPot
     #number of electrons needs to be averaged here for A-800
     Adjustment = np.exp(Beta_prime * nc.n * nc.F * (MixedPotential - EqmPotentialFe3O4) / (nc.R * Kelvin))
      
-    AdjustedSaturation = BulkSatFe3O4 #* Adjustment
+    AdjustedSaturation = BulkSatFe3O4 * Adjustment
     
     return AdjustedSaturation
 
@@ -64,7 +64,7 @@ def electrochemical_adjustment(
         SOConcentrationH, j
         ):
 
-    KpFe3O4electrochem = [nc.KdFe3O4] * Section.NodeNumber # c.plngs_precipitation_kinetics(Section, j)
+    KpFe3O4electrochem = c.plngs_precipitation_kinetics(Section, j)
     #[nc.KpFe3O4] * Section.NodeNumber
 #     KpFe3O4electrochem = ElectrochemicalKineticConstant(
 #         Section, [nc.KpFe3O4] * Section.NodeNumber, EqmPotentialFe3O4, "no", SOMixedPotential
@@ -240,3 +240,4 @@ def ECP(Section):
         )    
     
     return MixedECP, EqmPotentialFe3O4
+
