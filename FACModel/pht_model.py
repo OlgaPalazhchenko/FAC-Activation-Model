@@ -33,12 +33,12 @@ def initial_chemistry(Loop):
         for Zone in ld.SteamGenerator:
             Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
             Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure,
-            T_primary_in=583, x_pht=0.002, calendar_year=1983
+            x_pht=0.002, calendar_year=1983
             )
     else:
         ld.SteamGenerator[57].PrimaryBulkTemperature = SGHX.temperature_profile(
             ld.SteamGenerator[57], ld.SteamGenerator[57].InnerOxThickness, ld.SteamGenerator[57].OuterOxThickness,
-            RemainingPHTMassFlow, SecondarySidePressure, T_primary_in=583, x_pht=0.2, calendar_year=1983
+            RemainingPHTMassFlow, SecondarySidePressure, x_pht=0.2, calendar_year=1983
             )
         
     # initial concentrations

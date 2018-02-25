@@ -62,8 +62,8 @@ def pht_cleaning(Section, j):
     else:
         None
           
-SimulationYears = 3  # years
-SimulationHours = SimulationYears * 8760
+SimulationYears = 8  # years
+SimulationHours = SimulationYears * 50
 
 if OutputLogging == "yes":
     Solubility = []
@@ -74,6 +74,7 @@ if OutputLogging == "yes":
     RIHT = [] # monitored with time 
     OutletTemperatures1 = [] 
     OutletTemperatures2 = []
+    pht_SteamFraction = []
     # StreamOutletTemperatures = [] # monitored with time 
     TemperatureProfile = []
     Years = []
@@ -137,6 +138,8 @@ for j in range(SimulationHours):
             SGHX.energy_balance(ld.SteamGenerator[Default_Tube].NodeNumber - 1, UncleanedInnerOxide,
                                 UncleanedOuterOxide, x_pht, j) - 273.15
                  )
+        if j == 8760 * 5:
+            T_RIH = T_RIH - 0.7
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
         for Section in ld.HalfLoop:
@@ -144,7 +147,7 @@ for j in range(SimulationHours):
             
         if OutputLogging == "yes":
             RIHT.append(T_RIH)
-            
+            pht_SteamFraction.append(x_pht)
             Temperature1 = (
                 ld.SteamGenerator[SGHX.tube_number[0]].PrimaryBulkTemperature[21] - 273.15
                            )
@@ -193,6 +196,8 @@ with open(csvfile, "w") as output:
     writer.writerow(Years)
     writer.writerow(['Delta RIHT (oC'])
     writer.writerow(RIHT_delta)
+    writer.writerow(['Steam fraction'])
+    writer.writerow(pht_SteamFraction)
     writer.writerow([''])
     
     for i, j in zip(Labels, Data):

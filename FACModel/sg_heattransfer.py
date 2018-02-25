@@ -165,8 +165,8 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.001 # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.00055 # [g/cm^2] /year = 3.25 um/year
+    TubeGrowth = 0.0014 # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.0008 # [g/cm^2] /year = 3.25 um/year
     
     if i == 0 or i == 21:
         SludgePileGrowth = 2 * TubeGrowth
@@ -186,13 +186,13 @@ def sludge_fouling_resistance(Section, i, calendar_year):
     # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
     elif YearCPP < calendar_year < YearSHTChemicalClean: 
         Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth)
-                        + (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth * (1 - 0.7)))
+                        + (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth))
     # tubes + sludge cleaned 70%, along with reduction in sludge growth rate (by 70%)
     # after and including 1995
 
     elif calendar_year >= YearSHTChemicalClean:
         Accumulation = ((calendar_year - YearSHTChemicalClean) * ReducedTubeGrowth
-                        + (calendar_year - YearSHTChemicalClean) * SludgePileGrowth * (1 - 0.7))
+                        + (calendar_year - YearSHTChemicalClean) * SludgePileGrowth)
         
     Thickness = Accumulation / nc.Fe3O4Density
     
@@ -500,8 +500,7 @@ def wall_temperature(
 
 
 def temperature_profile(
-        Section, InnerAccumulation, OuterAccumulation, m_h_leakagecorrection, SecondarySidePressure, T_primary_in,
-        x_pht, calendar_year):
+        Section, InnerOxide, OuterOxide, m_h_leakagecorrection, SecondarySidePressure, x_pht, calendar_year):
     
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
@@ -526,8 +525,8 @@ def temperature_profile(
         Cp_c = nc.HeatCapacity("SHT", T_SecondaryBulkIn, SecondarySidePressure)
         
         T_wh, T_wc, U = wall_temperature(
-            Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation,
-            calendar_year, SecondarySidePressure)
+            Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerOxide, OuterOxide, calendar_year,
+            SecondarySidePressure)
         
         # all nodes other than preheater
         if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater" and \
@@ -547,7 +546,8 @@ def temperature_profile(
                 if x_pht * DeltaH * m_h_leakagecorrection < Q:
                     # this much heat needs to be transferred from PHT fluid as sensible heat
                     Q = Q - (x_pht * DeltaH * m_h_leakagecorrection)
-                    T_PrimaryBulkOut = T_PrimaryBulkIn - Q / (Cp_h * m_h_leakagecorrection)
+                    
+                    T_PrimaryBulkOut = T_PrimaryBulkIn - Q / (Cp_h * m_h_leakagecorrection * (1 - x_pht))
                     # no more latent heat/quality remains
                     x_pht = 0
                 else:    
@@ -689,7 +689,7 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(
         calendar_year, x_pht
         )
-    print (calendar_year, x_pht)
+
     Energy = []
     for Zone in ld.SteamGenerator:
         
@@ -715,7 +715,7 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
             OuterOx = OuterAccumulation
         
         Zone.PrimaryBulkTemperature = temperature_profile(
-            Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, T_primary_in, x_pht, calendar_year
+            Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, calendar_year
             ) 
         
         m_timesH = (Zone.TubeNumber / TotalSGTubeNumber) * RemainingPHTMassFlow \
@@ -726,10 +726,10 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
         Enthalpy_dp_sat_liq = nc.enthalpy("PHT", T_sat_primary, None)
         Enthalpy_dividerplate = Enthalpy_dp_sat_liq + x_pht * (EnthalpySaturatedSteam.magnitude -Enthalpy_dp_sat_liq)
         
-        Enthalpy = (sum(Energy) + MasssFlow_dividerplate.magnitude * Enthalpy_dp_sat_liq) / MassFlow_h.magnitude 
+        Enthalpy = (sum(Energy) + MasssFlow_dividerplate.magnitude * Enthalpy_dividerplate) / MassFlow_h.magnitude 
 
     RIHT = nc.temperature_from_enthalpy("PHT", Enthalpy, None)
     return RIHT
-   
-print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 0.002, 0) 
-       - 273.15)
+#    
+# print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 0.042, 0) 
+#        - 273.15)
