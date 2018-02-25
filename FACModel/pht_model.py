@@ -83,8 +83,7 @@ def initial_chemistry(Loop):
             if Section in ld.InletSections:
                 Section.PrimaryBulkTemperature = (
                     [SGHX.energy_balance(21, ld.SteamGenerator[0].InnerOxThickness,
-                                         ld.SteamGenerator[0].OuterOxThickness, T_primary_in=583, x_pht=0.002, j=0)] \
-                                                  * Section.NodeNumber
+                                         ld.SteamGenerator[0].OuterOxThickness, x_pht=0.002, j=0)] * Section.NodeNumber
                                                   )
             
             if Section in ld.FuelSections and Interface == Section.MetalOxide:

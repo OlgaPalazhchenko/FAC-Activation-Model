@@ -52,6 +52,19 @@ def sg_heat_transfer(Outlet, InletInput):
     return Tubes
 
 
+def pht_cleaning(Section, j):
+    if j == 8760 * 12:
+        for i in range(Section.NodeNumber):
+            if Section.OuterOxThickness[i] > 0:
+                Section.OuterOxThickness = Section.OuterOxThickness * (1 - 0.67)
+            else:
+                Section.InnerOxThickness = Section.InnerOxThickness * (1- 0.67)
+    else:
+        None
+          
+SimulationYears = 3  # years
+SimulationHours = SimulationYears * 8760
+
 if OutputLogging == "yes":
     Solubility = []
     IronConcentration = []
@@ -63,9 +76,9 @@ if OutputLogging == "yes":
     OutletTemperatures2 = []
     # StreamOutletTemperatures = [] # monitored with time 
     TemperatureProfile = []
-
-SimulationYears = 10  # years
-SimulationHours = SimulationYears * 8760
+    Years = []
+    for i in range((SimulationYears + 1) * 2):
+        Years.append(i/2 + SGHX.YearStartup)
 
 # load initial chemistry for full/half loop
 pht_model.initial_chemistry(Loop)
@@ -87,6 +100,9 @@ for j in range(SimulationHours):
     
     Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j)
     SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput)
+    
+    # pass "cleaned" sg tube through heat transfer function as well
+    pht_cleaning(SteamGeneratorTubes[0].Section1, j)
 #     print (
 #         ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
 #     None, None, None, None)
@@ -100,27 +116,32 @@ for j in range(SimulationHours):
             )
         Sg_2 = pht_model.PHT_FAC(
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
-            )
-    
+            )   
     
     if j % 4380 == 0:  # twice a year  
         
         if j ==0:
-            x_pht = 0.002 # %
+            x_pht = 0.002 # PHT steam fraction for "clean" boiler
+        else:
+            x_pht = SGHX.pht_steam_quality(T_RIH + 273.15)
+        
+        #pass cleaned and uncleaned tubes into heat transfer function
+        CleanedInnerOxide = SteamGeneratorTubes[0].Section1.InnerOxThickness
+        CleanedOuterOxide = SteamGeneratorTubes[0].Section1.OuterOxThickness
+        
+        UncleanedInnerOxide = Sg.Section1.InnerOxThickness
+        UncleanedOuterOxide = Sg.Section1.OuterOxThickness
         
         # parameters tracked with time 
-        T_RIH = (SGHX.energy_balance(
-            ld.SteamGenerator[Default_Tube].NodeNumber - 1, ld.SteamGenerator[Default_Tube].InnerOxThickness,
-            ld.SteamGenerator[Default_Tube].OuterOxThickness, 583, x_pht, j
-            ) - 273.15)
-        
-        x_pht = SGHX.pht_steam_quality(T_RIH + 273.15)
+        T_RIH = (
+            SGHX.energy_balance(ld.SteamGenerator[Default_Tube].NodeNumber - 1, UncleanedInnerOxide,
+                                UncleanedOuterOxide, x_pht, j) - 273.15
+                 )
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
         for Section in ld.HalfLoop:
             Section.Bulk.FeSatFe3O4 = c.iron_solubility(Section, None)
-        
-        
+            
         if OutputLogging == "yes":
             RIHT.append(T_RIH)
             
@@ -129,6 +150,7 @@ for j in range(SimulationHours):
                            )
             OutletTemperatures1.append(Temperature1)
             
+            # if multiple tubes arc/total lengths are run
             if len(SGHX.selected_tubes) > 1:
                 Temperature2 = (
                     ld.SteamGenerator[SGHX.tube_number[1]].PrimaryBulkTemperature[21] - 273.15
@@ -160,12 +182,17 @@ Data = [SGHX.TubeLengths, TotalInnerLoading, TotalOuterLoading, Solubility, Iron
 Labels = [
     "U-bend length (cm)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Solubility (mol/kg)", "S/O [Fe] (mol/kg)",
     "Temperature Profile (oC)"]
-    
+
+RIHT_delta = [x-y for x, y in zip (RIHT[1:], RIHT)]   
+
 csvfile = "RIHTOutput.csv"
 with open(csvfile, "w") as output:
     writer = csv.writer(output, lineterminator='\n')
-    writer.writerow(['RIHT (oC)'])
+    writer.writerow(['RIHT (oC) and year'])
     writer.writerow(RIHT)
+    writer.writerow(Years)
+    writer.writerow(['Delta RIHT (oC'])
+    writer.writerow(RIHT_delta)
     writer.writerow([''])
     
     for i, j in zip(Labels, Data):

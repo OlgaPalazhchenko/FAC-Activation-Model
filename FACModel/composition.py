@@ -78,7 +78,7 @@ def arrhenius_activaton_energy():
             
         if 3 < i < 12:
             T_hot.append(SteamGenerator[Tube].PrimaryBulkTemperature[i])
-#     print (kp_cold, kp_hot)       
+
     T_coldavg = sum(T_cold) / len(T_cold)  # preheater
     T_hotavg = sum(T_hot) / len(T_hot)  # hot leg not including preheater or first 4 m
 #     print (kp_cold, kp_hot)

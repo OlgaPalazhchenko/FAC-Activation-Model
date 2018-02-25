@@ -147,6 +147,17 @@ def enthalpy(side, Temperature, SecondarySidePressure):
     return ratio_temperatures * Gibbs_T * R_IAPWS * Temperature  # [J/g mol]*[K] = [J/g]
 
 
+def enthalpy_D2O(Temperature):
+    T = Temperature - 273.15
+    return 4.7307 * T - 546.55 # [kJ/kg]
+
+
+def temperature_from_enthalpy_D2O(Enthalpy):
+    T = (Enthalpy + 546.55) / 4.7307
+    Temperature = T + 273.15
+    return Temperature
+
+
 def temperature_from_enthalpy(side, Enthalpy, SecondarySidePressure):
     if side == "PHT" or side == "PHTS" or side == "phts" or side == "pht":
         p = PrimarySidePressure
