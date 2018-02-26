@@ -12,7 +12,7 @@ OUTLET_INNER_SPALL_CONSTANT = 1000
 INLET_OUTER_SPALL_CONSTANT = 1.00E+18  # Different units for inlet versus outlet (different functions)
 INLET_INNER_SPALL_CONSTANT = 1.00E+5
 
-TIME_INCREMENT = 3600  # s  Based on desired time step (3600 s/h for 1h time step)
+TIME_INCREMENT = 36000  # s  Based on desired time step (3600 360s/h for 1h time step)
 
 
 def oxide_composition(
@@ -197,6 +197,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
         if ElementTracking == "yes":
             Section.NiThickness = [x + y * TIME_INCREMENT for x, y in zip(Section.NiThickness, GrowthNickel)]
             Section.CoThickness = [x + y * TIME_INCREMENT for x, y in zip(Section.CoThickness, GrowthCobalt)]
+        
     
     else:
     # FAC solver for rate   

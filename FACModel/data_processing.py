@@ -53,7 +53,7 @@ def sg_heat_transfer(Outlet, InletInput):
 
 
 def pht_cleaning(Section, j):
-    if j == 8760 * 12:
+    if j == 876 * 12:
         for i in range(Section.NodeNumber):
             if Section.OuterOxThickness[i] > 0:
                 Section.OuterOxThickness = Section.OuterOxThickness * (1 - 0.67)
@@ -62,8 +62,8 @@ def pht_cleaning(Section, j):
     else:
         None
           
-SimulationYears = 8  # years
-SimulationHours = SimulationYears * 50
+SimulationYears = 11  # years
+SimulationHours = SimulationYears * 876
 
 if OutputLogging == "yes":
     Solubility = []
@@ -119,12 +119,11 @@ for j in range(SimulationHours):
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )   
     
-    if j % 4380 == 0:  # twice a year  
+    if j % 438 == 0:  # twice a year  
         
         if j ==0:
             x_pht = 0.002 # PHT steam fraction for "clean" boiler
-        else:
-            x_pht = SGHX.pht_steam_quality(T_RIH + 273.15)
+
         
         #pass cleaned and uncleaned tubes into heat transfer function
         CleanedInnerOxide = SteamGeneratorTubes[0].Section1.InnerOxThickness
@@ -138,8 +137,11 @@ for j in range(SimulationHours):
             SGHX.energy_balance(ld.SteamGenerator[Default_Tube].NodeNumber - 1, UncleanedInnerOxide,
                                 UncleanedOuterOxide, x_pht, j) - 273.15
                  )
-        if j == 8760 * 5:
-            T_RIH = T_RIH - 0.7
+        if 876 * 5.5 <= j <= 876 * 9:
+            T_RIH = T_RIH - 1.2
+        
+        print (1983 +j/876, x_pht, T_RIH)
+        x_pht = SGHX.pht_steam_quality(T_RIH + 273.15)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
         for Section in ld.HalfLoop:
@@ -168,7 +170,7 @@ for Zone in SGHX.selected_tubes:
     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerOxThickness, None, None, None
     )
     y = ld.UnitConverter(
-    Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterOxThickness, None, None, None
+    Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterFe3O4Thickness, None, None, None
     )
     
 #     totalloading = [i + j for i, j in zip(x, y)]
