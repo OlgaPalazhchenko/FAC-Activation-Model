@@ -8,7 +8,7 @@ NumberPluggedTubes = 8
 TotalSGTubeNumber = 3550 - NumberPluggedTubes
 
 YearStartup = 1983
-YearCPP = 1986.5
+YearCPP = 1987.5
 YearSHTChemicalClean = 1995.5
 
 # select all the SG tubes to be run (by arc length)
@@ -165,11 +165,11 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.0018 # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.00085 # [g/cm^2] /year = 3.25 um/year
+    TubeGrowth = 0.0014 # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.00008 # [g/cm^2] /year = 3.25 um/year
     
     if i == 0 or i == 21:
-        SludgePileGrowth = 3 * TubeGrowth
+        SludgePileGrowth = 1.5 * TubeGrowth
     
     elif 0 < i < 21:
         SludgePileGrowth = 0
@@ -185,14 +185,14 @@ def sludge_fouling_resistance(Section, i, calendar_year):
     # (assumed proportional red. in deposit formation)
     # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
     elif YearCPP < calendar_year < YearSHTChemicalClean: 
-        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth)
+        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth) *(0.16)
                         + (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth))
     # tubes + sludge cleaned 70%, along with reduction in sludge growth rate (by 70%)
     # after and including 1995
 
     elif calendar_year >= YearSHTChemicalClean:
         Accumulation = ((calendar_year - YearSHTChemicalClean) * ReducedTubeGrowth
-                        + (calendar_year - YearSHTChemicalClean) * SludgePileGrowth)
+                        + (calendar_year - YearSHTChemicalClean) * SludgePileGrowth * (1-0.9))
         
     Thickness = Accumulation / nc.Fe3O4Density
     
@@ -254,7 +254,7 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
 
 def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySidePressure, i):
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 258.69 + 273.15
+        T_sat_secondary = 258.89 + 273.15
     elif SecondarySidePressure < 4.593:
         T_sat_secondary = 257 + 273.15
     
@@ -392,14 +392,22 @@ def outer_area(Section):
     return [np.pi * x * y for x, y in zip(Section.OuterDiameter, Section.Length.magnitude)]
 
 
-def pht_steam_quality(Temperature):
+def pht_steam_quality(Temperature, j):
+    calendar_year = (j / 876) + YearStartup
+         
     CoreMassFlow = (MassFlow_h.magnitude / 1000) * 4 # [kg /s]
-    Delta_T = T_sat_primary - (259.5 + 273.15) # [K]
-    C_p_cold = nc.HeatCapacity("PHT", 259.5, SecondarySidePressure = None)
+    Delta_T = T_sat_primary - (259.35 + 273.45) # [K]
+    C_p_cold = nc.HeatCapacity("PHT", 259.35, SecondarySidePressure = None)
     C_p_hot = nc.HeatCapacity("PHT", T_sat_primary, SecondarySidePressure = None)
     C_p_avg = (C_p_cold + C_p_hot) / 2 # [kJ/kg K]
     
     Power = CoreMassFlow * C_p_avg * Delta_T # [kW]
+    
+    if calendar_year >= 1998:
+        YearDeratingStarts = 1998
+        Percent_derating = 0.45
+        # derating by 1% per year (~20 kW)
+        Power = Power - Power * (Percent_derating / 100) * (calendar_year - YearDeratingStarts)
 #     print (C_p_avg, Power/1000)
     # core inlet enthalpy at RIHT + that added from fuel
     # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
@@ -409,7 +417,7 @@ def pht_steam_quality(Temperature):
     H_current = nc.enthalpy("PHT", Temperature, None) + H_pht
     x = (H_current - H_satliq_outlet) / (EnthalpySaturatedSteam.magnitude - H_satliq_outlet)
     return x
-# print (pht_steam_quality(267 +273.15))
+# print (pht_steam_quality(264.37 +273.15, 876*19.5))
 
 def sht_steam_quality(Q, T_sat_secondary, x, SecondarySidePressure):
     
@@ -486,10 +494,10 @@ def wall_temperature(
             SCR = secondary_convection_resistance(
                 Section, SecondaryT_film, T_SecondaryWall, x_in, SecondarySidePressure, i
                 )
-# #             if calendar_year == 1983 or calendar_year == 1984:
-#             print (PCR *100*100, "PCR", conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)*100*100,\
-#                     "cond", SCR*100*100, "SCR", R_F_primary.magnitude*100*100, "primary fouling", \
-#                     R_F_secondary.magnitude*100*100, "secondary fouling", i)
+#             if i ==0:
+#                 print (PCR *100*100, "PCR", conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)*100*100,\
+#                         "cond", SCR*100*100, "SCR", R_F_primary.magnitude*100*100, "primary fouling", \
+#                         R_F_secondary.magnitude*100*100, "secondary fouling", i)
             
             #[cm^2 K/W] all resistances (convective, conductive, and fouling)
             inverseU_total = (PCR + conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i) + SCR) \
@@ -506,7 +514,7 @@ def temperature_profile(
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 258.69 + 273.15 # 258.69
+        T_sat_secondary = 258.89 + 273.15 # 258.69
     elif SecondarySidePressure < 4.593:
         T_sat_secondary = 257 + 273.15  # 257
     
@@ -653,13 +661,15 @@ def station_events(calendar_year, x_pht):
     else:
         None
 
-    
+#     if calendar_year >= 1992:
+#         MassFlow_h.magnitude = MassFlow_h.magnitude * 0.97
+        
     # divider plate raplacement in 1995, assumed to stop increase in leak (2% constant going forward)
     if calendar_year < 1995.5:
         # divider plate leakage rates estimated based on AECL work
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-        InitialLeakage = 0.0275 
+        InitialLeakage = 0.025 
         YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
          
     elif calendar_year >= 1995.5:
@@ -686,7 +696,7 @@ def station_events(calendar_year, x_pht):
     return SecondarySidePressure, m_h_leakagecorrection, DividerPlateMassFlow
 
 
-def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulation, x_pht, j):
+def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j):
     year = (j *10 / 8760) 
     calendar_year = year + YearStartup
 
@@ -713,10 +723,13 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
             InnerOx = Zone.InnerOxThickness
             OuterOx = Zone.OuterOxThickness
         else: # assumes same growth as in default passed tube for remaining tubes
-            # pass through default cleaned and not cleaned tube? 
-            # work cleaning into here
-            InnerOx = InnerAccumulation
-            OuterOx = OuterAccumulation
+            # pass through default cleaned and not cleaned tubes
+            if Zone in Cleaned:
+                InnerOx = CleanedInnerOxide
+                OuterOx = CleanedOuterOxide
+            else:
+                InnerOx = InnerOxide
+                OuterOx = OuterOxide
         
         Zone.PrimaryBulkTemperature = temperature_profile(
             Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, calendar_year
@@ -736,5 +749,9 @@ def energy_balance(SteamGeneratorOutputNode, InnerAccumulation, OuterAccumulatio
 #     print (calendar_year, x_pht, RIHT-273.15)
     return RIHT
     
-# print (energy_balance(21, ld.SteamGenerator[12].InnerOxThickness, ld.SteamGenerator[12].OuterOxThickness, 0.02, 0) 
-#        - 273.15)
+# UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
+# UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
+# CleanedInner = [i * 0.67 for i in UncleanedInner]
+# CleanedOuter = [i * 0.67 for i in UncleanedOuter]
+
+# print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 8760*0) - 273.15)

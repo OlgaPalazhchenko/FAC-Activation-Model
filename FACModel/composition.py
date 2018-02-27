@@ -103,7 +103,7 @@ def plngs_precipitation_kinetics(Section, j):
 
 def temperature_dependent_parameters(Section):
     Celsius = [i - 273.15 for i in Section.PrimaryBulkTemperature]
-    # Equilibrium and Debye-Huckel thermochemistry_and_constants - POLYNOMIALs as a function of temperature
+    # Equilibrium and Debye-Huckel thermochemistry and_ onstants - polynomials as a function of temperature
     # Coeff1*x^4 + Coeff2*x^3 + Coeff3*x^2 + Coeff4*x + Coeff5, depends on # elements in coeff list
     Section.DebyeHuckelConstant = (np.polyval(DEBYE_HUCKEL_POLYNOMIAL, Celsius))
     Section.k_W = 10 ** (np.polyval(KwPOLYNOMIAL, Section.PrimaryBulkTemperature))
@@ -259,8 +259,8 @@ def hydrolysis(Section, FeTotal, ConcentrationH):
 
 
 def iron_solubility(Section, Condition):
-    # As temperature changes, thermochemistry_and_constants (k_Li, k_w, etc. change), pH changes as well, 
-    # both effecting solubility --> Bulk FeSatFe3O4
+    # As temperature changes, thermochemistry and constants (k_Li, k_w, etc. change), pH changes as well, 
+    # both affecting solubility --> Bulk FeSatFe3O4
     Section.SolutionOxide.ConcentrationH = bulkpH_calculator(Section)
     
     # based on high temperature henry's law constant data for H2 (some taken from T&L ref. some from sol. program DHL

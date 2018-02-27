@@ -21,7 +21,7 @@ Activation = "no"
 PlotOutput = "yes"
 OutputLogging = "yes"
 Loop = "half"
-ElementTracking = "yes"
+ElementTracking = "no"
 
 # 1.52 m is the u-bend arc length of an average SG tube
 Default_Tube = SGHX.closest_ubend(1.52 * 50)
@@ -53,16 +53,16 @@ def sg_heat_transfer(Outlet, InletInput):
 
 
 def pht_cleaning(Section, j):
-    if j == 876 * 12:
+    if j == 876 * 12.5:
         for i in range(Section.NodeNumber):
             if Section.OuterOxThickness[i] > 0:
-                Section.OuterOxThickness = Section.OuterOxThickness * (1 - 0.67)
+                Section.OuterOxThickness[i] = Section.OuterOxThickness[i] * (1 - 0.67)
             else:
-                Section.InnerOxThickness = Section.InnerOxThickness * (1- 0.67)
+                Section.InnerOxThickness[i] = Section.InnerOxThickness[i] * (1- 0.67)
     else:
         None
           
-SimulationYears = 11  # years
+SimulationYears = 26  # years
 SimulationHours = SimulationYears * 876
 
 if OutputLogging == "yes":
@@ -135,13 +135,13 @@ for j in range(SimulationHours):
         # parameters tracked with time 
         T_RIH = (
             SGHX.energy_balance(ld.SteamGenerator[Default_Tube].NodeNumber - 1, UncleanedInnerOxide,
-                                UncleanedOuterOxide, x_pht, j) - 273.15
+                                UncleanedOuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j) - 273.15
                  )
-        if 876 * 5.5 <= j <= 876 * 9:
-            T_RIH = T_RIH - 1.2
-        
+#         if 876 * 5.5 <= j <= 876 * 9:
+#             T_RIH = T_RIH - 1.1
+#         
         print (1983 +j/876, x_pht, T_RIH)
-        x_pht = SGHX.pht_steam_quality(T_RIH + 273.15)
+        x_pht = SGHX.pht_steam_quality(T_RIH + 273.15, j)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
         for Section in ld.HalfLoop:
@@ -167,7 +167,7 @@ for j in range(SimulationHours):
           
 for Zone in SGHX.selected_tubes:
     x = ld.UnitConverter(
-    Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerOxThickness, None, None, None
+    Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerIronOxThickness, None, None, None
     )
     y = ld.UnitConverter(
     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterFe3O4Thickness, None, None, None
