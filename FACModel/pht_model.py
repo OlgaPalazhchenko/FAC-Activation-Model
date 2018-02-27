@@ -249,21 +249,10 @@ class PHT_FAC():
 #             self.Section1.MetalOxide.Ni63 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
 #                                                           self.Section1.InnerOxThickness, self.Section1.Bulk.Ni63, j, "Ni63")
 
-        # SG heat transfer 
-#         if HeatTransfer == "yes":
-#             if self.Section1 in ld.SteamGenerator or self.Section1 in ld.SteamGenerator_2:  
-#                 self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1) 
-#         
-            # RIHT  
-#             elif self.Section1 in ld.InletSections:
-                # Temperature profile for each section calculated within energy balance
-#                 self.Section1.PrimaryBulkTemperature = [SGHX.energy_balance(21, j)] * self.Section1.NodeNumber
-#                 self.Section1.Bulk.FeSatFe3O4 = c.iron_solubility(self.Section1)
-#             else:
-#                 None
-               
+
         # RK4 oxide thickness calculation (no spalling)
-        rk_4.oxide_layers(self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j)
+        rk_4.oxide_layers(
+            self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j)
         
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(

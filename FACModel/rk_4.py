@@ -5,6 +5,7 @@ import numpy as np
 import iteration as it
 import electrochemistry as e
 import random
+import sg_heattransfer as SGHX
 
 # Spalling thermochemistry_and_constants depend heavily on particle size distribution
 OUTLET_OUTER_SPALL_CONSTANT = 7000
@@ -173,7 +174,28 @@ def oxide_growth(
     return GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt
     
 
-def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j):
+def pht_cleaning(Section, InnerOxide, OuterOxide, j):
+    if j == 876 * 12.5:
+        Inner = []
+        Outer = []
+        for i in range(Section.NodeNumber):
+            if OuterOxide[i] > 0:
+                OuterOxide[i] = OuterOxide[i] * (1 - 0.67)
+                InnerOxide[i] = InnerOxide[i]
+            else:
+                InnerOxide[i] = InnerOxide[i] * (1- 0.67)
+                
+        Inner.append(InnerOxide)
+        Outer.append(OuterOxide)
+    
+    else:
+        InnerOxide = InnerOxide
+        OuterOxide = OuterOxide
+    return InnerOxide, OuterOxide
+
+
+def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations,
+                 ElementTracking, j):
     
     if ConstantRate == "yes":
         # updates M/O and S/O concentrations based on oxide thickness
@@ -197,10 +219,12 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
         if ElementTracking == "yes":
             Section.NiThickness = [x + y * TIME_INCREMENT for x, y in zip(Section.NiThickness, GrowthNickel)]
             Section.CoThickness = [x + y * TIME_INCREMENT for x, y in zip(Section.CoThickness, GrowthCobalt)]
-            
         
+        if Section == SGHX.selected_tubes[0]:
+            [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
+                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, j)
         
-    
+          
     else:
     # FAC solver for rate   
         RK4_InnerIronOxThickness = Section.InnerIronOxThickness

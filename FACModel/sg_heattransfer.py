@@ -166,7 +166,7 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 def sludge_fouling_resistance(Section, i, calendar_year):
     
     TubeGrowth = 0.0014  # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
+    ReducedTubeGrowth = 0.0002  # [g/cm^2] /year = 3.25 um/year
     
     if i == 0:
         SludgePileGrowth = 1.5 * TubeGrowth
@@ -182,7 +182,7 @@ def sludge_fouling_resistance(Section, i, calendar_year):
     # (assumed proportional red. in deposit formation)
     # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
     elif YearCPP < calendar_year < YearSHTChemicalClean: 
-        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth) * (0.16)
+        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth) * (0.2)
                         + (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth))
     # tubes + sludge cleaned 70%, along with reduction in sludge growth rate (by 70%)
     # after and including 1995
@@ -251,7 +251,7 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
 
 def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySidePressure, i):
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 258.89 + 273.15
+        T_sat_secondary = 258.69 + 273.15
     elif SecondarySidePressure < 4.593:
         T_sat_secondary = 257 + 273.15
     
@@ -382,7 +382,8 @@ def prandtl(side, Temperature, SecondarySidePressure, i):
 
 
 def inner_area(Section, Oxide):
-    return [np.pi * (x - z) * y for x, y, z in zip(Section.Diameter, Section.Length.magnitude, Oxide)]
+    return [np.pi * x * y for x, y in zip(Section.Diameter, Section.Length.magnitude)]
+#     return [np.pi * (x - z) * y for x, y, z in zip(Section.Diameter, Section.Length.magnitude, Oxide)]
 
 
 def outer_area(Section):
@@ -514,7 +515,7 @@ def temperature_profile(
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 258.89 + 273.15  # 258.69
+        T_sat_secondary = 258.69 + 273.15  # 258.69
     elif SecondarySidePressure < 4.593:
         T_sat_secondary = 257 + 273.15  # 257
     
@@ -715,7 +716,7 @@ def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInne
             OuterOx = Zone.OuterOxThickness
         else:  # assumes same growth as in default passed tube for remaining tubes
             # pass through default cleaned and not cleaned tubes
-            if Zone in Cleaned:
+            if Zone in Cleaned:   
                 InnerOx = CleanedInnerOxide
                 OuterOx = CleanedOuterOxide
             else:
@@ -723,18 +724,20 @@ def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInne
                 OuterOx = OuterOxide
         
         # [g/cm^2] / [g/cm^3] = [cm]
-        TotalIDDeposit = [(x + y) / nc.Fe3O4Density for x, y in zip (InnerOx, OuterOx)]
-        # insert adjusted mass flow here - eventually will do with pressure 
-        AverageDeposit = sum(TotalIDDeposit) / Zone.NodeNumber
-        RemainingPHTMassFlow_fouling = (
-            RemainingPHTMassFlow * ((Zone.Diameter[0] - AverageDeposit) ** 2) / (Zone.Diameter[0] ** 2))
+#         TotalIDDeposit = [(x + y) / nc.Fe3O4Density for x, y in zip (InnerOx, OuterOx)]
+#         # insert adjusted mass flow here - eventually will do with pressure 
+#         AverageDeposit = sum(TotalIDDeposit) / Zone.NodeNumber
+#         RemainingPHTMassFlow_fouling = (
+#             RemainingPHTMassFlow * ((Zone.Diameter[0] - 2 * AverageDeposit) ** 2) / (Zone.Diameter[0] ** 2))
         
-        if Zone == ld.SteamGenerator[0]: print (RemainingPHTMassFlow_fouling / RemainingPHTMassFlow)
+#         if Zone == ld.SteamGenerator[0]: print (RemainingPHTMassFlow_fouling / RemainingPHTMassFlow)
+#         if Zone == Cleaned[0]: print (OuterOx[19], calendar_year)
+        
         Zone.PrimaryBulkTemperature = temperature_profile(
-            Zone, InnerOx, OuterOx, RemainingPHTMassFlow_fouling, SecondarySidePressure, x_pht, calendar_year
+            Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, calendar_year
             ) 
         
-        m_timesH = (Zone.TubeNumber / TotalSGTubeNumber) * RemainingPHTMassFlow_fouling \
+        m_timesH = (Zone.TubeNumber / TotalSGTubeNumber) * RemainingPHTMassFlow \
             * nc.enthalpy("PHT", Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode], None)
 
         Energy.append(m_timesH)
@@ -745,7 +748,7 @@ def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInne
         Enthalpy = (sum(Energy) + MasssFlow_dividerplate.magnitude * Enthalpy_dividerplate) / MassFlow_h.magnitude 
 
     RIHT = nc.temperature_from_enthalpy("PHT", Enthalpy, None)
-#     print (calendar_year, x_pht, RIHT-273.15)
+    print (calendar_year, x_pht, RIHT-273.15)
     return RIHT
     
 # UncleanedInner = ld.SteamGenerator[12].InnerOxThickness

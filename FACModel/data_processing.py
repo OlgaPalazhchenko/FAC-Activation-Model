@@ -51,18 +51,8 @@ def sg_heat_transfer(Outlet, InletInput):
         Tubes.append(w)
     return Tubes
 
-
-def pht_cleaning(Section, j):
-    if j == 876 * 12.5:
-        for i in range(Section.NodeNumber):
-            if Section.OuterOxThickness[i] > 0:
-                Section.OuterOxThickness[i] = Section.OuterOxThickness[i] * (1 - 0.67)
-            else:
-                Section.InnerOxThickness[i] = Section.InnerOxThickness[i] * (1- 0.67)
-    else:
-        None
           
-SimulationYears = 16  # years
+SimulationYears = 26  # years
 SimulationHours = SimulationYears * 876
 
 if OutputLogging == "yes":
@@ -103,7 +93,7 @@ for j in range(SimulationHours):
     SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput)
     
     # pass "cleaned" sg tube through heat transfer function as well
-    pht_cleaning(SteamGeneratorTubes[0].Section1, j)
+#     pht_cleaning(SteamGeneratorTubes[0].Section1, j)
 #     print (
 #         ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
 #     None, None, None, None)
@@ -126,8 +116,8 @@ for j in range(SimulationHours):
 
         
         #pass cleaned and uncleaned tubes into heat transfer function
-        CleanedInnerOxide = SteamGeneratorTubes[0].Section1.InnerOxThickness
-        CleanedOuterOxide = SteamGeneratorTubes[0].Section1.OuterOxThickness
+        CleanedInnerOxide = SteamGeneratorTubes[0].Section1.InnerIronOxThickness
+        CleanedOuterOxide = SteamGeneratorTubes[0].Section1.OuterFe3O4Thickness
         
         UncleanedInnerOxide = Sg.Section1.InnerOxThickness
         UncleanedOuterOxide = Sg.Section1.OuterOxThickness
@@ -140,7 +130,7 @@ for j in range(SimulationHours):
 #         if 876 * 5.5 <= j <= 876 * 9:
 #             T_RIH = T_RIH - 1.1
 #         
-        print (1983 +j/876, x_pht, T_RIH)
+#         print (1983 +j/876, x_pht, T_RIH)
         x_pht = SGHX.pht_steam_quality(T_RIH + 273.15, j)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
