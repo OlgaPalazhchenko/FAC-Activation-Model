@@ -166,16 +166,13 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 def sludge_fouling_resistance(Section, i, calendar_year):
     
     TubeGrowth = 0.0014 # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.00008 # [g/cm^2] /year = 3.25 um/year
+    ReducedTubeGrowth = 0.0001 # [g/cm^2] /year = 3.25 um/year
     
-    if i == 0 or i == 21:
+    if i == 0:
         SludgePileGrowth = 1.5 * TubeGrowth
-    
-    elif 0 < i < 21:
+    else:
         SludgePileGrowth = 0
         
-    else:
-        None
     # between 1983 and 1986 (included)
     if YearStartup <= calendar_year <= YearCPP:
         # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
@@ -191,8 +188,7 @@ def sludge_fouling_resistance(Section, i, calendar_year):
     # after and including 1995
 
     elif calendar_year >= YearSHTChemicalClean:
-        Accumulation = ((calendar_year - YearSHTChemicalClean) * ReducedTubeGrowth
-                        + (calendar_year - YearSHTChemicalClean) * SludgePileGrowth * (1-0.9))
+        Accumulation = (calendar_year - YearSHTChemicalClean) * ReducedTubeGrowth
         
     Thickness = Accumulation / nc.Fe3O4Density
     
@@ -233,23 +229,24 @@ def conduction_resistance(Section, Twall, SecondarySidePressure, i):
     return R_cond
 
 
-def primary_convection_resistance(Section, correlation, T_film, T_wall, SecondarySidePressure, x_pht, i):
+def primary_convection_resistance(Section, correlation, T_film, T_wall, SecondarySidePressure, x_pht, i,
+                                  m_h_leakagecorrection, TotalAccumulation):
     # R_1,Convective = 1/(h_1,convectove *A)
     # A = inner area (based on inner diameter)
     # [W/cm K]/ [cm] = [W/K cm^2]
     
     if x_pht > 0:
-        MassFlux_h.magnitude = MassFlow_h.magnitude / (TotalSGTubeNumber * (np.pi / 4) * (Section.Diameter[i] ** 2))
+        MassFlux_h.magnitude = m_h_leakagecorrection / (TotalSGTubeNumber * (np.pi / 4) * (Section.Diameter[i] ** 2))
         
         h_i = boiling_heat_transfer(
             x_pht, "PHT", T_sat_primary, MassFlux_h.magnitude, T_wall, Section.Diameter[i], SecondarySidePressure, i
             )
          
     else:
-        h_i = nusseltnumber(Section, correlation, T_film, SecondarySidePressure, i, x_pht) \
+        h_i = nusseltnumber(Section, correlation, T_film, SecondarySidePressure, i, x_pht, m_h_leakagecorrection) \
         * thermal_conductivity(T_film, "water", SecondarySidePressure) / Section.Diameter[i]
 
-    return 1 / (h_i * inner_area(Section)[i])  # [K/W]
+    return 1 / (h_i * inner_area(Section, TotalAccumulation)[i])  # [K/W]
 
 
 def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySidePressure, i):
@@ -346,14 +343,14 @@ def boiling_heat_transfer(x, side, T_sat, MassFlux, T_wall, Diameter, SecondaryS
     return HeatTransferCoefficient
 
 
-def nusseltnumber(Section, correlation, Temperature, SecondarySidePressure, i, x_pht):
+def nusseltnumber(Section, correlation, Temperature, SecondarySidePressure, i, x_pht, m_h_leakagecorrection):
     # DensityH2O = nc.density("PHT", Temperature)
 
     # Re_D = Section.Velocity[i]*Section.Diameter[i]/(ViscosityH2O*DensityH2O)
     if x_pht > 0:
-        MassFlow = MassFlow_h.magnitude * (1 - x_pht)
+        MassFlow = m_h_leakagecorrection * (1 - x_pht)
     else:
-        MassFlow = MassFlow_h.magnitude
+        MassFlow = m_h_leakagecorrection
     
     MassFlux_h.magnitude = MassFlow / (TotalSGTubeNumber * (np.pi / 4) * (Section.Diameter[i] ** 2))
     
@@ -384,8 +381,8 @@ def prandtl(side, Temperature, SecondarySidePressure, i):
     return Pr
 
 
-def inner_area(Section):
-    return [np.pi * x * y for x, y in zip(Section.Diameter, Section.Length.magnitude)]
+def inner_area(Section, Oxide):
+    return [np.pi * (x -z) * y for x, y, z in zip(Section.Diameter, Section.Length.magnitude, Oxide)]
 
 
 def outer_area(Section):
@@ -435,7 +432,9 @@ def sht_steam_quality(Q, T_sat_secondary, x, SecondarySidePressure):
     
 def wall_temperature(
         Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation,
-        calendar_year, SecondarySidePressure):
+        calendar_year, SecondarySidePressure, m_h_leakagecorrection):
+    
+    TotalAccumulation = [x + y for x, y in zip (InnerAccumulation, OuterAccumulation)]
     
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
@@ -449,25 +448,26 @@ def wall_temperature(
         SecondaryT_film = (T_SecondaryBulkIn + T_SecondaryWall) / 2
 
         h_i.magnitude = 1 / (primary_convection_resistance(
-            Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, x_pht, i
-            ) * inner_area(Section)[i])
+            Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, x_pht, i,
+            m_h_leakagecorrection, TotalAccumulation) * inner_area(Section, TotalAccumulation)[i])
         
         h_o.magnitude = 1 / (secondary_convection_resistance(
             Section, SecondaryT_film, T_SecondaryWall, x_in, SecondarySidePressure, i
             ) * outer_area(Section)[i])
         # R = 1/hA --> h=A*1/R
 
-        U_h1 = inner_area(Section)[i] * conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)
+        U_h1 = inner_area(Section, TotalAccumulation)[i] \
+        * conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)
         
-        U_h2 = inner_area(Section)[i] * secondary_convection_resistance(
+        U_h2 = inner_area(Section, TotalAccumulation)[i] * secondary_convection_resistance(
             Section, SecondaryT_film, T_SecondaryWall, x_in, SecondarySidePressure, i
             )
         U_h.magnitude = 1 / (U_h1 + U_h2)  # [W/ cm^2 K]
 
         U_c1 = outer_area(Section)[i] * conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)
         U_c2 = outer_area(Section)[i] * primary_convection_resistance(
-            Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, x_pht, i
-            ) 
+            Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, x_pht, i,
+            m_h_leakagecorrection, TotalAccumulation) 
         U_c.magnitude = 1 / (U_c1 + U_c2)  # [W/cm^2 K]
 
         T_PrimaryWall = (T_PrimaryBulkIn * h_i.magnitude + T_SecondaryBulkIn * U_h.magnitude)\
@@ -489,8 +489,8 @@ def wall_temperature(
             R_F_secondary.magnitude = sludge_fouling_resistance(Section, i, calendar_year)
                         
             PCR = primary_convection_resistance(
-                Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, x_pht, i
-                )
+                Section, "Dittus-Boelter", PrimaryT_film, T_PrimaryWall, SecondarySidePressure, x_pht, i,
+                m_h_leakagecorrection, TotalAccumulation)
             SCR = secondary_convection_resistance(
                 Section, SecondaryT_film, T_SecondaryWall, x_in, SecondarySidePressure, i
                 )
@@ -535,7 +535,7 @@ def temperature_profile(
         
         T_wh, T_wc, U = wall_temperature(
             Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerOxide, OuterOxide, calendar_year,
-            SecondarySidePressure)
+            SecondarySidePressure, m_h_leakagecorrection)
         
         # all nodes other than preheater
         if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater" and \
@@ -639,6 +639,8 @@ def temperature_profile(
 #     print()
     return PrimaryBulk
 
+def pht_massflow():
+    None
 
 def station_events(calendar_year, x_pht):
     # Divider plate leakage, mechanical cleaning, and pressure changes 
@@ -703,21 +705,10 @@ def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInne
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(
         calendar_year, x_pht
         )
+    
 
     Energy = []
     for Zone in ld.SteamGenerator:
-        
-#         # partial mechanical clean of boiler tube primary side (67 % efficiency for the 60 % of tubes accessed)
-#         if calendar_year == 1995.5:        
-#             if Zone in SGHX.Cleaned:
-#                 for i in range(Zone.NodeNumber - 1):
-#                     if Zone.OuterOxThickness[i] > 0:
-#                         Zone.OuterOxThickness[i] = Zone.OuterOxThickness[i] * (1 - 0.67)
-#                     else:
-#                         Zone.InnerOxThickness[i] = Zone.InnerOxThickness[i] * (1 - 0.67)
-#                 InnerOx = Zone.InnerOxThickness
-#                 OuterOx = Zone.OuterOxThickness
-    
         if Zone in selected_tubes:
             # tracks oxide growth for these tubes specifically
             InnerOx = Zone.InnerOxThickness
@@ -730,6 +721,9 @@ def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInne
             else:
                 InnerOx = InnerOxide
                 OuterOx = OuterOxide
+        
+#         #insert adjusted mass flow here 
+#         RemainingPHTMassFlow = RemainingPHTMassFlow * (Zone.Diameter[0] - ) will have to be array bc diff loadings
         
         Zone.PrimaryBulkTemperature = temperature_profile(
             Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, calendar_year
@@ -749,9 +743,9 @@ def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInne
 #     print (calendar_year, x_pht, RIHT-273.15)
     return RIHT
     
-# UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
-# UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
-# CleanedInner = [i * 0.67 for i in UncleanedInner]
-# CleanedOuter = [i * 0.67 for i in UncleanedOuter]
-
-# print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 8760*0) - 273.15)
+UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
+UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
+CleanedInner = [i * 0.67 for i in UncleanedInner]
+CleanedOuter = [i * 0.67 for i in UncleanedOuter]
+ 
+print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 8760*0) - 273.15)

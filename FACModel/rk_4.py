@@ -197,6 +197,8 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
         if ElementTracking == "yes":
             Section.NiThickness = [x + y * TIME_INCREMENT for x, y in zip(Section.NiThickness, GrowthNickel)]
             Section.CoThickness = [x + y * TIME_INCREMENT for x, y in zip(Section.CoThickness, GrowthCobalt)]
+            
+        
         
     
     else:

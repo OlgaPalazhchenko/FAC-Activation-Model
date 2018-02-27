@@ -62,7 +62,7 @@ def pht_cleaning(Section, j):
     else:
         None
           
-SimulationYears = 26  # years
+SimulationYears = 16  # years
 SimulationHours = SimulationYears * 876
 
 if OutputLogging == "yes":
