@@ -52,7 +52,7 @@ def sg_heat_transfer(Outlet, InletInput):
     return Tubes
 
           
-SimulationYears = 14  # years
+SimulationYears = 26  # years
 SimulationHours = SimulationYears * 876
 
 if OutputLogging == "yes":
@@ -130,7 +130,7 @@ for j in range(SimulationHours):
 #         if 876 * 5.5 <= j <= 876 * 9:
 #             T_RIH = T_RIH - 1.1
 #         
-#         print (1983 +j/876, x_pht, T_RIH)
+        print (1983 +j/876, x_pht, T_RIH)
         x_pht = SGHX.pht_steam_quality(T_RIH + 273.15, j)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber

@@ -209,6 +209,11 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations,
                 Section, ElementTracking,  Section.InnerIronOxThickness, Section.OuterFe3O4Thickness,
                 Section.NiThickness, Section.CoThickness
                 )
+        
+        if Section == SGHX.selected_tubes[0]:
+            [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
+                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, j)
+        
         # uniform oxide growth (preset corrosion rate)
         Section.InnerIronOxThickness = [
             x + y * TIME_INCREMENT for x, y in zip(Section.InnerIronOxThickness, GrowthInnerIronOxide)
@@ -221,9 +226,8 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations,
             Section.NiThickness = [x + y * TIME_INCREMENT for x, y in zip(Section.NiThickness, GrowthNickel)]
             Section.CoThickness = [x + y * TIME_INCREMENT for x, y in zip(Section.CoThickness, GrowthCobalt)]
         
-        if Section == SGHX.selected_tubes[0]:
-            [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
-                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, j)
+        else:
+            None
         
           
     else:
@@ -514,6 +518,6 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
         
         if Section not in ld.FuelSections:
             if Section.InnerIronOxThickness[i] <= 8e-6:
-                Section.InnerIronOxThickness[i] = 0.0000025  # Resets to original thickness
+                Section.InnerIronOxThickness[i] = 0.00025  # Resets to original thickness
 
     return ElapsedTime, SpallTime

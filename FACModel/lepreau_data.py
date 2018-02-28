@@ -235,7 +235,7 @@ for i, j in zip (radii, radius_decrease):
     
 u_bend_total = [x + y for x, y in zip(u_bend, straight_u_bend_section)]
 
-hot_leg_length = [74.05, 74.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96]
+hot_leg_length = [24.05, 124.05, 148.1, 113.96, 113.96, 113.96, 113.96, 113.96]
 cold_leg_length = [113.96, 113.96, 113.96, 113.96, 113.96, 74.05, 75, 74.05, 42.05, 3.2]
 
 number_tubes = [8, 11, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 26, 28, 28, 28, 29, 28, 31, 32, 33, 34, 35, 36, 35,
@@ -284,7 +284,8 @@ def steam_generator_properties(SteamGenerator):
         + ["u-bend"] * 4 \
         + [None] * 5 \
         + ["preheater start"] \
-        + ["preheater"] * 3
+        + ["preheater"] * 3\
+        + ["thermal plate"]
 
 steam_generator_properties(SteamGenerator)
 steam_generator_properties(SteamGenerator_2)

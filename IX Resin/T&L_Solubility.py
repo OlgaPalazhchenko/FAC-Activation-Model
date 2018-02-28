@@ -19,7 +19,7 @@ SG = Section()
 CONCENTRATION_LITHIUM = 0.000225095734 # [mol/kg]
 H2 = 10  # [cm^3/kg] dissolved hydrogen gas concentration
 
-SG.PrimaryBulkTemperature = [265 + 273.15] # [K]
+SG.PrimaryBulkTemperature = [256.9354978437175 + 273.15] # [K]
 SG.NodeNumber = len(SG.PrimaryBulkTemperature)
 
 #literature constants
