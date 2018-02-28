@@ -192,6 +192,7 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, j):
         InnerOxide = InnerOxide
         OuterOxide = OuterOxide
     return InnerOxide, OuterOxide
+# print (pht_cleaning(ld.SteamGenerator[0], [0.00025, 0.00025], [0.00025, 0.00025], 876*1.5))
 
 
 def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations,

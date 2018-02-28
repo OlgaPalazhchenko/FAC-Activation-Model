@@ -165,8 +165,8 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.0014  # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.0002  # [g/cm^2] /year = 3.25 um/year
+    TubeGrowth = 0.0012  # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
     
     if i == 0:
         SludgePileGrowth = 1.5 * TubeGrowth
@@ -182,7 +182,7 @@ def sludge_fouling_resistance(Section, i, calendar_year):
     # (assumed proportional red. in deposit formation)
     # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
     elif YearCPP < calendar_year < YearSHTChemicalClean: 
-        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth) * (0.2)
+        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth) * (0.16)
                         + (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth))
     # tubes + sludge cleaned 70%, along with reduction in sludge growth rate (by 70%)
     # after and including 1995
@@ -668,14 +668,14 @@ def station_events(calendar_year, x_pht):
 #         MassFlow_h.magnitude = MassFlow_h.magnitude * 0.97
         
     # divider plate raplacement in 1995, assumed to stop increase in leak (2% constant going forward)
-    if calendar_year < 1995.5:
+    if calendar_year < 1995:
         # divider plate leakage rates estimated based on AECL work
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
         InitialLeakage = 0.025 
         YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
          
-    elif calendar_year >= 1995.5:
+    elif calendar_year >= 1995:
         InitialLeakage = 0.02 
         YearlyRateLeakage = 0
     else:
@@ -755,5 +755,5 @@ def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInne
 # UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
 # CleanedInner = [i * 0.67 for i in UncleanedInner]
 # CleanedOuter = [i * 0.67 for i in UncleanedOuter]
-#  
+#   
 # print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 8760 * 0) - 273.15)

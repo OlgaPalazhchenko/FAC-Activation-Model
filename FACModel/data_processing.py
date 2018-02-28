@@ -52,7 +52,7 @@ def sg_heat_transfer(Outlet, InletInput):
     return Tubes
 
           
-SimulationYears = 26  # years
+SimulationYears = 14  # years
 SimulationHours = SimulationYears * 876
 
 if OutputLogging == "yes":
