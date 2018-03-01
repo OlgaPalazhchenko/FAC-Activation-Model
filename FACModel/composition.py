@@ -24,13 +24,12 @@ KFeOH3POLYNOMIAL = [-4.667E-10, 1.0496E-06, -0.000935775, 0.413186, -97.4709]
 
 
 def arrhenius_activaton_energy():
-    SteamGenerator = ld.SteamGenerator
-#     year = (j / 8760) 
-#     calendar_year = year + 1983
-    
-    Tube = SGHX.closest_tubelength(1980)
+    Section = SGHX.selected_tubes[0]
+# #     year = (j / 8760) 
+# #     calendar_year = year + 1983
+#     
+#     Tube = SGHX.closest_tubelength(1980)
 
-#     if calendar_year < 2012:
         # based on chemical clean (AECL) of plngs pulled tubes in 1994
         # assumed this average growth rate applies to all tubes (data only available for 2 x 19.8 m long tubes)
         
@@ -39,12 +38,12 @@ def arrhenius_activaton_energy():
     Growth_hotavg = 16 / (100 ** 2)
     
     Saturation = ld.UnitConverter(
-        SteamGenerator[Tube], "Mol per Kg", "Grams per Cm Cubed", SteamGenerator[Tube].SolutionOxide.FeSatFe3O4, None,
+        Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeSatFe3O4, None,
         None, None, nc.FeMolarMass, None
         )
     
     Concentration = ld.UnitConverter(
-        SteamGenerator[Tube], "Mol per Kg", "Grams per Cm Cubed", SteamGenerator[Tube].SolutionOxide.FeTotal, None,
+        Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeTotal, None,
         None, None, nc.FeMolarMass, None
         )
     
@@ -70,17 +69,20 @@ def arrhenius_activaton_energy():
     T_cold = []
     T_hot = []
         
-    for i in range(SteamGenerator[Tube].NodeNumber - 1):
-        if (SteamGenerator[Tube].Length.label[i] == "preheater"
-            or SteamGenerator[Tube].Length.label[i] == "preheater start"):
-            # preheater area
-            T_cold.append(SteamGenerator[Tube].PrimaryBulkTemperature[i])
-            
-        if 3 < i < 12:
-            T_hot.append(SteamGenerator[Tube].PrimaryBulkTemperature[i])
+#     for i in range(SteamGenerator[Tube].NodeNumber - 1):
+#         if (SteamGenerator[Tube].Length.label[i] == "preheater"
+#             or SteamGenerator[Tube].Length.label[i] == "preheater start"):
+#             # preheater area
+#             T_cold.append(SteamGenerator[Tube].PrimaryBulkTemperature[i])
+#             
+#         if 3 < i < 12:
+#             T_hot.append(SteamGenerator[Tube].PrimaryBulkTemperature[i])
 
-    T_coldavg = sum(T_cold) / len(T_cold)  # preheater
-    T_hotavg = sum(T_hot) / len(T_hot)  # hot leg not including preheater or first 4 m
+    T_coldavg = Section.PrimaryBulkTemperature[19]  # preheater
+    T_hotavg = Section.PrimaryBulkTemperature[7]
+    
+#     T_coldavg = sum(T_cold) / len(T_cold)  # preheater
+#     T_hotavg = sum(T_hot) / len(T_hot)  # hot leg not including preheater or first 4 m
 #     print (kp_cold, kp_hot)
     # natural logarithm, ln, [J/K mol][K] = [J/mol]
     ActivationEnergy = (nc.R * T_coldavg * T_hotavg / (T_coldavg - T_hotavg)) * np.log(kp_cold / kp_hot)

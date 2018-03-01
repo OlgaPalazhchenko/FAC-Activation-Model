@@ -14,7 +14,7 @@ YearSHTChemicalClean = 1995.5
 # select all the SG tubes to be run (by arc length)
 UBends = [1.52]  # , 1.52, 2.31, 3.09]
 UBends = [i * 100 for i in UBends]
-TubeLengths = [1907]
+TubeLengths = [1907, 1907]
 
 h_i = nc.SGParameters()
 h_o = nc.SGParameters()
@@ -44,15 +44,15 @@ for i in [R_F_primary, R_F_secondary]:
     i.unit = "cm^2 K/W"
 
 # T_sat_secondary = 260.1 + 273.15
-T_sat_primary = 309.24 + 273.15
+T_sat_primary = 310 + 273.15
 T_PreheaterIn = 186.5 + 273.15
 RecirculationRatio = 5.3
 
 MassFlow_h.magnitude = 1900 * 1000
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
 # 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
-MassFlow_preheater.magnitude = 240 * 1000
-MassFlow_ReheaterDrains = 89 * 1000 / 4
+MassFlow_preheater.magnitude = 258 * 1000
+MassFlow_ReheaterDrains = 0 #89 * 1000 / 4
 MassFlow_c.magnitude = MassFlow_preheater.magnitude * RecirculationRatio + MassFlow_ReheaterDrains
 
 
@@ -181,11 +181,11 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.001  # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.00008  # [g/cm^2] /year = 3.25 um/year
+    TubeGrowth = 0.0008  # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
     
     if i == 0:
-        SludgePileGrowth = 2 * TubeGrowth
+        SludgePileGrowth = 1.25 * TubeGrowth
     else:
         SludgePileGrowth = 0
         
@@ -269,7 +269,7 @@ def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySide
     if SecondarySidePressure == 4.593: 
         T_sat_secondary = 258.69 + 273.15
     elif SecondarySidePressure < 4.593:
-        T_sat_secondary = 256.9 + 273.15
+        T_sat_secondary = 257 + 273.15
     
     # split into boiling and non-boiling (preheater) sections
     if Section.Length.label[i] == "preheater" or Section.Length.label[i] == "preheater start":  # from Silpsrikul thesis
@@ -444,8 +444,8 @@ def sht_steam_quality(Q, T_sat_secondary, x, SecondarySidePressure):
 
     x = (H_current - H_satliq) / (H_SaturatedSteam - H_satliq)
     return x
-    
-    
+
+
 def wall_temperature(
         Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation,
         calendar_year, SecondarySidePressure, m_h_leakagecorrection):
@@ -532,7 +532,7 @@ def temperature_profile(
     if SecondarySidePressure == 4.593: 
         T_sat_secondary = 258.69 + 273.15  # 258.69
     elif SecondarySidePressure < 4.593:
-        T_sat_secondary = 256.9 + 273.15  # 257
+        T_sat_secondary = 257 + 273.15  # 257
     
     PrimaryWall = []
     PrimaryBulk = []
@@ -595,8 +595,9 @@ def temperature_profile(
 #                 MassFlow_c.magnitude * EnthalpySaturatedSteam.magnitude  * (Section.TubeNumber / TotalSGTubeNumber)
 #                 ))               
 
-#             if i == 10:
-#                 x_in = 0
+            # steam collection at top of u-bend
+            if i == 14:
+                x_in = 0
             x_in = sht_steam_quality(Q, T_SecondaryBulkOut, x_in, SecondarySidePressure)
 #             print (i, x_in)
 
@@ -710,17 +711,7 @@ def station_events(calendar_year, x_pht):
         InitialLeakage = 0.02 
         YearlyRateLeakage = 0
     else:
-        None
-    
-#     # partial mechanical clean of boiler tube primary side (67 % efficiency for the 60 % of tubes accessed)        
-#     if calendar_year == 1995.5:
-#         for Zone in ld.SteamGenerator:
-#             if Zone in Cleaned:
-#                 for i in range(Zone.NodeNumber - 1):
-#                     if Zone.OuterOxThickness[i] > 0:
-#                         Zone.OuterOxThickness[i] = Zone.OuterOxThickness[i] * (1 - 0.67)
-#                     else:
-#                         Zone.InnerOxThickness[i] = Zone.InnerOxThickness[i] * (1 - 0.67)    
+        None 
     
     Leakage = InitialLeakage + (calendar_year - YearStartup) * YearlyRateLeakage
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
@@ -786,5 +777,5 @@ def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInne
 # UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
 # CleanedInner = [i * 0.67 for i in UncleanedInner]
 # CleanedOuter = [i * 0.67 for i in UncleanedOuter]
-#     
+#      
 # print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 0) - 273.15)

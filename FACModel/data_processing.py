@@ -52,7 +52,7 @@ def sg_heat_transfer(Outlet, InletInput):
     return Tubes
 
           
-SimulationYears = 26  # years
+SimulationYears = 4  # years
 SimulationHours = SimulationYears * 876
 
 if OutputLogging == "yes":
@@ -67,6 +67,7 @@ if OutputLogging == "yes":
     pht_SteamFraction = []
     # StreamOutletTemperatures = [] # monitored with time 
     TemperatureProfile = []
+    TotalDistance = []
     Years = []
     for i in range((SimulationYears + 1) * 2):
         Years.append(i/2 + SGHX.YearStartup)
@@ -155,17 +156,18 @@ for j in range(SimulationHours):
     else:
         None
           
-for Zone in SGHX.selected_tubes:
+for Zone in [SGHX.selected_tubes[0], ld.SteamGenerator[Default_Tube]]:
     x = ld.UnitConverter(
     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerIronOxThickness, None, None, None
     )
     y = ld.UnitConverter(
     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterFe3O4Thickness, None, None, None
     )
-    
+    z = Zone.Distance
 #     totalloading = [i + j for i, j in zip(x, y)]
 #     z = sum(totalloading[11:len(totalloading)]) / (len(totalloading) - 11)
     
+    TotalDistance.append(z)
     TotalInnerLoading.append(x)
     TotalOuterLoading.append(y)
     Solubility.append(Zone.SolutionOxide.FeSatFe3O4)
@@ -173,9 +175,10 @@ for Zone in SGHX.selected_tubes:
     Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
     TemperatureProfile.append(Temperature_C)
     
-Data = [SGHX.TubeLengths, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration, TemperatureProfile]
+Data = [SGHX.TubeLengths, TotalDistance, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration,
+        TemperatureProfile]
 Labels = [
-    "U-bend length (cm)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Solubility (mol/kg)", "S/O [Fe] (mol/kg)",
+    "U-bend length (cm)", "Distance (cm)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Solubility (mol/kg)", "S/O [Fe] (mol/kg)",
     "Temperature Profile (oC)"]
 
 RIHT_delta = [x-y for x, y in zip (RIHT[1:], RIHT)]   

@@ -210,7 +210,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations,
                 Section.NiThickness, Section.CoThickness
                 )
         
-        if Section == SGHX.selected_tubes[0]:
+        if Section == SGHX.selected_tubes[1]:
             [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
                 Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, j)
         
