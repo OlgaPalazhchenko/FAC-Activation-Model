@@ -8,6 +8,7 @@ import lepreau_data as ld
 import sg_heattransfer as SGHX
 import composition as c
 import numpy as np
+import thermochemistry_and_constants as nc
 import csv
 
 import matplotlib.pyplot as plt
@@ -24,9 +25,8 @@ Loop = "half"
 ElementTracking = "no"
 
 # 1.52 m is the u-bend arc length of an average SG tube
-Default_Tube = SGHX.closest_ubend(1.52 * 50)
+Default_Tube = SGHX.closest_ubend(1.92 * 100)
 # SteamGeneratorTubes = []
-
 
 def sg_heat_transfer(Outlet, InletInput):
     Tubes = []
@@ -52,7 +52,7 @@ def sg_heat_transfer(Outlet, InletInput):
     return Tubes
 
           
-SimulationYears = 4  # years
+SimulationYears = 26  # years
 SimulationHours = SimulationYears * 876
 
 if OutputLogging == "yes":
@@ -61,6 +61,7 @@ if OutputLogging == "yes":
     Loading_time = []
     TotalInnerLoading = []
     TotalOuterLoading = []
+    TotalOxide = []
     RIHT = [] # monitored with time 
     OutletTemperatures1 = [] 
     OutletTemperatures2 = []
@@ -128,9 +129,7 @@ for j in range(SimulationHours):
             SGHX.energy_balance(ld.SteamGenerator[Default_Tube].NodeNumber - 1, UncleanedInnerOxide,
                                 UncleanedOuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j) - 273.15
                  )
-#         if 876 * 5.5 <= j <= 876 * 9:
-#             T_RIH = T_RIH - 1.1
-#         
+
         print (1983 +j/876, x_pht, T_RIH)
         x_pht = SGHX.pht_steam_quality(T_RIH + 273.15, j)
         
@@ -163,23 +162,28 @@ for Zone in [SGHX.selected_tubes[0], ld.SteamGenerator[Default_Tube]]:
     y = ld.UnitConverter(
     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterFe3O4Thickness, None, None, None
     )
-    z = Zone.Distance
-#     totalloading = [i + j for i, j in zip(x, y)]
+    z = [i / 100 for i in Zone.Distance]
+    q = [i + j for i, j in zip(x, y)]
 #     z = sum(totalloading[11:len(totalloading)]) / (len(totalloading) - 11)
+    d = ld.UnitConverter(Zone, "Mol per Kg", "Grams per Cm Cubed", Zone.SolutionOxide.FeSatFe3O4, None, None, None,
+                         nc.FeMolarMass, None)
+    e = ld.UnitConverter(Zone, "Mol per Kg", "Grams per Cm Cubed", Zone.SolutionOxide.FeTotal, None, None, None,
+                         nc.FeMolarMass, None)
     
     TotalDistance.append(z)
     TotalInnerLoading.append(x)
     TotalOuterLoading.append(y)
-    Solubility.append(Zone.SolutionOxide.FeSatFe3O4)
-    IronConcentration.append(Zone.SolutionOxide.FeTotal)
+    TotalOxide.append(q)
+    Solubility.append(d) # Zone.SolutionOxide.FeSatFe3O4
+    IronConcentration.append(e) # Zone.SolutionOxide.FeTotal
     Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
     TemperatureProfile.append(Temperature_C)
     
-Data = [SGHX.TubeLengths, TotalDistance, TotalInnerLoading, TotalOuterLoading, Solubility, IronConcentration,
+Data = [SGHX.TubeLengths, TotalDistance, TotalInnerLoading, TotalOuterLoading, TotalOxide, Solubility, IronConcentration,
         TemperatureProfile]
 Labels = [
-    "U-bend length (cm)", "Distance (cm)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Solubility (mol/kg)", "S/O [Fe] (mol/kg)",
-    "Temperature Profile (oC)"]
+    "U-bend length (cm)", "Distance (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Total Oxide (g/m^2)",
+    "Solubility (mol/kg)", "S/O [Fe] (mol/kg)", "Temperature Profile (oC)"]
 
 RIHT_delta = [x-y for x, y in zip (RIHT[1:], RIHT)]   
 

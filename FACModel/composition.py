@@ -34,7 +34,7 @@ def arrhenius_activaton_energy():
         # assumed this average growth rate applies to all tubes (data only available for 2 x 19.8 m long tubes)
         
         # [g/m^2 /yr] --> [g/cm^2 /yr]
-    Growth_coldavg = 33.8 / (100 ** 2) # preheater
+    Growth_coldavg = 32 / (100 ** 2) # preheater
     Growth_hotavg = 16 / (100 ** 2)
     
     Saturation = ld.UnitConverter(
@@ -93,13 +93,11 @@ def arrhenius_activaton_energy():
  
 
 def plngs_precipitation_kinetics(Section, j):
-    if j < 200:
-        [ActivationEnergy, A] = arrhenius_activaton_energy()
-                
+    if j < 150:
+        [ActivationEnergy, A] = arrhenius_activaton_energy()         
         kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
     else:
         kp = Section.KpFe3O4electrochem
-
     return kp
 
 

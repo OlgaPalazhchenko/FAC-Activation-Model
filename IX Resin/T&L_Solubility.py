@@ -19,7 +19,7 @@ SG = Section()
 CONCENTRATION_LITHIUM = 0.000225095734 # [mol/kg]
 H2 = 10  # [cm^3/kg] dissolved hydrogen gas concentration
 
-SG.PrimaryBulkTemperature = [256.9354978437175 + 273.15] # [K]
+SG.PrimaryBulkTemperature = [261 + 273.15] # [K]
 SG.NodeNumber = len(SG.PrimaryBulkTemperature)
 
 #literature constants
@@ -118,7 +118,7 @@ def bulkpH_calculator(Section):  # Bulk pH calculation
 
 def hydrolysis(Section, FeTotal):
     
-    Section.ConcentrationH = bulkpH_calculator(Section)
+    ConcentrationH = bulkpH_calculator(Section)
     
     ActivityCoefficient1 = [1.0] * Section.NodeNumber  # initial estimate for activities (+/- 1 charged ions)
     ActivityCoefficient2 = [1.0] * Section.NodeNumber  # (+/- 2 charged ions)
@@ -179,7 +179,6 @@ def hydrolysis(Section, FeTotal):
 
             return ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2
 
-
 def iron_solubility(Section, Condition):
     # As temperature changes, thermochemistry and constants (k_Li, k_w, etc. change), pH changes as well, 
     # both affecting solubility --> Bulk FeSatFe3O4
@@ -194,7 +193,7 @@ def iron_solubility(Section, Condition):
     # if total iron concentration in solution unknown, use these activity coeffs    
     if Condition == "initial":
         gamma_1 = [0.95] * Section.NodeNumber
-        gamma_2 = [0.78] * Section.NodeNumber
+        gamma_2 = [0.9] * Section.NodeNumber
     else:
         gamma_1 = hydrolysis(Section, Section.FeTotal, Section.ConcentrationH)[2]
         gamma_2 = hydrolysis(Section, Section.FeTotal, Section.ConcentrationH)[3]

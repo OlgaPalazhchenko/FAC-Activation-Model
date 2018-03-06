@@ -11,10 +11,19 @@ YearStartup = 1983
 YearCPP = 1987.5
 YearSHTChemicalClean = 1995.5
 
+YearDerates = [1999.5, 1999.75, 2000, 2000.25, 2000.5, 2000.75, 2001, 2001.25, 2001.5, 2001.75, 2002, 2002.25, 20002.5,
+               2002.75, 2003, 2003.25, 2003.5, 2003.75, 2004, 2004.25, 2004.5, 2004.75, 2005, 2005.25, 2005.5, 2005.75,
+               2006, 2006.25, 2006.5, 2006.75, 2007, 2007.25, 2007.5, 2007.75, 2008]
+
+PercentDerates = [3, 4, 5, 5, 6, 3.57, 3.22, 3.43, 3.77, 4.27, 4.61, 4.74, 3.33, 3.64, 3.15, 4.08, 4, 3.88, 3.74, 4.18,
+                  4.97, 5.17, 5.24, 6.30, 6.97, 7.41, 7.89, 8.29, 8.5, 8.75, 8.87, 9.39, 9, 9, 9]
+
+# PercentDerates = [i - 1 for i in PercentDerates]
+
 # select all the SG tubes to be run (by arc length)
 UBends = [1.52]  # , 1.52, 2.31, 3.09]
 UBends = [i * 100 for i in UBends]
-TubeLengths = [1907, 1907]
+TubeLengths = [1907]
 
 h_i = nc.SGParameters()
 h_o = nc.SGParameters()
@@ -51,8 +60,8 @@ RecirculationRatio = 5.3
 MassFlow_h.magnitude = 1900 * 1000
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
 # 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
-MassFlow_preheater.magnitude = 258 * 1000
-MassFlow_ReheaterDrains = 0 #89 * 1000 / 4
+MassFlow_preheater.magnitude = 222.25 * 1000
+MassFlow_ReheaterDrains = 140 * 1000 / 4
 MassFlow_c.magnitude = MassFlow_preheater.magnitude * RecirculationRatio + MassFlow_ReheaterDrains
 
 
@@ -158,8 +167,8 @@ def tube_picker(method):
 
 selected_tubes = tube_picker("tube length")[0]
 tube_number = tube_picker("tube length")[1] 
-Cleaned = cleaned_tubes()
 
+Cleaned = cleaned_tubes()
 
 def thermal_conductivity(Twall, material, SecondarySidePressure):
     if material == "Alloy-800" or material == "Alloy800" or material == "A800" or material == "Alloy 800":
@@ -181,11 +190,11 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.0008  # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
+    TubeGrowth = 0.0012  # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.0002  # [g/cm^2] /year = 3.25 um/year
     
     if i == 0:
-        SludgePileGrowth = 1.25 * TubeGrowth
+        SludgePileGrowth = 0 #1 * TubeGrowth
     else:
         SludgePileGrowth = 0
         
@@ -198,8 +207,7 @@ def sludge_fouling_resistance(Section, i, calendar_year):
     # (assumed proportional red. in deposit formation)
     # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
     elif YearCPP < calendar_year < YearSHTChemicalClean: 
-        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth) * (0.16)
-                        + (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth))
+        Accumulation = (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth)
     # tubes + sludge cleaned 70%, along with reduction in sludge growth rate (by 70%)
     # after and including 1995
 
@@ -409,20 +417,29 @@ def outer_area(Section):
 def pht_steam_quality(Temperature, j):
     calendar_year = (j / 876) + YearStartup
          
-    CoreMassFlow = (MassFlow_h.magnitude / 1000) * 4  # [kg /s]
-    Delta_T = T_sat_primary - (259.35 + 273.45)  # [K]
-    C_p_cold = nc.HeatCapacity("PHT", 259.35, SecondarySidePressure=None)
+    CoreMassFlow = (1925000 / 1000) * 4  # [kg /s]
+    Delta_T = T_sat_primary - (259.6 + 273.15)  # [K]
+    C_p_cold = nc.HeatCapacity("PHT", 259.6, SecondarySidePressure=None)
     C_p_hot = nc.HeatCapacity("PHT", T_sat_primary, SecondarySidePressure=None)
     C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
     
     Power = CoreMassFlow * C_p_avg * Delta_T  # [kW]
+    YearDeratingStarts = 1999.5
     
-    if calendar_year >= 1998:
-        YearDeratingStarts = 1998
-        Percent_derating = 0.45
-        # derating by 1% per year (~20 kW)
-        Power = Power - Power * (Percent_derating / 100) * (calendar_year - YearDeratingStarts)
-#     print (C_p_avg, Power/1000)
+    difference = []
+    
+    if YearDeratingStarts <= calendar_year <= 2008:
+        for Yr in YearDerates:
+            difference.append(abs(calendar_year - Yr))
+        ClosestYear = difference.index(min(difference))
+        
+        Percent_derating = PercentDerates[ClosestYear]
+   
+    else:
+        Percent_derating = 0
+        
+    Power = Power - Power * (Percent_derating / 100)
+#     print (Percent_derating, Power / 1000)
     # core inlet enthalpy at RIHT + that added from fuel
     # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
     H_pht = Power / CoreMassFlow
@@ -430,8 +447,11 @@ def pht_steam_quality(Temperature, j):
     # no quality in return primary flow
     H_current = nc.enthalpy("PHT", Temperature, None) + H_pht
     x = (H_current - H_satliq_outlet) / (EnthalpySaturatedSteam.magnitude - H_satliq_outlet)
+    
+    if x < 0:
+        x = 0
     return x
-# print (pht_steam_quality(264.37 +273.15, 876*19.5))
+# print (pht_steam_quality(267.15 +273.15, 876*0))
 
 def sht_steam_quality(Q, T_sat_secondary, x, SecondarySidePressure):
     
@@ -684,7 +704,7 @@ def station_events(calendar_year, x_pht):
     
     # PLNGS pressure reduction in 1992 (september) by 125 kPa
     elif 1992.5 <= calendar_year <= 1995.5:
-        SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
+        SecondarySidePressure = 4.593 #- (125 / 1000)  # MPa
     
     # return to full boiler secondary side pressure, 4.593 MPa
     # pressure restored shortly after reactor back online from refurb.
@@ -777,5 +797,5 @@ def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInne
 # UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
 # CleanedInner = [i * 0.67 for i in UncleanedInner]
 # CleanedOuter = [i * 0.67 for i in UncleanedOuter]
-#      
+#       
 # print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 0) - 273.15)
