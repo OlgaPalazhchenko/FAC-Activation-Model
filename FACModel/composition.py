@@ -24,7 +24,7 @@ KFeOH3POLYNOMIAL = [-4.667E-10, 1.0496E-06, -0.000935775, 0.413186, -97.4709]
 
 
 def arrhenius_activaton_energy():
-    Section = SGHX.selected_tubes[0]
+    Section = ld.SteamGenerator[57]
 # #     year = (j / 8760) 
 # #     calendar_year = year + 1983
 #     

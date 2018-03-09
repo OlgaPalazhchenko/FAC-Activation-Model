@@ -18,12 +18,12 @@ YearDerates = [1999.5, 1999.75, 2000, 2000.25, 2000.5, 2000.75, 2001, 2001.25, 2
 PercentDerates = [3, 4, 5, 5, 6, 3.57, 3.22, 3.43, 3.77, 4.27, 4.61, 4.74, 3.33, 3.64, 3.15, 4.08, 4, 3.88, 3.74, 4.18,
                   4.97, 5.17, 5.24, 6.30, 6.97, 7.41, 7.89, 8.29, 8.5, 8.75, 8.87, 9.39, 9, 9, 9]
 
-# PercentDerates = [i - 1 for i in PercentDerates]
+PercentDerates = [i - 1 for i in PercentDerates]
 
 # select all the SG tubes to be run (by arc length)
-UBends = [1.52]  # , 1.52, 2.31, 3.09]
+UBends = [1.52, 1.71]  # , 1.52, 2.31, 3.09]
 UBends = [i * 100 for i in UBends]
-TubeLengths = [1907]
+TubeLengths = [1907, 1907]
 
 h_i = nc.SGParameters()
 h_o = nc.SGParameters()
@@ -113,7 +113,7 @@ def cleaned_tubes():
         NumberTubes.append(ld.SteamGenerator[x].TubeNumber)
         
         # siva blast used on only 60% of tubes due to time/spacial constraints
-        if sum(NumberTubes) < (0.6 * TotalSGTubeNumber):
+        if sum(NumberTubes) <= (0.6 * TotalSGTubeNumber):
             Cleaned.append(ld.SteamGenerator[x])
         else:
             break
@@ -165,7 +165,8 @@ def tube_picker(method):
         
     return tubes, tube_number
 
-selected_tubes = tube_picker("tube length")[0]
+selected_tubes = ld.SteamGenerator #[0::3] # tube_picker("arc length")[0]
+# print (len(selected_tubes))
 tube_number = tube_picker("tube length")[1] 
 
 Cleaned = cleaned_tubes()
@@ -190,8 +191,8 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.0012  # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.0002  # [g/cm^2] /year = 3.25 um/year
+    TubeGrowth = 0.0014  # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.00035  # [g/cm^2] /year = 3.25 um/year
     
     if i == 0:
         SludgePileGrowth = 0 #1 * TubeGrowth
@@ -400,8 +401,7 @@ def prandtl(side, Temperature, SecondarySidePressure, i):
     else:
         Viscosity = nc.viscosity("SHT", Temperature, SecondarySidePressure)
         
-    Pr = nc.HeatCapacity("PHT", Temperature, SecondarySidePressure) \
-    * Viscosity / nc.thermal_conductivityH2O("PHT", Temperature, SecondarySidePressure)
+    Pr = nc.HeatCapacity("PHT", Temperature, None) * Viscosity / nc.thermal_conductivityH2O("PHT", Temperature, None)
     return Pr
 
 
@@ -704,7 +704,7 @@ def station_events(calendar_year, x_pht):
     
     # PLNGS pressure reduction in 1992 (september) by 125 kPa
     elif 1992.5 <= calendar_year <= 1995.5:
-        SecondarySidePressure = 4.593 #- (125 / 1000)  # MPa
+        SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     
     # return to full boiler secondary side pressure, 4.593 MPa
     # pressure restored shortly after reactor back online from refurb.
@@ -741,8 +741,9 @@ def station_events(calendar_year, x_pht):
     return SecondarySidePressure, m_h_leakagecorrection, DividerPlateMassFlow
 
 
-def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j):
-    year = (j * 10 / 8760) 
+# def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j):
+def energy_balance(SteamGeneratorOutputNode, x_pht, j):
+    year = (j * 100 / 8760) 
     calendar_year = year + YearStartup
 
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(
@@ -752,28 +753,29 @@ def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInne
 
     Energy = []
     for Zone in ld.SteamGenerator:
-        if Zone in selected_tubes:
-            # tracks oxide growth for these tubes specifically
-            InnerOx = Zone.InnerOxThickness
-            OuterOx = Zone.OuterOxThickness
-        else:  # assumes same growth as in default passed tube for remaining tubes
-            # pass through default cleaned and not cleaned tubes
-            if Zone in Cleaned:   
-                InnerOx = CleanedInnerOxide
-                OuterOx = CleanedOuterOxide
-            else:
-                InnerOx = InnerOxide
-                OuterOx = OuterOxide
-        
+        InnerOx = Zone.InnerOxThickness
+        OuterOx = Zone.OuterOxThickness
+#         if Zone in selected_tubes:
+#             # tracks oxide growth for these tubes specifically
+#             InnerOx = Zone.InnerOxThickness
+#             OuterOx = Zone.OuterOxThickness
+#  
+#         else:  # assumes same growth as in default passed tube for remaining tubes
+#             # pass through default cleaned and not cleaned tubes
+#             if Zone in Cleaned:   
+#                 InnerOx = CleanedInnerOxide
+#                 OuterOx = CleanedOuterOxide
+#              
+#             else:
+#                 InnerOx = InnerOxide
+#                 OuterOx = OuterOxide
+         
         # [g/cm^2] / [g/cm^3] = [cm]
 #         TotalIDDeposit = [(x + y) / nc.Fe3O4Density for x, y in zip (InnerOx, OuterOx)]
 #         # insert adjusted mass flow here - eventually will do with pressure 
 #         AverageDeposit = sum(TotalIDDeposit) / Zone.NodeNumber
 #         RemainingPHTMassFlow_fouling = (
 #             RemainingPHTMassFlow * ((Zone.Diameter[0] - 2 * AverageDeposit) ** 2) / (Zone.Diameter[0] ** 2))
-        
-#         if Zone == ld.SteamGenerator[0]: print (RemainingPHTMassFlow_fouling / RemainingPHTMassFlow)
-#         if Zone == Cleaned[0]: print (OuterOx[19], calendar_year)
         
         Zone.PrimaryBulkTemperature = temperature_profile(
             Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, calendar_year

@@ -2,7 +2,6 @@
 Created on Oct 22, 2017
 @author: opalazhc
 '''
-
 import pht_model
 import lepreau_data as ld
 import sg_heattransfer as SGHX
@@ -15,7 +14,6 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('mathtext', default='regular')
 
-
 # preset corrosion rate instead of calculated from FAC model
 ConstantRate = "yes"
 Activation = "no"
@@ -25,10 +23,10 @@ Loop = "half"
 ElementTracking = "no"
 
 # 1.52 m is the u-bend arc length of an average SG tube
-Default_Tube = SGHX.closest_ubend(1.92 * 100)
-# SteamGeneratorTubes = []
+Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
-def sg_heat_transfer(Outlet, InletInput):
+
+def sg_heat_transfer(Outlet, InletInput, j):
     Tubes = []
     # Set input concentrations for all SG zones to be same as output of outlet feeder
     BulkOutletActivityOutput = [
@@ -52,8 +50,8 @@ def sg_heat_transfer(Outlet, InletInput):
     return Tubes
 
           
-SimulationYears = 26  # years
-SimulationHours = SimulationYears * 876
+SimulationYears = 14  # years
+SimulationHours = SimulationYears * 87
 
 if OutputLogging == "yes":
     Solubility = []
@@ -92,8 +90,9 @@ for j in range(SimulationHours):
         InletInput = ld.InletFeeder
     
     Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j)
-    SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput)
-    
+    SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput, j)
+#     print (Sg.Section1.OuterOxThickness[15], Sg.Section1.OuterOxThickness[15], "default")
+#     print (SteamGeneratorTubes[0].Section1.OuterOxThickness[15], SteamGeneratorTubes[0].Section1.OuterOxThickness[15], "selected")
     # pass "cleaned" sg tube through heat transfer function as well
 #     pht_cleaning(SteamGeneratorTubes[0].Section1, j)
 #     print (
@@ -111,26 +110,28 @@ for j in range(SimulationHours):
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )   
     
-    if j % 438 == 0:  # twice a year  
+    if j % 44 == 0:  # twice a year  
         
         if j ==0:
             x_pht = 0.002 # PHT steam fraction for "clean" boiler
 
         
         #pass cleaned and uncleaned tubes into heat transfer function
-        CleanedInnerOxide = SteamGeneratorTubes[0].Section1.InnerIronOxThickness
-        CleanedOuterOxide = SteamGeneratorTubes[0].Section1.OuterFe3O4Thickness
-        
-        UncleanedInnerOxide = Sg.Section1.InnerOxThickness
-        UncleanedOuterOxide = Sg.Section1.OuterOxThickness
+#         CleanedInnerOxide = SteamGeneratorTubes[0].Section1.InnerOxThickness
+#         CleanedOuterOxide = SteamGeneratorTubes[0].Section1.OuterOxThickness
+#         
+#         UncleanedInnerOxide = Sg.Section1.InnerOxThickness
+#         UncleanedOuterOxide = Sg.Section1.OuterOxThickness
         
         # parameters tracked with time 
-        T_RIH = (
-            SGHX.energy_balance(ld.SteamGenerator[Default_Tube].NodeNumber - 1, UncleanedInnerOxide,
-                                UncleanedOuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j) - 273.15
-                 )
+        T_RIH = (SGHX.energy_balance(ld.SteamGenerator[Default_Tube].NodeNumber - 1, x_pht, j) - 273.15)
+        
+#         T_RIH = (
+#             SGHX.energy_balance(ld.SteamGenerator[Default_Tube].NodeNumber - 1, UncleanedInnerOxide,
+#                                 UncleanedOuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j) - 273.15
+#                  )
 
-        print (1983 +j/876, x_pht, T_RIH)
+        print (1983 +j/87, x_pht, T_RIH)
         x_pht = SGHX.pht_steam_quality(T_RIH + 273.15, j)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber

@@ -13,7 +13,7 @@ OUTLET_INNER_SPALL_CONSTANT = 1000
 INLET_OUTER_SPALL_CONSTANT = 1.00E+18  # Different units for inlet versus outlet (different functions)
 INLET_INNER_SPALL_CONSTANT = 1.00E+5
 
-TIME_INCREMENT = 36000  # s  Based on desired time step (3600 360s/h for 1h time step)
+TIME_INCREMENT = 360000  # s  Based on desired time step (3600 360s/h for 1h time step)
 
 
 def oxide_composition(
@@ -195,8 +195,7 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, j):
 # print (pht_cleaning(ld.SteamGenerator[0], [0.00025, 0.00025], [0.00025, 0.00025], 876*1.5))
 
 
-def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations,
-                 ElementTracking, j):
+def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j):
     
     if ConstantRate == "yes":
         # updates M/O and S/O concentrations based on oxide thickness
@@ -210,8 +209,8 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations,
                 Section.NiThickness, Section.CoThickness
                 )
         
-        if Section == SGHX.selected_tubes[0]:
-#             print Section.Length.magnitude[10]
+#         if Section in SGHX.selected_tubes:
+        if Section in SGHX.Cleaned:
             [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
                 Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, j)
         
