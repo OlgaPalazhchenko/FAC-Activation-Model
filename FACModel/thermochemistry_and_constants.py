@@ -1,6 +1,11 @@
 import csv
 import numpy as np
 
+
+TIME_STEP = 10 # hr
+TIME_INCREMENT = 3600 * TIME_STEP # s  Based on desired time step (3600 3600s/h for 1h time step)
+
+
 # General electrochemistry constants
 Beta = 0.5  # Symmetry coefficient
 kH2 = 0.00078  # Henry's law constant for H2 @ 298.15 K [mol/L*atm]

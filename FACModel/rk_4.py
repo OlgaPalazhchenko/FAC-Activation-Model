@@ -13,8 +13,6 @@ OUTLET_INNER_SPALL_CONSTANT = 1000
 INLET_OUTER_SPALL_CONSTANT = 1.00E+18  # Different units for inlet versus outlet (different functions)
 INLET_INNER_SPALL_CONSTANT = 1.00E+5
 
-TIME_INCREMENT = 360000  # s  Based on desired time step (3600 360s/h for 1h time step)
-
 
 def oxide_composition(
         Section, Element, OxideType, Outer, OuterFe3O4Thickness, NiThickness, CoThickness, InnerIronOxThickness
@@ -175,7 +173,10 @@ def oxide_growth(
     
 
 def pht_cleaning(Section, InnerOxide, OuterOxide, j):
-    if j == 876 * 12.5:
+    CleaningYear_1 = SGHX.YearStartup + 12.5
+    CurrentYear = (j * nc.TIME_STEP / 8760) + SGHX.YearStartup 
+    
+    if (CurrentYear - 0.125) <= CleaningYear_1 <= (CurrentYear + 0.125):
         Inner = []
         Outer = []
         for i in range(Section.NodeNumber):
@@ -192,7 +193,6 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, j):
         InnerOxide = InnerOxide
         OuterOxide = OuterOxide
     return InnerOxide, OuterOxide
-# print (pht_cleaning(ld.SteamGenerator[0], [0.00025, 0.00025], [0.00025, 0.00025], 876*1.5))
 
 
 def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j):
@@ -216,15 +216,15 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
         
         # uniform oxide growth (preset corrosion rate)
         Section.InnerIronOxThickness = [
-            x + y * TIME_INCREMENT for x, y in zip(Section.InnerIronOxThickness, GrowthInnerIronOxide)
+            x + y * nc.TIME_INCREMENT for x, y in zip(Section.InnerIronOxThickness, GrowthInnerIronOxide)
             ]
         Section.OuterFe3O4Thickness = [
-            x + y * TIME_INCREMENT for x, y in zip(Section.OuterFe3O4Thickness, GrowthOuterMagnetite)
+            x + y * nc.TIME_INCREMENT for x, y in zip(Section.OuterFe3O4Thickness, GrowthOuterMagnetite)
             ]
         
         if ElementTracking == "yes":
-            Section.NiThickness = [x + y * TIME_INCREMENT for x, y in zip(Section.NiThickness, GrowthNickel)]
-            Section.CoThickness = [x + y * TIME_INCREMENT for x, y in zip(Section.CoThickness, GrowthCobalt)]
+            Section.NiThickness = [x + y * nc.TIME_INCREMENT for x, y in zip(Section.NiThickness, GrowthNickel)]
+            Section.CoThickness = [x + y * nc.TIME_INCREMENT for x, y in zip(Section.CoThickness, GrowthCobalt)]
         
         else:
             None
@@ -312,7 +312,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
     
 
 def RK4(Section, InitialThickness, GrowthFunction, approximation):
-    x = [i * TIME_INCREMENT for i in GrowthFunction]  # f(t)*delta t
+    x = [i * nc.TIME_INCREMENT for i in GrowthFunction]  # f(t)*delta t
     if approximation < 2:
         thickness = [a + b / 2 for a, b in zip(InitialThickness, x)]
     elif approximation == 2:
@@ -508,7 +508,7 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
                     )
 
             else:  # not enough time has passed
-                ElapsedTime[i] = ElapsedTime[i] + 1 * (TIME_INCREMENT / 3600)
+                ElapsedTime[i] = ElapsedTime[i] + 1 * (nc.TIME_INCREMENT / 3600)
 
     for i in range(Section.NodeNumber):
         

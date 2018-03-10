@@ -25,6 +25,37 @@ ElementTracking = "no"
 # 1.52 m is the u-bend arc length of an average SG tube
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
+          
+SimulationYears = 26  # years
+SimulationHours = SimulationYears * 876
+
+
+if OutputLogging == "yes":
+    Solubility = []
+    IronConcentration = []
+    Loading_time = []
+    TotalInnerLoading = []
+    TotalOuterLoading = []
+    TotalOxide = []
+    RIHT = [] # monitored with time 
+    OutletTemperatures1 = [] 
+    OutletTemperatures2 = []
+    pht_SteamFraction = []
+    # StreamOutletTemperatures = [] # monitored with time 
+    TemperatureProfile = []
+    TotalDistance = []
+    Years = []
+    for i in range((SimulationYears + 1) * 2):
+        Years.append((i / 2) + SGHX.YearStartup)
+
+
+# load initial chemistry for full/half loop
+pht_model.initial_chemistry(Loop)
+
+
+import time
+start_time = time.time()
+
 
 def sg_heat_transfer(Outlet, InletInput, j):
     Tubes = []
@@ -49,34 +80,6 @@ def sg_heat_transfer(Outlet, InletInput, j):
         Tubes.append(w)
     return Tubes
 
-          
-SimulationYears = 14  # years
-SimulationHours = SimulationYears * 87
-
-if OutputLogging == "yes":
-    Solubility = []
-    IronConcentration = []
-    Loading_time = []
-    TotalInnerLoading = []
-    TotalOuterLoading = []
-    TotalOxide = []
-    RIHT = [] # monitored with time 
-    OutletTemperatures1 = [] 
-    OutletTemperatures2 = []
-    pht_SteamFraction = []
-    # StreamOutletTemperatures = [] # monitored with time 
-    TemperatureProfile = []
-    TotalDistance = []
-    Years = []
-    for i in range((SimulationYears + 1) * 2):
-        Years.append(i/2 + SGHX.YearStartup)
-
-# load initial chemistry for full/half loop
-pht_model.initial_chemistry(Loop)
-
-import time
-start_time = time.time()
-
 
 for j in range(SimulationHours):
     In = pht_model.PHT_FAC(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j)
@@ -91,10 +94,7 @@ for j in range(SimulationHours):
     
     Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j)
     SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput, j)
-#     print (Sg.Section1.OuterOxThickness[15], Sg.Section1.OuterOxThickness[15], "default")
-#     print (SteamGeneratorTubes[0].Section1.OuterOxThickness[15], SteamGeneratorTubes[0].Section1.OuterOxThickness[15], "selected")
-    # pass "cleaned" sg tube through heat transfer function as well
-#     pht_cleaning(SteamGeneratorTubes[0].Section1, j)
+
 #     print (
 #         ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
 #     None, None, None, None)
@@ -110,7 +110,7 @@ for j in range(SimulationHours):
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )   
     
-    if j % 44 == 0:  # twice a year  
+    if j % (4380 / nc.TIME_STEP) == 0:  # twice a year  
         
         if j ==0:
             x_pht = 0.002 # PHT steam fraction for "clean" boiler
@@ -131,7 +131,7 @@ for j in range(SimulationHours):
 #                                 UncleanedOuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j) - 273.15
 #                  )
 
-        print (1983 +j/87, x_pht, T_RIH)
+        print (1983 + j / (8760 / nc.TIME_STEP), x_pht, T_RIH)
         x_pht = SGHX.pht_steam_quality(T_RIH + 273.15, j)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber

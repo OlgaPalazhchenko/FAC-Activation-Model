@@ -191,8 +191,8 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.0014  # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.00035  # [g/cm^2] /year = 3.25 um/year
+    TubeGrowth = 0.0013  # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
     
     if i == 0:
         SludgePileGrowth = 0 #1 * TubeGrowth
@@ -223,11 +223,14 @@ def sludge_fouling_resistance(Section, i, calendar_year):
     
 
 def pht_fouling_resistance(Section, i, calendar_year, InnerAccumulation, OuterAccumulation):
-
+    if i == 21:
+        ThermalPlateReduction = 0.5
+    else:
+        ThermalPlateReduction = 1
     # [g/cm^2]/[g/cm^3] = [cm]
     # thickness/thermal conductivity [cm]/[W/cm K] = [cm^2 K/W]
     InnerThickness = InnerAccumulation / nc.Fe3O4Density
-    OuterThickness = OuterAccumulation / nc.Fe3O4Density 
+    OuterThickness = ThermalPlateReduction * OuterAccumulation / nc.Fe3O4Density 
 
     # [cm]/ [W/cm K] =[cm^2 K/W]
     # inner deposit is consolidated, predicted to have different thermal resistance than unconsolidated outer ox.
@@ -415,7 +418,7 @@ def outer_area(Section):
 
 
 def pht_steam_quality(Temperature, j):
-    calendar_year = (j / 876) + YearStartup
+    calendar_year = (j * nc.TIME_STEP / 8760) + YearStartup
          
     CoreMassFlow = (1925000 / 1000) * 4  # [kg /s]
     Delta_T = T_sat_primary - (259.6 + 273.15)  # [K]
@@ -439,7 +442,7 @@ def pht_steam_quality(Temperature, j):
         Percent_derating = 0
         
     Power = Power - Power * (Percent_derating / 100)
-#     print (Percent_derating, Power / 1000)
+#     print (Percent_derating, calendar_year)
     # core inlet enthalpy at RIHT + that added from fuel
     # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
     H_pht = Power / CoreMassFlow
@@ -451,14 +454,17 @@ def pht_steam_quality(Temperature, j):
     if x < 0:
         x = 0
     return x
-# print (pht_steam_quality(267.15 +273.15, 876*0))
+# print (pht_steam_quality(267.15 +273.15, 876*17.5))
 
 def sht_steam_quality(Q, T_sat_secondary, x, SecondarySidePressure):
     
     # [J/s] / [g/s] = [J /g]
     H_pht = Q / (MassFlow_c.magnitude)  # [kJ/kg]
     H_satliq = nc.enthalpy("SHT", T_sat_secondary, SecondarySidePressure)
-    H_SaturatedSteam = 2797.3  # [kJ/kg]
+    if SecondarySidePressure == 4.593:
+        H_SaturatedSteam = 2797.3  # [kJ/kg]
+    elif SecondarySidePressure <  4.593:
+        H_SaturatedSteam = 2798.2
     H_prev = H_satliq + x * (H_SaturatedSteam - H_satliq)
     H_current = H_pht + H_prev
 
@@ -619,7 +625,6 @@ def temperature_profile(
             if i == 14:
                 x_in = 0
             x_in = sht_steam_quality(Q, T_SecondaryBulkOut, x_in, SecondarySidePressure)
-#             print (i, x_in)
 
             T_PrimaryBulkIn = T_PrimaryBulkOut
             T_SecondaryBulkIn = T_SecondaryBulkOut
@@ -743,7 +748,7 @@ def station_events(calendar_year, x_pht):
 
 # def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j):
 def energy_balance(SteamGeneratorOutputNode, x_pht, j):
-    year = (j * 100 / 8760) 
+    year = (j * nc.TIME_STEP / 8760) 
     calendar_year = year + YearStartup
 
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(
@@ -800,4 +805,4 @@ def energy_balance(SteamGeneratorOutputNode, x_pht, j):
 # CleanedInner = [i * 0.67 for i in UncleanedInner]
 # CleanedOuter = [i * 0.67 for i in UncleanedOuter]
 #       
-# print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 0) - 273.15)
+# print (energy_balance(21, 0.002, 876*10) - 273.15)
