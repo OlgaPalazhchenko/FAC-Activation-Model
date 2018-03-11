@@ -26,7 +26,7 @@ ElementTracking = "no"
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
           
-SimulationYears = 26  # years
+SimulationYears = 15  # years
 SimulationHours = SimulationYears * 876
 
 
@@ -45,8 +45,8 @@ if OutputLogging == "yes":
     TemperatureProfile = []
     TotalDistance = []
     Years = []
-    for i in range((SimulationYears + 1) * 2):
-        Years.append((i / 2) + SGHX.YearStartup)
+    for i in range((SimulationYears + 1) * 4):
+        Years.append((i / 4) + SGHX.YearStartup)
 
 
 # load initial chemistry for full/half loop
@@ -110,7 +110,7 @@ for j in range(SimulationHours):
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )   
     
-    if j % (4380 / nc.TIME_STEP) == 0:  # twice a year  
+    if j % (2190 / nc.TIME_STEP) == 0:  # twice a year  
         
         if j ==0:
             x_pht = 0.002 # PHT steam fraction for "clean" boiler

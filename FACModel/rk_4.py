@@ -176,7 +176,7 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, j):
     CleaningYear_1 = SGHX.YearStartup + 12.5
     CurrentYear = (j * nc.TIME_STEP / 8760) + SGHX.YearStartup 
     
-    if (CurrentYear - 0.125) <= CleaningYear_1 <= (CurrentYear + 0.125):
+    if CurrentYear == CleaningYear_1:
         Inner = []
         Outer = []
         for i in range(Section.NodeNumber):
@@ -184,7 +184,8 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, j):
                 OuterOxide[i] = OuterOxide[i] * (1 - 0.67)
                 InnerOxide[i] = InnerOxide[i]
             else:
-                InnerOxide[i] = InnerOxide[i] * (1- 0.67)
+                InnerOxide[i] = InnerOxide[i]#* (1- 0.67)
+                OuterOxide[i] = OuterOxide[i]
                 
         Inner.append(InnerOxide)
         Outer.append(OuterOxide)

@@ -8,8 +8,8 @@ NumberPluggedTubes = 8
 TotalSGTubeNumber = 3550 - NumberPluggedTubes
 
 YearStartup = 1983
-YearCPP = 1987.5
-YearSHTChemicalClean = 1995.5
+YearCPP = 1988
+YearSHTChemicalClean = 1995
 
 YearDerates = [1999.5, 1999.75, 2000, 2000.25, 2000.5, 2000.75, 2001, 2001.25, 2001.5, 2001.75, 2002, 2002.25, 20002.5,
                2002.75, 2003, 2003.25, 2003.5, 2003.75, 2004, 2004.25, 2004.5, 2004.75, 2005, 2005.25, 2005.5, 2005.75,
@@ -192,7 +192,7 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 def sludge_fouling_resistance(Section, i, calendar_year):
     
     TubeGrowth = 0.0013  # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
+    ReducedTubeGrowth = 0.00003  # [g/cm^2] /year = 3.25 um/year
     
     if i == 0:
         SludgePileGrowth = 0 #1 * TubeGrowth
@@ -205,13 +205,12 @@ def sludge_fouling_resistance(Section, i, calendar_year):
         Accumulation = (calendar_year - YearStartup) * (TubeGrowth + SludgePileGrowth)
      
     # CPP installation (late 1986) reduces secondary side crud by 50% 
-    # (assumed proportional red. in deposit formation)
     # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
-    elif YearCPP < calendar_year < YearSHTChemicalClean: 
-        Accumulation = (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth)
-    # tubes + sludge cleaned 70%, along with reduction in sludge growth rate (by 70%)
-    # after and including 1995
-
+    elif YearCPP < calendar_year < YearSHTChemicalClean:
+        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth) * 0.05
+                        + (calendar_year - YearCPP) * ReducedTubeGrowth)
+#         Accumulation = (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth)
+    
     elif calendar_year >= YearSHTChemicalClean:
         Accumulation = (calendar_year - YearSHTChemicalClean) * ReducedTubeGrowth
         
@@ -224,7 +223,7 @@ def sludge_fouling_resistance(Section, i, calendar_year):
 
 def pht_fouling_resistance(Section, i, calendar_year, InnerAccumulation, OuterAccumulation):
     if i == 21:
-        ThermalPlateReduction = 0.5
+        ThermalPlateReduction = 0.56
     else:
         ThermalPlateReduction = 1
     # [g/cm^2]/[g/cm^3] = [cm]
@@ -279,7 +278,7 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
 
 def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySidePressure, i):
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 258.69 + 273.15
+        T_sat_secondary = 259 + 273.15
     elif SecondarySidePressure < 4.593:
         T_sat_secondary = 257 + 273.15
     
@@ -556,7 +555,7 @@ def temperature_profile(
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 258.69 + 273.15  # 258.69
+        T_sat_secondary = 259 + 273.15  # 258.69
     elif SecondarySidePressure < 4.593:
         T_sat_secondary = 257 + 273.15  # 257
     
@@ -622,7 +621,7 @@ def temperature_profile(
 #                 ))               
 
             # steam collection at top of u-bend
-            if i == 14:
+            if i == 16:
                 x_in = 0
             x_in = sht_steam_quality(Q, T_SecondaryBulkOut, x_in, SecondarySidePressure)
 
@@ -720,6 +719,7 @@ def station_events(calendar_year, x_pht):
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     else:
         None
+#     print (calendar_year, SecondarySidePressure)
 
 #     if calendar_year >= 1992:
 #         MassFlow_h.magnitude = MassFlow_h.magnitude * 0.97
@@ -729,11 +729,11 @@ def station_events(calendar_year, x_pht):
         # divider plate leakage rates estimated based on AECL work
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-        InitialLeakage = 0.02 
+        InitialLeakage = 0.0275 
         YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
          
     elif calendar_year >= 1995.5:
-        InitialLeakage = 0.02 
+        InitialLeakage = 0.03 
         YearlyRateLeakage = 0
     else:
         None 
@@ -805,4 +805,4 @@ def energy_balance(SteamGeneratorOutputNode, x_pht, j):
 # CleanedInner = [i * 0.67 for i in UncleanedInner]
 # CleanedOuter = [i * 0.67 for i in UncleanedOuter]
 #       
-# print (energy_balance(21, 0.002, 876*10) - 273.15)
+# print (energy_balance(21, 0.002, 876*0) - 273.15)
