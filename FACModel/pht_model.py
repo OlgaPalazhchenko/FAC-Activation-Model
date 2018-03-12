@@ -11,7 +11,9 @@ from operator import itemgetter
 
 def initial_chemistry(Loop):
     
-    [SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(1983, x_pht= 0.002)
+    [SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(
+        SGHX.YearStartup, x_pht= 0.002
+        )
     # initial temperatures in steam generator(s)
     
     if Loop == "full":
@@ -33,12 +35,12 @@ def initial_chemistry(Loop):
         for Zone in ld.SteamGenerator:
             Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
             Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure,
-            x_pht=0.002, calendar_year=1983
+            x_pht=0.002, calendar_year=SGHX.YearStartup
             )
     else:
         ld.SteamGenerator[57].PrimaryBulkTemperature = SGHX.temperature_profile(
             ld.SteamGenerator[57], ld.SteamGenerator[57].InnerOxThickness, ld.SteamGenerator[57].OuterOxThickness,
-            RemainingPHTMassFlow, SecondarySidePressure, x_pht=0.2, calendar_year=1983
+            RemainingPHTMassFlow, SecondarySidePressure, x_pht=0.2, calendar_year=SGHX.YearStartup
             )
         
     # initial concentrations

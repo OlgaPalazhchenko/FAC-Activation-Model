@@ -7,15 +7,15 @@ import random
 NumberPluggedTubes = 8
 TotalSGTubeNumber = 3550 - NumberPluggedTubes
 
-YearStartup = 1983
-YearCPP = 1988
-YearSHTChemicalClean = 1995
+YearStartup = 1983.25
+YearCPP = 1988.25
+YearSHTChemicalClean = 1996
 
-YearDerates = [1999.5, 1999.75, 2000, 2000.25, 2000.5, 2000.75, 2001, 2001.25, 2001.5, 2001.75, 2002, 2002.25, 20002.5,
+YearDerates = [1999.75, 2000, 2000.25, 2000.5, 2000.75, 2001, 2001.25, 2001.5, 2001.75, 2002, 2002.25, 20002.5,
                2002.75, 2003, 2003.25, 2003.5, 2003.75, 2004, 2004.25, 2004.5, 2004.75, 2005, 2005.25, 2005.5, 2005.75,
-               2006, 2006.25, 2006.5, 2006.75, 2007, 2007.25, 2007.5, 2007.75, 2008]
+               2006, 2006.25, 2006.5, 2006.75, 2007, 2007.25, 2007.5, 2007.75, 2008.25]
 
-PercentDerates = [3, 4, 5, 5, 6, 3.57, 3.22, 3.43, 3.77, 4.27, 4.61, 4.74, 3.33, 3.64, 3.15, 4.08, 4, 3.88, 3.74, 4.18,
+PercentDerates = [3, 4, 4.8, 5, 6.5, 4.07, 3.23, 3.43, 3.77, 4.27, 4.61, 4.74, 3.33, 3.64, 3.15, 4.08, 4, 3.88, 3.74, 4.18,
                   4.97, 5.17, 5.24, 6.30, 6.97, 7.41, 7.89, 8.29, 8.5, 8.75, 8.87, 9.39, 9, 9, 9]
 
 PercentDerates = [i - 1 for i in PercentDerates]
@@ -595,7 +595,7 @@ def temperature_profile(
             if x_pht > 0:
                 DeltaH = EnthalpySaturatedSteam.magnitude - nc.enthalpy("PHT", T_sat_primary, None)
                 
-                LatentHeatAvailable = x_pht * DeltaH * m_h_leakagecorrection
+                LatentHeatAvailable = 0.89 * x_pht * DeltaH * m_h_leakagecorrection
                 # if x_pht - 0 (entire quality entering ith section) is not enough to transfer all of heat need to SHT
                 if LatentHeatAvailable < Q:
                     # this much heat needs to be transferred from PHT fluid as sensible heat
@@ -703,19 +703,19 @@ def station_events(calendar_year, x_pht):
     # Divider plate leakage, mechanical cleaning, and pressure changes 
 
     # Pressure changes only:
-    if calendar_year < 1992.5:
+    if calendar_year < 1993:
         SecondarySidePressure = 4.593  # MPa
     
     # PLNGS pressure reduction in 1992 (september) by 125 kPa
-    elif 1992.5 <= calendar_year <= 1995.5:
+    elif 1993 <= calendar_year < 1996.25:
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     
     # return to full boiler secondary side pressure, 4.593 MPa
     # pressure restored shortly after reactor back online from refurb.
-    elif 1995.5 < calendar_year < 1998.5:
+    elif 1996.25 <= calendar_year < 1998.5:
         SecondarySidePressure = 4.593
     
-    elif calendar_year >= 1998.5:
+    elif calendar_year >= 1999:
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     else:
         None
@@ -725,15 +725,15 @@ def station_events(calendar_year, x_pht):
 #         MassFlow_h.magnitude = MassFlow_h.magnitude * 0.97
         
     # divider plate raplacement in 1995, assumed to stop increase in leak (2% constant going forward)
-    if calendar_year < 1995.5:
+    if calendar_year < 1996:
         # divider plate leakage rates estimated based on AECL work
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-        InitialLeakage = 0.0275 
+        InitialLeakage = 0.0285 
         YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
          
-    elif calendar_year >= 1995.5:
-        InitialLeakage = 0.03 
+    elif calendar_year >= 1996:
+        InitialLeakage = 0.0325 
         YearlyRateLeakage = 0
     else:
         None 

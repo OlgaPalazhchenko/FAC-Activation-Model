@@ -173,7 +173,7 @@ def oxide_growth(
     
 
 def pht_cleaning(Section, InnerOxide, OuterOxide, j):
-    CleaningYear_1 = SGHX.YearStartup + 12.5
+    CleaningYear_1 = SGHX.YearStartup + 12.75
     CurrentYear = (j * nc.TIME_STEP / 8760) + SGHX.YearStartup 
     
     if CurrentYear == CleaningYear_1:
