@@ -21,6 +21,7 @@ PlotOutput = "yes"
 OutputLogging = "yes"
 Loop = "half"
 ElementTracking = "no"
+SGFastMode = "yes"
 
 # 1.52 m is the u-bend arc length of an average SG tube
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
@@ -115,13 +116,13 @@ for j in range(SimulationHours):
         if j ==0:
             x_pht = 0.002 # PHT steam fraction for "clean" boiler
 
-        
-        #pass cleaned and uncleaned tubes into heat transfer function
-#         CleanedInnerOxide = SteamGeneratorTubes[0].Section1.InnerOxThickness
-#         CleanedOuterOxide = SteamGeneratorTubes[0].Section1.OuterOxThickness
-#         
-#         UncleanedInnerOxide = Sg.Section1.InnerOxThickness
-#         UncleanedOuterOxide = Sg.Section1.OuterOxThickness
+        if SGFastMode == "yes":
+            #pass cleaned and uncleaned tubes into heat transfer function
+            CleanedInnerOxide = SteamGeneratorTubes[0].Section1.InnerOxThickness
+            CleanedOuterOxide = SteamGeneratorTubes[0].Section1.OuterOxThickness
+             
+            UncleanedInnerOxide = Sg.Section1.InnerOxThickness
+            UncleanedOuterOxide = Sg.Section1.OuterOxThickness
         
         # parameters tracked with time 
         T_RIH = (SGHX.energy_balance(ld.SteamGenerator[Default_Tube].NodeNumber - 1, x_pht, j) - 273.15)

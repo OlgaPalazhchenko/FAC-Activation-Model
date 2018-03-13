@@ -60,8 +60,8 @@ RecirculationRatio = 5.3
 MassFlow_h.magnitude = 1900 * 1000
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
 # 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
-MassFlow_preheater.magnitude = 222.25 * 1000
-MassFlow_ReheaterDrains = 140 * 1000 / 4
+MassFlow_preheater.magnitude = 240 * 1000
+MassFlow_ReheaterDrains = 89 * 1000 / 4
 MassFlow_c.magnitude = MassFlow_preheater.magnitude * RecirculationRatio + MassFlow_ReheaterDrains
 
 
@@ -191,8 +191,8 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.0013  # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.00003  # [g/cm^2] /year = 3.25 um/year
+    TubeGrowth = 0.0012  # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
     
     if i == 0:
         SludgePileGrowth = 0 #1 * TubeGrowth
@@ -278,8 +278,8 @@ def primary_convection_resistance(Section, correlation, T_film, T_wall, Secondar
 
 def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySidePressure, i):
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 259 + 273.15
-    elif SecondarySidePressure < 4.593:
+        T_sat_secondary = 258.69 + 273.15
+    else: 
         T_sat_secondary = 257 + 273.15
     
     # split into boiling and non-boiling (preheater) sections
@@ -326,7 +326,11 @@ def boiling_heat_transfer(x, side, T_sat, MassFlux, T_wall, Diameter, SecondaryS
     # x = steam quality in percent
       
     if side == "SHT":
-        rho_v = 1000 * 23.187 / (100 ** 3)  # [g/cm^3]
+        if SecondarySidePressure == 4.593:
+            rho_v = 0.023187  # [g/cm^3]
+        elif SecondarySidePressure < 4.593:
+            rho_v = 0.022529 # [g/cm^3]
+        
         Density = nc.density(side, T_sat, SecondarySidePressure)
         Viscosity = nc.viscosity(side, T_sat, SecondarySidePressure)
         Pressure = SecondarySidePressure
@@ -548,16 +552,15 @@ def wall_temperature(
 
             return T_PrimaryWall, T_SecondaryWall, U_total.magnitude
 
-
 def temperature_profile(
         Section, InnerOxide, OuterOxide, m_h_leakagecorrection, SecondarySidePressure, x_pht, calendar_year):
     
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
     if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 259 + 273.15  # 258.69
+        T_sat_secondary = 258.69 + 273.15
     elif SecondarySidePressure < 4.593:
-        T_sat_secondary = 257 + 273.15  # 257
+        T_sat_secondary = 257 + 273.15
     
     PrimaryWall = []
     PrimaryBulk = []
@@ -570,7 +573,7 @@ def temperature_profile(
             T_PrimaryBulkIn = T_sat_primary  # [K]
             T_SecondaryBulkIn = T_sat_secondary
             x_in = 0
-#         print (i, T_PrimaryBulkIn - 273.15, x_pht)
+#         print (i, T_PrimaryBulkIn-273.15, T_SecondaryBulkIn-273.15, x_in)
         Cp_h = nc.HeatCapacity("PHT", T_PrimaryBulkIn, None)
         Cp_c = nc.HeatCapacity("SHT", T_SecondaryBulkIn, SecondarySidePressure)
         
@@ -580,7 +583,6 @@ def temperature_profile(
         
         # [W/ cm^2 K] * [K] * [cm^2] = [W] = [J/s]
         Q = U * (T_PrimaryBulkIn - T_SecondaryBulkIn) * outer_area(Section)[i] * TotalSGTubeNumber
-        
         # all nodes other than preheater
         if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater" and \
             Section.Length.label[i] != "thermal plate":
@@ -595,7 +597,7 @@ def temperature_profile(
             if x_pht > 0:
                 DeltaH = EnthalpySaturatedSteam.magnitude - nc.enthalpy("PHT", T_sat_primary, None)
                 
-                LatentHeatAvailable = 0.89 * x_pht * DeltaH * m_h_leakagecorrection
+                LatentHeatAvailable = x_pht * DeltaH * m_h_leakagecorrection
                 # if x_pht - 0 (entire quality entering ith section) is not enough to transfer all of heat need to SHT
                 if LatentHeatAvailable < Q:
                     # this much heat needs to be transferred from PHT fluid as sensible heat
@@ -611,7 +613,7 @@ def temperature_profile(
     
                     if x_pht < 0:
                         x_pht = 0
-#                 print (x_pht, T_PrimaryBulkOut-273.15, LatentHeatAvailable/1000000, Q/1000000, i)
+
             else:
                 # no latent heat available, only sensible heat used
                 T_PrimaryBulkOut = T_PrimaryBulkIn - Q / (Cp_h * m_h_leakagecorrection)
@@ -620,11 +622,9 @@ def temperature_profile(
 #                 MassFlow_c.magnitude * EnthalpySaturatedSteam.magnitude  * (Section.TubeNumber / TotalSGTubeNumber)
 #                 ))               
 
-            # steam collection at top of u-bend
-            if i == 16:
-                x_in = 0
-            x_in = sht_steam_quality(Q, T_SecondaryBulkOut, x_in, SecondarySidePressure)
+            x_in = sht_steam_quality(Q, T_sat_secondary, x_in, SecondarySidePressure)
 
+            
             T_PrimaryBulkIn = T_PrimaryBulkOut
             T_SecondaryBulkIn = T_SecondaryBulkOut
 
@@ -632,16 +632,22 @@ def temperature_profile(
             SecondaryBulk.append(T_SecondaryBulkOut)
             PrimaryWall.append(T_wh)
             SecondaryWall.append(T_wc)
+            
         else:
             # no PHT quality here
             x_pht = 0
             
             if Section.Length.label[i] == "preheater start":
+                
+                T_PrimaryBulkOut = T_PrimaryBulkIn - Q / (Cp_h * m_h_leakagecorrection)
+                T_PrimaryBulkIn = T_PrimaryBulkOut
+                
                 C_min = Cp_c * MassFlow_preheater.magnitude  # [J/g K]*[g/s] = [J/Ks] ] [W/K]
                 C_max = Cp_h * m_h_leakagecorrection
                 C_r = C_min / C_max
                 Q_max = C_min * (T_PrimaryBulkIn - T_PreheaterIn)
-                TotalArea = sum(outer_area(Section)[i:(Section.NodeNumber - 1)])
+                # total area of only preheater area
+                TotalArea = sum(outer_area(Section)[(i + 1):(Section.NodeNumber - 1)])
                 NTU = U * TotalArea * TotalSGTubeNumber / C_min
 
                 eta = (1 - np.exp(-NTU * (1 - C_r))) / (1 - C_r * np.exp(-NTU * (1 - C_r)))
@@ -652,42 +658,42 @@ def temperature_profile(
                 # solving for other two ends (PHT out, and end of preheater before mixing with recirculating downcomer)
                 T_PrimaryBulkOutEnd = T_PrimaryBulkIn - Q_NTU / (m_h_leakagecorrection * Cp_h)
                 T_SecondaryBulkOutEnd = T_PreheaterIn + Q_NTU / (MassFlow_preheater.magnitude * Cp_c)
-                # first node of preheater (at the bottom above thermal plate)
+                # at end of preheater - about to mix with downcomer flow
+                T_SecondaryBulkOut = T_SecondaryBulkOutEnd
                 T_SecondaryBulkIn = T_SecondaryBulkOutEnd
                 
+            else:
+                   
                 # Guessing cold-side temperatures for remaining nodes inside preheater
-                T_SecondaryBulkOut = T_SecondaryBulkOut - i
-                T_PrimaryBulkOut = T_PrimaryBulkIn - Q / (Cp_h * m_h_leakagecorrection)
+                T_SecondaryBulkOut = T_SecondaryBulkIn - (T_SecondaryBulkOutEnd - T_PreheaterIn) / 4
                 
-                T_PrimaryBulkIn = T_PrimaryBulkOut
-                T_SecondaryBulkIn = T_SecondaryBulkOut
-                
-            else:        
-                # Guessing cold-side temperatures for remaining nodes inside preheater
-                T_SecondaryBulkOut = T_SecondaryBulkOut - i
+           
                 T_PrimaryBulkOut = T_PrimaryBulkIn - Q / (Cp_h * m_h_leakagecorrection)
-    
+#                 print (i, T_PrimaryBulkIn-273.15, T_SecondaryBulkIn-273.15, T_SecondaryBulkOut-273.15)     
                 # end of preheater 
                 if i == Section.NodeNumber - 2:
                     T_SecondaryBulkOut = T_PreheaterIn
                     T_PrimaryBulkOut = T_PrimaryBulkOutEnd
                     # recirculating downcomer flow entering area under thermal plate
                     T_SecondaryBulkIn = T_sat_secondary
-                    
-                if i == Section.NodeNumber - 1:
+
+                elif i == Section.NodeNumber - 1:
+                    T_SecondaryBulkIn = T_sat_secondary
                     T_SecondaryBulkOut = T_sat_secondary
                           
                 else:
                     T_SecondaryBulkIn = T_SecondaryBulkOut
-                    
+                   
                 T_PrimaryBulkIn = T_PrimaryBulkOut
-                                        
-#             SecondaryBulk[16] = T_SecondaryBulkOutEnd (first node of preheater (at the bottom above thermal plate)
+            
+
+
             PrimaryBulk.append(T_PrimaryBulkOut)
             SecondaryBulk.append(T_SecondaryBulkOut)
             PrimaryWall.append(T_wh)
             SecondaryWall.append(T_wc)
 
+#     print (calendar_year, T_sat_secondary-273.15)
 #     print ([j - 273.15 for j in PrimaryBulk])
 #     print ([j-273.15 for j in PrimaryWall])
 #     print ()
@@ -712,7 +718,7 @@ def station_events(calendar_year, x_pht):
     
     # return to full boiler secondary side pressure, 4.593 MPa
     # pressure restored shortly after reactor back online from refurb.
-    elif 1996.25 <= calendar_year < 1998.5:
+    elif 1996.25 <= calendar_year < 1999:
         SecondarySidePressure = 4.593
     
     elif calendar_year >= 1999:
@@ -733,7 +739,7 @@ def station_events(calendar_year, x_pht):
         YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
          
     elif calendar_year >= 1996:
-        InitialLeakage = 0.0325 
+        InitialLeakage = 0.04 
         YearlyRateLeakage = 0
     else:
         None 
@@ -747,33 +753,38 @@ def station_events(calendar_year, x_pht):
 
 
 # def energy_balance(SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j):
-def energy_balance(SteamGeneratorOutputNode, x_pht, j):
+def energy_balance(
+        SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j, SGFastMode
+        ):
     year = (j * nc.TIME_STEP / 8760) 
     calendar_year = year + YearStartup
-
+    Energy = []
+    
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(
         calendar_year, x_pht
         )
     
-
-    Energy = []
     for Zone in ld.SteamGenerator:
-        InnerOx = Zone.InnerOxThickness
-        OuterOx = Zone.OuterOxThickness
-#         if Zone in selected_tubes:
-#             # tracks oxide growth for these tubes specifically
-#             InnerOx = Zone.InnerOxThickness
-#             OuterOx = Zone.OuterOxThickness
-#  
-#         else:  # assumes same growth as in default passed tube for remaining tubes
-#             # pass through default cleaned and not cleaned tubes
-#             if Zone in Cleaned:   
-#                 InnerOx = CleanedInnerOxide
-#                 OuterOx = CleanedOuterOxide
-#              
-#             else:
-#                 InnerOx = InnerOxide
-#                 OuterOx = OuterOxide
+        if SGFastMode == "yes":
+            if Zone in selected_tubes:
+                # tracks oxide growth for these tubes specifically
+                InnerOx = Zone.InnerOxThickness
+                OuterOx = Zone.OuterOxThickness
+  
+            else:  # assumes same growth as in default passed tube for remaining tubes
+                # pass through default cleaned and not cleaned tubes
+                if Zone in Cleaned:   
+                    InnerOx = CleanedInnerOxide
+                    OuterOx = CleanedOuterOxide
+                  
+                else:
+                    InnerOx = InnerOxide
+                    OuterOx = OuterOxide
+        else:
+            InnerOx = Zone.InnerOxThickness
+            OuterOx = Zone.OuterOxThickness
+                       
+   
          
         # [g/cm^2] / [g/cm^3] = [cm]
 #         TotalIDDeposit = [(x + y) / nc.Fe3O4Density for x, y in zip (InnerOx, OuterOx)]
@@ -800,9 +811,10 @@ def energy_balance(SteamGeneratorOutputNode, x_pht, j):
 #     print (calendar_year, x_pht, RIHT-273.15)
     return RIHT
     
-# UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
-# UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
-# CleanedInner = [i * 0.67 for i in UncleanedInner]
-# CleanedOuter = [i * 0.67 for i in UncleanedOuter]
+UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
+UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
+CleanedInner = [i * 0.67 for i in UncleanedInner]
+CleanedOuter = [i * 0.67 for i in UncleanedOuter]
 #       
-# print (energy_balance(21, 0.002, 876*0) - 273.15)
+print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876*0, SGFastMode="no")
+       - 273.15)

@@ -172,142 +172,154 @@ def oxide_growth(
     return GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt
     
 
-def pht_cleaning(Section, InnerOxide, OuterOxide, j):
-    CleaningYear_1 = SGHX.YearStartup + 12.75
-    CurrentYear = (j * nc.TIME_STEP / 8760) + SGHX.YearStartup 
+def pht_cleaning(Section, InnerOxide, OuterOxide):
     
-    if CurrentYear == CleaningYear_1:
-        Inner = []
-        Outer = []
-        for i in range(Section.NodeNumber):
-            if OuterOxide[i] > 0:
-                OuterOxide[i] = OuterOxide[i] * (1 - 0.67)
-                InnerOxide[i] = InnerOxide[i]
-            else:
-                InnerOxide[i] = InnerOxide[i]#* (1- 0.67)
-                OuterOxide[i] = OuterOxide[i]
-                
-        Inner.append(InnerOxide)
-        Outer.append(OuterOxide)
+    Inner = []
+    Outer = []
+    for i in range(Section.NodeNumber):
+        if OuterOxide[i] > 0:
+            OuterOxide[i] = OuterOxide[i] * (1 - 0.67)
+            InnerOxide[i] = InnerOxide[i]
+        else:
+            InnerOxide[i] = InnerOxide[i]#* (1- 0.67)
+            OuterOxide[i] = OuterOxide[i]
+            
+    Inner.append(InnerOxide)
+    Outer.append(OuterOxide)
     
-    else:
-        InnerOxide = InnerOxide
-        OuterOxide = OuterOxide
     return InnerOxide, OuterOxide
 
 
-def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j):
+def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, SGFastMode):
     
-    if ConstantRate == "yes":
-        # updates M/O and S/O concentrations based on oxide thickness
-        it.interface_concentrations(
-            Section, ConstantRate, BulkConcentrations, Saturations, Section.InnerIronOxThickness,
-            Section.OuterFe3O4Thickness, Section.NiThickness, Section.CoThickness, j
-            )
-        # oxide growth functions based on S/O and M/O concentrations
-        [GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt] = oxide_growth(
-                Section, ElementTracking,  Section.InnerIronOxThickness, Section.OuterFe3O4Thickness,
-                Section.NiThickness, Section.CoThickness
-                )
+    CurrentYear = (j * nc.TIME_STEP / 8760) + SGHX.YearStartup
         
-#         if Section in SGHX.selected_tubes:
-        if Section in SGHX.Cleaned:
-            [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
-                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, j)
-        
-        # uniform oxide growth (preset corrosion rate)
-        Section.InnerIronOxThickness = [
-            x + y * nc.TIME_INCREMENT for x, y in zip(Section.InnerIronOxThickness, GrowthInnerIronOxide)
-            ]
-        Section.OuterFe3O4Thickness = [
-            x + y * nc.TIME_INCREMENT for x, y in zip(Section.OuterFe3O4Thickness, GrowthOuterMagnetite)
-            ]
-        
-        if ElementTracking == "yes":
-            Section.NiThickness = [x + y * nc.TIME_INCREMENT for x, y in zip(Section.NiThickness, GrowthNickel)]
-            Section.CoThickness = [x + y * nc.TIME_INCREMENT for x, y in zip(Section.CoThickness, GrowthCobalt)]
-        
-        else:
-            None
-        
-          
+    if 1995.25 < CurrentYear < 1996:
+        # no oxide growth
+        Section.InnerIronOxThickness = Section.InnerIronOxThickness
+        Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness
+        Section.NiThickness = Section.NiThickness
+        Section.CoThickness = Section.CoThickness
+    
+    elif CurrentYear == 1996:
+        if SGFastMode == "yes":
+            if Section == SGHX.selected_tubes[0]:
+                [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
+                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness)
+        else:    
+            if Section in SGHX.Cleaned:
+                [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
+                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness)
+            else:
+               Section.InnerIronOxThickness = Section.InnerIronOxThickness
+               Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness 
+    
     else:
-    # FAC solver for rate   
-        RK4_InnerIronOxThickness = Section.InnerIronOxThickness
-        RK4_OuterFe3O4Thickness = Section.OuterFe3O4Thickness
-        # If element tracking is off, Co/Ni thickness remains same as initial loadings
-        RK4_NiThickness = Section.NiThickness
-        RK4_CoThickness = Section.CoThickness
-        
-        
-        L = []
-        M = []
-        
-        if ElementTracking == "yes": # lists for Ni and Co growth
-            N = []
-            P = []
-        
-        for approximation in range(4):  # 4 approximations in the "RK4" method
-            
+
+        if ConstantRate == "yes":
+            # updates M/O and S/O concentrations based on oxide thickness
             it.interface_concentrations(
-                Section, ConstantRate, BulkConcentrations, Saturations, RK4_InnerIronOxThickness,
-                RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness, j
+                Section, ConstantRate, BulkConcentrations, Saturations, Section.InnerIronOxThickness,
+                Section.OuterFe3O4Thickness, Section.NiThickness, Section.CoThickness, j
                 )
+            # oxide growth functions based on S/O and M/O concentrations
+            [GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt] = oxide_growth(
+                    Section, ElementTracking,  Section.InnerIronOxThickness, Section.OuterFe3O4Thickness,
+                    Section.NiThickness, Section.CoThickness
+                    )
             
-            GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt = oxide_growth(
-                Section, ElementTracking,  RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness,
-                RK4_CoThickness
-                )
+            # uniform oxide growth (preset corrosion rate)
+            Section.InnerIronOxThickness = [
+                x + y * nc.TIME_INCREMENT for x, y in zip(Section.InnerIronOxThickness, GrowthInnerIronOxide)
+                ]
+            Section.OuterFe3O4Thickness = [
+                x + y * nc.TIME_INCREMENT for x, y in zip(Section.OuterFe3O4Thickness, GrowthOuterMagnetite)
+                ]
             
-            # iterate using previously solved RK4 thickness: re-evaluates growth functions based on S/O + M/O 
-            # concentrations using new thickness     
-           
-            [RK4_InnerIronOxThickness, a] = RK4(
-                Section, Section.InnerIronOxThickness, GrowthInnerIronOxide, approximation
-                )
-            L.append(a)
-    
-            [RK4_OuterFe3O4Thickness, b] = RK4(
-                Section, Section.OuterFe3O4Thickness, GrowthOuterMagnetite, approximation
-                )
-            M.append(b)
-    
-            if ElementTracking == "yes": # otherwise, no growth 
-                [RK4_CoThickness, c] = RK4(Section, Section.CoThickness, GrowthCobalt, approximation)
-                N.append(c)
+            if ElementTracking == "yes":
+                Section.NiThickness = [x + y * nc.TIME_INCREMENT for x, y in zip(Section.NiThickness, GrowthNickel)]
+                Section.CoThickness = [x + y * nc.TIME_INCREMENT for x, y in zip(Section.CoThickness, GrowthCobalt)]
+            
+            else:
+                None
+          
+        else:
+        # FAC solver for rate   
+            RK4_InnerIronOxThickness = Section.InnerIronOxThickness
+            RK4_OuterFe3O4Thickness = Section.OuterFe3O4Thickness
+            # If element tracking is off, Co/Ni thickness remains same as initial loadings
+            RK4_NiThickness = Section.NiThickness
+            RK4_CoThickness = Section.CoThickness
+            
+            
+            L = []
+            M = []
+            
+            if ElementTracking == "yes": # lists for Ni and Co growth
+                N = []
+                P = []
+            
+            for approximation in range(4):  # 4 approximations in the "RK4" method
+                
+                it.interface_concentrations(
+                    Section, ConstantRate, BulkConcentrations, Saturations, RK4_InnerIronOxThickness,
+                    RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness, j
+                    )
+                
+                GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt = oxide_growth(
+                    Section, ElementTracking,  RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness,
+                    RK4_CoThickness
+                    )
+                
+                # iterate using previously solved RK4 thickness: re-evaluates growth functions based on S/O + M/O 
+                # concentrations using new thickness     
+               
+                [RK4_InnerIronOxThickness, a] = RK4(
+                    Section, Section.InnerIronOxThickness, GrowthInnerIronOxide, approximation
+                    )
+                L.append(a)
         
-                [RK4_NiThickness, d] = RK4(Section, Section.NiThickness, GrowthNickel, approximation)
-                P.append(d)
-    
-        Section.InnerIronOxThickness = [
-            x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(
-                Section.InnerIronOxThickness, L[0], L[1], L[2], L[3]
-                )
-            ]
-        Section.OuterFe3O4Thickness = [
-            x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(
-                Section.OuterFe3O4Thickness, M[0], M[1], M[2], M[3]
-                )
-            ]
+                [RK4_OuterFe3O4Thickness, b] = RK4(
+                    Section, Section.OuterFe3O4Thickness, GrowthOuterMagnetite, approximation
+                    )
+                M.append(b)
         
-        if ElementTracking == "yes": # otherwise, not updated 
-            Section.CoThickness = [
-                x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.CoThickness, N[0], N[1], N[2], N[3])
+                if ElementTracking == "yes": # otherwise, no growth 
+                    [RK4_CoThickness, c] = RK4(Section, Section.CoThickness, GrowthCobalt, approximation)
+                    N.append(c)
+            
+                    [RK4_NiThickness, d] = RK4(Section, Section.NiThickness, GrowthNickel, approximation)
+                    P.append(d)
+        
+            Section.InnerIronOxThickness = [
+                x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(
+                    Section.InnerIronOxThickness, L[0], L[1], L[2], L[3]
+                    )
                 ]
-            Section.NiThickness = [
-                x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.NiThickness, P[0], P[1], P[2], P[3])
+            Section.OuterFe3O4Thickness = [
+                x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(
+                    Section.OuterFe3O4Thickness, M[0], M[1], M[2], M[3]
+                    )
                 ]
-    
-    Layers = [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Section.CoThickness, Section.NiThickness]
-    # 4 different layers at each node. If any thicknesses are negative due to dissolution of respective layer, 
-    # thickness = 0
-    for i in range(4):
-        for x in range(Section.NodeNumber):
-            if Layers[i][x] < 0:
-                Layers[i][x] = 0
-    
-#     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
-#         print (Layers[1], ConstantRate)
+            
+            if ElementTracking == "yes": # otherwise, not updated 
+                Section.CoThickness = [
+                    x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.CoThickness, N[0], N[1], N[2], N[3])
+                    ]
+                Section.NiThickness = [
+                    x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.NiThickness, P[0], P[1], P[2], P[3])
+                    ]
+        
+        Layers = [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Section.CoThickness, Section.NiThickness]
+        # 4 different layers at each node. If any thicknesses are negative due to dissolution of respective layer, 
+        # thickness = 0
+        for i in range(4):
+            for x in range(Section.NodeNumber):
+                if Layers[i][x] < 0:
+                    Layers[i][x] = 0
+        
+    #     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
+    #         print (Layers[1], ConstantRate)
     
     return None
     
