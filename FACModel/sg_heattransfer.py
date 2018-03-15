@@ -3,7 +3,6 @@ import numpy as np
 import thermochemistry_and_constants as nc
 import random
 
-  
 NumberPluggedTubes = 8
 TotalSGTubeNumber = 3550 - NumberPluggedTubes
 
@@ -15,15 +14,11 @@ YearDerates = [1999.75, 2000, 2000.25, 2000.5, 2000.75, 2001, 2001.25, 2001.5, 2
                2002.75, 2003, 2003.25, 2003.5, 2003.75, 2004, 2004.25, 2004.5, 2004.75, 2005, 2005.25, 2005.5, 2005.75,
                2006, 2006.25, 2006.5, 2006.75, 2007, 2007.25, 2007.5, 2007.75, 2008.25]
 
-PercentDerates = [3, 4, 4.8, 5, 6.5, 4.07, 3.23, 3.43, 3.77, 4.27, 4.61, 4.74, 3.33, 3.64, 3.15, 4.08, 4, 3.88, 3.74, 4.18,
+PercentDerates = [3, 4, 4.8, 5, 5.5, 4.07, 3.23, 3.43, 3.77, 4.27, 4.61, 4.74, 3.33, 3.64, 3.15, 4.08, 4, 3.88, 3.74, 4.18,
                   4.97, 5.17, 5.24, 6.30, 6.97, 7.41, 7.89, 8.29, 8.5, 8.75, 8.87, 9.39, 9, 9, 9]
 
 PercentDerates = [i - 1 for i in PercentDerates]
 
-# select all the SG tubes to be run (by arc length)
-UBends = [1.52, 1.71]  # , 1.52, 2.31, 3.09]
-UBends = [i * 100 for i in UBends]
-TubeLengths = [1907, 1907]
 
 h_i = nc.SGParameters()
 h_o = nc.SGParameters()
@@ -33,7 +28,8 @@ U_total = nc.SGParameters()
 R_F_primary = nc.SGParameters()
 R_F_secondary = nc.SGParameters()
 MassFlow_preheater = nc.SGParameters()
-MassFlow_c = nc.SGParameters()
+MassFlow_downcomer = nc.SGParameters()
+MassFlow_c_total = nc.SGParameters()
 ShellDiameter = nc.SGParameters()
 MassFlux_c = nc.SGParameters()
 MassFlux_h = nc.SGParameters()
@@ -53,16 +49,17 @@ for i in [R_F_primary, R_F_secondary]:
     i.unit = "cm^2 K/W"
 
 # T_sat_secondary = 260.1 + 273.15
-T_sat_primary = 310 + 273.15
-T_PreheaterIn = 186.5 + 273.15
+T_sat_primary = 309.24 + 273.15
+T_PreheaterIn = 186 + 273.15
 RecirculationRatio = 5.3
 
 MassFlow_h.magnitude = 1900 * 1000
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
 # 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
-MassFlow_preheater.magnitude = 240 * 1000
-MassFlow_ReheaterDrains = 89 * 1000 / 4
-MassFlow_c.magnitude = MassFlow_preheater.magnitude * RecirculationRatio + MassFlow_ReheaterDrains
+MassFlow_preheater.magnitude = 258 * 1000
+MassFlow_ReheaterDrains = 0#89 * 1000 / 4
+MassFlow_downcomer.magnitude = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
+MassFlow_c_total.magnitude = MassFlow_downcomer.magnitude + MassFlow_preheater.magnitude + MassFlow_ReheaterDrains
 
 
 def thermalplate_temp():
@@ -82,17 +79,30 @@ def thermalplate_temp():
 
 ShellDiameter.magnitude = 2.311 * 100
 
-for i in [MassFlow_c, MassFlow_h, MasssFlow_dividerplate, MassFlow_preheater]:
+for i in [MassFlow_c_total, MassFlow_h, MasssFlow_dividerplate, MassFlow_preheater, MassFlow_downcomer]:
     i.unit = "g/s"
 
 for i in [ShellDiameter, EquivalentDiameter, TubePitch]:
     i.unit = "cm"
 
-ShellCrossSectionalArea = (np.pi / 4) * (
-    (ShellDiameter.magnitude ** 2) - (ld.SteamGenerator[0].OuterDiameter[0] ** 2) * TotalSGTubeNumber
-    )
 
-MassFlux_c.magnitude = MassFlow_c.magnitude / ShellCrossSectionalArea
+def MassFlux_c(Section, i):
+    if Section.Length.label[i] == "opposite phreater":
+        PreheaterDiameter = ShellDiameter.magnitude / 2 # [cm]
+        MassFlow = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
+    else:
+        PreheaterDiameter = 0
+        MassFlow = MassFlow_c_total.magnitude
+        
+    ShellCrossSectionalArea = (np.pi / 4) * (
+    (ShellDiameter.magnitude ** 2)
+    - (ld.SteamGenerator[0].OuterDiameter[0] ** 2) * TotalSGTubeNumber
+    - PreheaterDiameter
+    )
+    Flux = MassFlow / ShellCrossSectionalArea
+    
+    return Flux
+
 
 for i in [MassFlux_c, MassFlux_h]:
     i.unit = "g/cm^2 s"
@@ -139,6 +149,13 @@ def closest_ubend(UbendLength):
     return difference.index(min(difference))
 
 
+SGFastMode = "yes"
+# select all the SG tubes to be run (by arc length)
+UBends = [1.52, 1.71, 2.31, 3.09]
+UBends = [i * 100 for i in UBends]
+TubeLengths = [1892, 1907]
+# [1892, 1907, 1907, 1889, 1907.952, 1968.59, 2044.4]
+
 def tube_picker(method):
     tubes = []
     tube_number = []
@@ -165,11 +182,16 @@ def tube_picker(method):
         
     return tubes, tube_number
 
-selected_tubes = ld.SteamGenerator #[0::3] # tube_picker("arc length")[0]
-# print (len(selected_tubes))
+    
+if SGFastMode == "yes":
+    selected_tubes = tube_picker("tube length")[0]
+else:
+    selected_tubes = ld.SteamGenerator #[0::3]
+
 tube_number = tube_picker("tube length")[1] 
 
 Cleaned = cleaned_tubes()
+
 
 def thermal_conductivity(Twall, material, SecondarySidePressure):
     if material == "Alloy-800" or material == "Alloy800" or material == "A800" or material == "Alloy 800":
@@ -207,7 +229,7 @@ def sludge_fouling_resistance(Section, i, calendar_year):
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
     elif YearCPP < calendar_year < YearSHTChemicalClean:
-        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth) * 0.05
+        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth) * 0.0475
                         + (calendar_year - YearCPP) * ReducedTubeGrowth)
 #         Accumulation = (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth)
     
@@ -223,7 +245,7 @@ def sludge_fouling_resistance(Section, i, calendar_year):
 
 def pht_fouling_resistance(Section, i, calendar_year, InnerAccumulation, OuterAccumulation):
     if i == 21:
-        ThermalPlateReduction = 0.56
+        ThermalPlateReduction = 0.54
     else:
         ThermalPlateReduction = 1
     # [g/cm^2]/[g/cm^3] = [cm]
@@ -283,7 +305,7 @@ def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySide
         T_sat_secondary = 257 + 273.15
     
     # split into boiling and non-boiling (preheater) sections
-    if Section.Length.label[i] == "preheater" or Section.Length.label[i] == "preheater start":  # from Silpsrikul thesis
+    if Section.Length.label[i] == "preheater":  # from Silpsrikul thesis
         # Based on PLGS data and Silpsrikul calculations
         f_b = 0.2119  # fraction of cross-sectional area of shell occupied by a baffle window
         N_b = f_b * TotalSGTubeNumber  # number of tubes in baffle window
@@ -308,6 +330,7 @@ def secondary_convection_resistance(Section, T_film, T_wall, x_in, SecondarySide
                 ) ** 0.33
 
     else:
+        MassFlux_c.magnitude = MassFlux_c(Section, i)
         # [cm]
         EquivalentDiameter.magnitude = 4 * \
         ((TubePitch.magnitude ** 2) - (np.pi * (Section.OuterDiameter[i] ** 2)) / 4) \
@@ -424,17 +447,17 @@ def pht_steam_quality(Temperature, j):
     calendar_year = (j * nc.TIME_STEP / 8760) + YearStartup
          
     CoreMassFlow = (1925000 / 1000) * 4  # [kg /s]
-    Delta_T = T_sat_primary - (259.6 + 273.15)  # [K]
-    C_p_cold = nc.HeatCapacity("PHT", 259.6, SecondarySidePressure=None)
+    Delta_T = T_sat_primary - (259.25 + 273.15)  # [K]
+    C_p_cold = nc.HeatCapacity("PHT", 259.25, SecondarySidePressure=None)
     C_p_hot = nc.HeatCapacity("PHT", T_sat_primary, SecondarySidePressure=None)
     C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
     
     Power = CoreMassFlow * C_p_avg * Delta_T  # [kW]
-    YearDeratingStarts = 1999.5
+    YearDeratingStarts = 1999.75
     
     difference = []
     
-    if YearDeratingStarts <= calendar_year <= 2008:
+    if YearDeratingStarts <= calendar_year <= 2008.25:
         for Yr in YearDerates:
             difference.append(abs(calendar_year - Yr))
         ClosestYear = difference.index(min(difference))
@@ -445,7 +468,7 @@ def pht_steam_quality(Temperature, j):
         Percent_derating = 0
         
     Power = Power - Power * (Percent_derating / 100)
-#     print (Percent_derating, calendar_year)
+#     print (Power/1000)
     # core inlet enthalpy at RIHT + that added from fuel
     # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
     H_pht = Power / CoreMassFlow
@@ -457,12 +480,12 @@ def pht_steam_quality(Temperature, j):
     if x < 0:
         x = 0
     return x
-# print (pht_steam_quality(267.15 +273.15, 876*17.5))
+# print (pht_steam_quality(262.13 +273.15, 876*0))
 
-def sht_steam_quality(Q, T_sat_secondary, x, SecondarySidePressure):
-    
+def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
+        
     # [J/s] / [g/s] = [J /g]
-    H_pht = Q / (MassFlow_c.magnitude)  # [kJ/kg]
+    H_pht = Q / (MassFlow_c)  # [kJ/kg]
     H_satliq = nc.enthalpy("SHT", T_sat_secondary, SecondarySidePressure)
     if SecondarySidePressure == 4.593:
         H_SaturatedSteam = 2797.3  # [kJ/kg]
@@ -573,7 +596,7 @@ def temperature_profile(
             T_PrimaryBulkIn = T_sat_primary  # [K]
             T_SecondaryBulkIn = T_sat_secondary
             x_in = 0
-#         print (i, T_PrimaryBulkIn-273.15, T_SecondaryBulkIn-273.15, x_in)
+        
         Cp_h = nc.HeatCapacity("PHT", T_PrimaryBulkIn, None)
         Cp_c = nc.HeatCapacity("SHT", T_SecondaryBulkIn, SecondarySidePressure)
         
@@ -584,6 +607,7 @@ def temperature_profile(
         # [W/ cm^2 K] * [K] * [cm^2] = [W] = [J/s]
         Q = U * (T_PrimaryBulkIn - T_SecondaryBulkIn) * outer_area(Section)[i] * TotalSGTubeNumber
         # all nodes other than preheater
+        
         if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater" and \
             Section.Length.label[i] != "thermal plate":
             
@@ -619,12 +643,16 @@ def temperature_profile(
                 T_PrimaryBulkOut = T_PrimaryBulkIn - Q / (Cp_h * m_h_leakagecorrection)
 #             Q = U * (T_PrimaryBulkOut - T_SecondaryBulkOut) * outer_area(Section)[i] * Section.TubeNumber
 #             x_out = (x_in + Q / (
-#                 MassFlow_c.magnitude * EnthalpySaturatedSteam.magnitude  * (Section.TubeNumber / TotalSGTubeNumber)
+#                 MassFlow_c_total.magnitude * EnthalpySaturatedSteam.magnitude  * (Section.TubeNumber / TotalSGTubeNumber)
 #                 ))               
 
-            x_in = sht_steam_quality(Q, T_sat_secondary, x_in, SecondarySidePressure)
-
+            if Section.Length.label[i] == "opposite preheater":
+                MassFlow_c = MassFlow_downcomer.magnitude
+            else:
+                MassFlow_c = MassFlow_c_total.magnitude
             
+            x_in = sht_steam_quality(Q, T_sat_secondary, x_in, MassFlow_c, SecondarySidePressure)
+
             T_PrimaryBulkIn = T_PrimaryBulkOut
             T_SecondaryBulkIn = T_SecondaryBulkOut
 
@@ -632,7 +660,7 @@ def temperature_profile(
             SecondaryBulk.append(T_SecondaryBulkOut)
             PrimaryWall.append(T_wh)
             SecondaryWall.append(T_wc)
-            
+         
         else:
             # no PHT quality here
             x_pht = 0
@@ -659,17 +687,20 @@ def temperature_profile(
                 T_PrimaryBulkOutEnd = T_PrimaryBulkIn - Q_NTU / (m_h_leakagecorrection * Cp_h)
                 T_SecondaryBulkOutEnd = T_PreheaterIn + Q_NTU / (MassFlow_preheater.magnitude * Cp_c)
                 # at end of preheater - about to mix with downcomer flow
-                T_SecondaryBulkOut = T_SecondaryBulkOutEnd
-                T_SecondaryBulkIn = T_SecondaryBulkOutEnd
+                T_SecondaryBulkOut = T_sat_secondary#T_SecondaryBulkOutEnd
+                T_SecondaryBulkIn = T_sat_secondary#T_sat_secondary
                 
+#                 x_in = (x_in * MassFlow_downcomer.magnitude) / MassFlow_c_total.magnitude
             else:
-                   
+                x_in = 0
+  
                 # Guessing cold-side temperatures for remaining nodes inside preheater
-                T_SecondaryBulkOut = T_SecondaryBulkIn - (T_SecondaryBulkOutEnd - T_PreheaterIn) / 4
+                T_SecondaryBulkOut = T_SecondaryBulkIn - (T_sat_secondary - T_PreheaterIn) / 4
                 
            
                 T_PrimaryBulkOut = T_PrimaryBulkIn - Q / (Cp_h * m_h_leakagecorrection)
-#                 print (i, T_PrimaryBulkIn-273.15, T_SecondaryBulkIn-273.15, T_SecondaryBulkOut-273.15)     
+#                 print (i, T_SecondaryBulkIn-273.15, T_SecondaryBulkOut-273.15)
+     
                 # end of preheater 
                 if i == Section.NodeNumber - 2:
                     T_SecondaryBulkOut = T_PreheaterIn
@@ -685,9 +716,7 @@ def temperature_profile(
                     T_SecondaryBulkIn = T_SecondaryBulkOut
                    
                 T_PrimaryBulkIn = T_PrimaryBulkOut
-            
-
-
+                        
             PrimaryBulk.append(T_PrimaryBulkOut)
             SecondaryBulk.append(T_SecondaryBulkOut)
             PrimaryWall.append(T_wh)
@@ -735,16 +764,23 @@ def station_events(calendar_year, x_pht):
         # divider plate leakage rates estimated based on AECL work
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-        InitialLeakage = 0.0285 
+        InitialLeakage = 0.02 
         YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
          
-    elif calendar_year >= 1996:
-        InitialLeakage = 0.04 
+    elif calendar_year == 1996:
+        InitialLeakage = 0.016 #controls where first post-outage point is
         YearlyRateLeakage = 0
+    elif calendar_year > 1996:
+        InitialLeakage = 0.0375 # helps second post-outage point rise
+        YearlyRateLeakage = 0#0.00025 # either this or some SHT deposits help out Phase 4 from dipping so much
     else:
         None 
     
-    Leakage = InitialLeakage + (calendar_year - YearStartup) * YearlyRateLeakage
+    if calendar_year < 1996:
+        Leakage = InitialLeakage + (calendar_year - YearStartup) * YearlyRateLeakage
+    else:
+        Leakage = InitialLeakage + (calendar_year - YearSHTChemicalClean) * YearlyRateLeakage
+        
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
     # decreases as divider (bypass) flow increases
     m_h_leakagecorrection = MassFlow_h.magnitude - DividerPlateMassFlow
@@ -784,7 +820,6 @@ def energy_balance(
             InnerOx = Zone.InnerOxThickness
             OuterOx = Zone.OuterOxThickness
                        
-   
          
         # [g/cm^2] / [g/cm^3] = [cm]
 #         TotalIDDeposit = [(x + y) / nc.Fe3O4Density for x, y in zip (InnerOx, OuterOx)]
@@ -816,5 +851,5 @@ UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
 CleanedInner = [i * 0.67 for i in UncleanedInner]
 CleanedOuter = [i * 0.67 for i in UncleanedOuter]
 #       
-print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876*0, SGFastMode="no")
-       - 273.15)
+# print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876*0, SGFastMode="yes")
+#        - 273.15)

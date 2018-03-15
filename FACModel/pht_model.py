@@ -83,13 +83,12 @@ def initial_chemistry(Loop):
              
             # initial RIHT temperature 
             if Section in ld.InletSections:
-                Section.PrimaryBulkTemperature = ([SGHX.energy_balance(21, x_pht=0.002, j=0)] * Section.NodeNumber)
-                
-#                 Section.PrimaryBulkTemperature = (
-#                     [SGHX.energy_balance(21, ld.SteamGenerator[0].InnerOxThickness,
-#                                          ld.SteamGenerator[0].OuterOxThickness, ld.SteamGenerator[0].InnerOxThickness,
-#                                          ld.SteamGenerator[0].OuterOxThickness, x_pht=0.002, j=0)] * Section.NodeNumber
-#                                                   )
+                Section.PrimaryBulkTemperature = (
+                    [SGHX.energy_balance(21, ld.SteamGenerator[0].InnerOxThickness,
+                                         ld.SteamGenerator[0].OuterOxThickness, ld.SteamGenerator[0].InnerOxThickness,
+                                         ld.SteamGenerator[0].OuterOxThickness, x_pht=0.002, j=0,
+                                         SGFastMode=SGHX.SGFastMode)] * Section.NodeNumber
+                                                )
             
             if Section in ld.FuelSections and Interface == Section.MetalOxide:
                 Interface.FeTotal = [0] * Section.NodeNumber
@@ -256,7 +255,7 @@ class PHT_FAC():
 
         # RK4 oxide thickness calculation (no spalling)
         rk_4.oxide_layers(
-            self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j)
+            self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, SGHX.SGFastMode)
         
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(

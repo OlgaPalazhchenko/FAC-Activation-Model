@@ -279,9 +279,9 @@ def steam_generator_properties(SteamGenerator):
              279.43, 277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03]
             )
         
-        Zone.Length.label = [None] * 2 \
-        + ["Preheater mixing"] \
-        + [None] * 5 \
+        Zone.Length.label = ["opposite preheater"] * 3 \
+        + ["preheater mixing"] \
+        + [None] * 4 \
         + ["u-bend"] * 4 \
         + [None] * 4\
         + ["preheater start"] \

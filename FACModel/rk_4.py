@@ -202,11 +202,16 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
         Section.CoThickness = Section.CoThickness
     
     elif CurrentYear == 1996:
-        if SGFastMode == "yes":
+        if SGHX.SGFastMode == "yes":
             if Section == SGHX.selected_tubes[0]:
                 [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
                 Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness)
-        else:    
+            else:
+                Section.InnerIronOxThickness = Section.InnerIronOxThickness
+                Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness 
+        
+        else: #all sg tubes run    
+            
             if Section in SGHX.Cleaned:
                 [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
                 Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness)

@@ -21,13 +21,12 @@ PlotOutput = "yes"
 OutputLogging = "yes"
 Loop = "half"
 ElementTracking = "no"
-SGFastMode = "yes"
 
 # 1.52 m is the u-bend arc length of an average SG tube
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
           
-SimulationYears = 26  # years
+SimulationYears = 25  # years
 SimulationHours = SimulationYears * 876
 
 
@@ -116,7 +115,7 @@ for j in range(SimulationHours):
         if j ==0:
             x_pht = 0.002 # PHT steam fraction for "clean" boiler
 
-        if SGFastMode == "yes":
+        if SGHX.SGFastMode == "yes":
             #pass cleaned and uncleaned tubes into heat transfer function
             CleanedInnerOxide = SteamGeneratorTubes[0].Section1.InnerOxThickness
             CleanedOuterOxide = SteamGeneratorTubes[0].Section1.OuterOxThickness
@@ -125,14 +124,16 @@ for j in range(SimulationHours):
             UncleanedOuterOxide = Sg.Section1.OuterOxThickness
         
         # parameters tracked with time 
-        T_RIH = (SGHX.energy_balance(ld.SteamGenerator[Default_Tube].NodeNumber - 1, x_pht, j) - 273.15)
+        T_RIH = (SGHX.energy_balance(
+            ld.SteamGenerator[Default_Tube].NodeNumber - 1, UncleanedInnerOxide, UncleanedOuterOxide,
+            CleanedInnerOxide, CleanedOuterOxide, x_pht, j, SGHX.SGFastMode) - 273.15)
         
 #         T_RIH = (
 #             SGHX.energy_balance(ld.SteamGenerator[Default_Tube].NodeNumber - 1, UncleanedInnerOxide,
 #                                 UncleanedOuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j) - 273.15
 #                  )
 
-        print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, T_RIH)
+#         print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, T_RIH)
         x_pht = SGHX.pht_steam_quality(T_RIH + 273.15, j)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
@@ -157,7 +158,7 @@ for j in range(SimulationHours):
     else:
         None
           
-for Zone in [SGHX.selected_tubes[0], ld.SteamGenerator[Default_Tube]]:
+for Zone in SGHX.selected_tubes:
     x = ld.UnitConverter(
     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerIronOxThickness, None, None, None
     )

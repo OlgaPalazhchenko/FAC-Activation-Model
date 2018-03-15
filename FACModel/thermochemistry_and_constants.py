@@ -281,8 +281,15 @@ def HeatCapacity(side, Temperature, SecondarySidePressure):
         )
     
     return (-ratio_temperatures ** 2) * Gibbs_TT * R_IAPWS  # [kJ/kg K] ([J/g K] or *H2OMolarMass for [J/mol K]
- 
- 
+
+
+def heat_capacity_d2O(Temperature):
+    None
+#     T = Temperature - 273.15
+#     
+#     Cp = 
+#     
+
 def thermal_conductivityH2O(side, Temperature, SecondarySidePressure):
 #     if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
 #         p = PrimarySidePressure
