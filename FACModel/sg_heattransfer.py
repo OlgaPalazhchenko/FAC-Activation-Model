@@ -14,8 +14,8 @@ YearDerates = [1999.75, 2000, 2000.25, 2000.5, 2000.75, 2001, 2001.25, 2001.5, 2
                2002.75, 2003, 2003.25, 2003.5, 2003.75, 2004, 2004.25, 2004.5, 2004.75, 2005, 2005.25, 2005.5, 2005.75,
                2006, 2006.25, 2006.5, 2006.75, 2007, 2007.25, 2007.5, 2007.75, 2008.25]
 
-PercentDerates = [3, 4, 4.8, 5, 5.5, 4.07, 3.23, 3.43, 3.77, 4.27, 4.61, 4.74, 3.33, 3.64, 3.15, 4.08, 4, 3.88, 3.74, 4.18,
-                  4.97, 5.17, 5.24, 6.30, 6.97, 7.41, 7.89, 8.29, 8.5, 8.75, 8.87, 9.39, 9, 9, 9]
+PercentDerates = [3, 4, 4.8, 5, 5.5, 4.07, 3.23, 3.43, 3.77, 4.27, 4.61, 4.74, 3.33, 3.64, 3.15, 4.08, 4, 3.88, 3.74,
+                  4.18, 4.97, 5.17, 5.24, 6.30, 6.97, 7.41, 7.89, 8.29, 8.5, 8.75, 8.87, 9.39, 9, 9, 9]
 
 PercentDerates = [i - 1 for i in PercentDerates]
 
@@ -49,8 +49,8 @@ for i in [R_F_primary, R_F_secondary]:
     i.unit = "cm^2 K/W"
 
 # T_sat_secondary = 260.1 + 273.15
-T_sat_primary = 309.24 + 273.15
-T_PreheaterIn = 186 + 273.15
+T_sat_primary = 309.54 + 273.15
+T_PreheaterIn = 186.5 + 273.15
 RecirculationRatio = 5.3
 
 MassFlow_h.magnitude = 1900 * 1000
@@ -87,20 +87,21 @@ for i in [ShellDiameter, EquivalentDiameter, TubePitch]:
 
 
 def MassFlux_c(Section, i):
-    if Section.Length.label[i] == "opposite phreater":
+    if Section.Length.label[i] == "opposite preheater":
         PreheaterDiameter = ShellDiameter.magnitude / 2 # [cm]
         MassFlow = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
+        TotalTubes = TotalSGTubeNumber
     else:
         PreheaterDiameter = 0
         MassFlow = MassFlow_c_total.magnitude
+        TotalTubes = TotalSGTubeNumber #* 2
         
     ShellCrossSectionalArea = (np.pi / 4) * (
     (ShellDiameter.magnitude ** 2)
-    - (ld.SteamGenerator[0].OuterDiameter[0] ** 2) * TotalSGTubeNumber
-    - PreheaterDiameter
+    - (ld.SteamGenerator[0].OuterDiameter[0] ** 2) * TotalTubes
+    - PreheaterDiameter **2
     )
     Flux = MassFlow / ShellCrossSectionalArea
-    
     return Flux
 
 
@@ -213,7 +214,7 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.0012  # [g/cm^2] /year = 6.5 um /year
+    TubeGrowth = 0.00125  # [g/cm^2] /year = 6.5 um /year
     ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
     
     if i == 0:
@@ -229,7 +230,7 @@ def sludge_fouling_resistance(Section, i, calendar_year):
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
     elif YearCPP < calendar_year < YearSHTChemicalClean:
-        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth) * 0.0475
+        Accumulation = ((YearCPP - YearStartup) * (TubeGrowth + SludgePileGrowth) * 0.05
                         + (calendar_year - YearCPP) * ReducedTubeGrowth)
 #         Accumulation = (calendar_year - YearCPP) * (ReducedTubeGrowth + SludgePileGrowth)
     
@@ -689,7 +690,7 @@ def temperature_profile(
                 # at end of preheater - about to mix with downcomer flow
                 T_SecondaryBulkOut = T_sat_secondary#T_SecondaryBulkOutEnd
                 T_SecondaryBulkIn = T_sat_secondary#T_sat_secondary
-                
+
 #                 x_in = (x_in * MassFlow_downcomer.magnitude) / MassFlow_c_total.magnitude
             else:
                 x_in = 0
@@ -754,25 +755,21 @@ def station_events(calendar_year, x_pht):
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     else:
         None
-#     print (calendar_year, SecondarySidePressure)
-
-#     if calendar_year >= 1992:
-#         MassFlow_h.magnitude = MassFlow_h.magnitude * 0.97
         
     # divider plate raplacement in 1995, assumed to stop increase in leak (2% constant going forward)
     if calendar_year < 1996:
         # divider plate leakage rates estimated based on AECL work
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-        InitialLeakage = 0.02 
+        InitialLeakage = 0.018 
         YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
          
     elif calendar_year == 1996:
         InitialLeakage = 0.016 #controls where first post-outage point is
         YearlyRateLeakage = 0
     elif calendar_year > 1996:
-        InitialLeakage = 0.0375 # helps second post-outage point rise
-        YearlyRateLeakage = 0#0.00025 # either this or some SHT deposits help out Phase 4 from dipping so much
+        InitialLeakage = 0.037 # helps second post-outage point rise
+        YearlyRateLeakage = 0.0003 # either this or some SHT deposits help out Phase 4 from dipping so much
     else:
         None 
     
@@ -846,10 +843,10 @@ def energy_balance(
 #     print (calendar_year, x_pht, RIHT-273.15)
     return RIHT
     
-UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
-UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
-CleanedInner = [i * 0.67 for i in UncleanedInner]
-CleanedOuter = [i * 0.67 for i in UncleanedOuter]
-#       
+# UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
+# UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
+# CleanedInner = [i * 0.67 for i in UncleanedInner]
+# CleanedOuter = [i * 0.67 for i in UncleanedOuter]
+# #       
 # print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876*0, SGFastMode="yes")
 #        - 273.15)

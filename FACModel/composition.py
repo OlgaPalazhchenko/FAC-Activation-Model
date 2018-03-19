@@ -34,7 +34,7 @@ def arrhenius_activaton_energy():
         # assumed this average growth rate applies to all tubes (data only available for 2 x 19.8 m long tubes)
         
         # [g/m^2 /yr] --> [g/cm^2 /yr]
-    Growth_coldavg = 32 / (100 ** 2) # preheater
+    Growth_coldavg = 32.6 / (100 ** 2) # preheater
     Growth_hotavg = 16 / (100 ** 2)
     
     Saturation = ld.UnitConverter(
