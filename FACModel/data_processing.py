@@ -26,7 +26,7 @@ ElementTracking = "no"
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
           
-SimulationYears = 10  # years
+SimulationYears = 1  # years
 SimulationHours = SimulationYears * 876
 
 
@@ -41,6 +41,7 @@ if OutputLogging == "yes":
     OutletTemperatures1 = [] 
     OutletTemperatures2 = []
     pht_SteamFraction = []
+    kp_Tdependent = []
     # StreamOutletTemperatures = [] # monitored with time 
     TemperatureProfile = []
     TotalDistance = []
@@ -122,7 +123,13 @@ for j in range(SimulationHours):
              
             UncleanedInnerOxide = Sg.Section1.InnerOxThickness
             UncleanedOuterOxide = Sg.Section1.OuterOxThickness
-        
+        else:
+            CleanedInnerOxide = None
+            CleanedOuterOxide = None
+            
+            UncleanedInnerOxide = None
+            UncleanedOuterOxide = None
+            
         # parameters tracked with time 
         T_RIH = (SGHX.energy_balance(
             ld.SteamGenerator[Default_Tube].NodeNumber - 1, UncleanedInnerOxide, UncleanedOuterOxide,
@@ -173,20 +180,23 @@ for Zone in SGHX.selected_tubes:
     e = ld.UnitConverter(Zone, "Mol per Kg", "Grams per Cm Cubed", Zone.SolutionOxide.FeTotal, None, None, None,
                          nc.FeMolarMass, None)
     
+    f = Zone.KpFe3O4electrochem
+    
     TotalDistance.append(z)
     TotalInnerLoading.append(x)
     TotalOuterLoading.append(y)
     TotalOxide.append(q)
     Solubility.append(d) # Zone.SolutionOxide.FeSatFe3O4
     IronConcentration.append(e) # Zone.SolutionOxide.FeTotal
+    kp_Tdependent.append(f)
     Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
     TemperatureProfile.append(Temperature_C)
     
 Data = [SGHX.TubeLengths, TotalDistance, TotalInnerLoading, TotalOuterLoading, TotalOxide, Solubility, IronConcentration,
-        TemperatureProfile]
+        TemperatureProfile,kp_Tdependent]
 Labels = [
     "U-bend length (cm)", "Distance (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Total Oxide (g/m^2)",
-    "Solubility (mol/kg)", "S/O [Fe] (mol/kg)", "Temperature Profile (oC)"]
+    "Solubility (mol/kg)", "S/O [Fe] (mol/kg)", "Temperature Profile (oC)", "kp (cm/s"]
 
 RIHT_delta = [x-y for x, y in zip (RIHT[1:], RIHT)]   
 

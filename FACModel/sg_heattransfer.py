@@ -87,7 +87,7 @@ for i in [ShellDiameter, EquivalentDiameter, TubePitch]:
 
 def MassFlux_c(Section, i):
     if Section.Length.label[i] == "opposite preheater":
-        PreheaterDiameter = ShellDiameter.magnitude / 2  # [cm]
+        PreheaterDiameter = 1.3 * 100  # [cm]
         MassFlow = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
         TotalTubes = TotalSGTubeNumber
     else:
@@ -149,11 +149,11 @@ def closest_ubend(UbendLength):
     return difference.index(min(difference))
 
 
-SGFastMode = "yes"
+SGFastMode = "no"
 # select all the SG tubes to be run (by arc length)
 UBends = [1.52, 1.71, 2.31, 3.09]
 UBends = [i * 100 for i in UBends]
-TubeLengths = [1892, 1907]
+TubeLengths = [1887, 1907]
 # [1892, 1907, 1907, 1889, 1907.952, 1968.59, 2044.4]
 
 def tube_picker(method):
@@ -186,7 +186,8 @@ def tube_picker(method):
 if SGFastMode == "yes":
     selected_tubes = tube_picker("tube length")[0]
 else:
-    selected_tubes = ld.SteamGenerator  # [0::3]
+    #omitting "default" tube so it does not pass through growth function twice
+    selected_tubes = ld.SteamGenerator[0:57] + ld.SteamGenerator[58:87]
 
 tube_number = tube_picker("tube length")[1] 
 
@@ -213,7 +214,7 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.00085  # [g/cm^2] /year = 6.5 um /year
+    TubeGrowth = 0.00125  # [g/cm^2] /year = 6.5 um /year
     ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
         
     # between 1983 and 1986 (included)
@@ -373,12 +374,12 @@ def boiling_heat_transfer(x, side, MassFlux, T_wall, Diameter, SecondarySidePres
         Density_l = nc.density(side, T_sat, SecondarySidePressure)
         Viscosity_sat = nc.viscosity(side, T_sat, SecondarySidePressure)
         Pressure = SecondarySidePressure
-        F = 1.04
+        F = 1.0
         
-        k_f = nc.thermal_conductivityH2O(side, T_sat, SecondarySidePressure)
-        Cp = nc.HeatCapacity(side, T_sat, SecondarySidePressure)
-        SurfaceTension_H2O = 0.024 * 1000#[N/m]
-        
+#         k_f = nc.thermal_conductivityH2O(side, T_sat, SecondarySidePressure)
+#         Cp = nc.HeatCapacity(side, T_sat, SecondarySidePressure)
+#         SurfaceTension_H2O = 0.024 * 1000#[N/m]
+#         
 #         h = 0.00122 * (
 #             (k_f ** 0.79) * (Cp ** 0.45) * (Density_l ** 0.49) \
 #             / ((SurfaceTension_H2O ** 0.79) * (Viscosity_sat ** 0.79) * (1128 ** 0.79) * (Density_v ** 0.79))
@@ -576,7 +577,7 @@ def wall_temperature(
     
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
-    T_SecondaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
+    T_SecondaryWall = T_PrimaryBulkIn - (2 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
 
     for k in range(50):
         WT_h = T_PrimaryWall
@@ -717,7 +718,7 @@ def temperature_profile(
 #                 ))               
 
             if Section.Length.label[i] == "opposite preheater":
-                MassFlow_c = MassFlow_downcomer.magnitude
+                MassFlow_c = MassFlow_c_total.magnitude
             else:
                 MassFlow_c = MassFlow_c_total.magnitude
             
@@ -840,7 +841,7 @@ def station_events(calendar_year, x_pht):
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
         InitialLeakage = 0.02
-        YearlyRateLeakage = 0.005  # yearly increase to fraction of total SG inlet mass flow
+        YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
          
     elif calendar_year == 1996:
         InitialLeakage = 0.015  # controls where first post-outage point is
@@ -920,10 +921,10 @@ def energy_balance(
 #     print (calendar_year, x_pht, RIHT-273.15)
     return RIHT
     
-UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
-UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
-CleanedInner = [i * 0.67 for i in UncleanedInner]
-CleanedOuter = [i * 0.67 for i in UncleanedOuter]
-#       
-print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876 * 0, SGFastMode="yes")
-- 273.15)
+# UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
+# UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
+# CleanedInner = [i * 0.67 for i in UncleanedInner]
+# CleanedOuter = [i * 0.67 for i in UncleanedOuter]
+# #       
+# print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876 * 0, SGFastMode="yes")
+# - 273.15)
