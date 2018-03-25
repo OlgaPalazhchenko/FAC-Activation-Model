@@ -26,7 +26,7 @@ ElementTracking = "no"
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
           
-SimulationYears = 25  # years
+SimulationYears = 10  # years
 SimulationHours = SimulationYears * 876
 
 
@@ -133,7 +133,7 @@ for j in range(SimulationHours):
 #                                 UncleanedOuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j) - 273.15
 #                  )
 
-#         print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, T_RIH)
+        print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, T_RIH)
         x_pht = SGHX.pht_steam_quality(T_RIH + 273.15, j)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber

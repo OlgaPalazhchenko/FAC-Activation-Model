@@ -207,10 +207,10 @@ def density(side, Temperature, SecondarySidePressure):
   
     return (1 / (R_IAPWS * Temperature * ratio_pressures * (Gibbs_p / (p * 1000)))) * 1000 / (100 ** 3)  # [g/cm^3] 
 
-        
+    
 def D2O_density(Temperature):
     T = Temperature - 273
-    return -0.0023 * T + 1.4646
+    return -0.0023 * T + 1.4646 #[g/cm^3]
 
 
 def D2O_viscosity(Temperature):
@@ -236,7 +236,7 @@ def D2O_viscosity(Temperature):
     
     return mu_ref * fi0 * fi1 #[g/cm s]
     
-    
+  
 def viscosity(side, Temperature, SecondarySidePressure):
     
     T_ref = 647.096  # K
