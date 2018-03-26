@@ -4,7 +4,7 @@ import thermochemistry_and_constants as nc
 import random
 
 NumberPluggedTubes = 8
-TotalSGTubeNumber = 3542 - NumberPluggedTubes
+TotalSGTubeNumber = 3550 - NumberPluggedTubes
 
 YearStartup = 1983.25
 YearCPP = 1988.25
@@ -48,15 +48,15 @@ for i in [U_h, U_c, U_total]:
 for i in [R_F_primary, R_F_secondary]:
     i.unit = "cm^2 K/W"
 
-T_sat_primary = 310 + 273.15
+T_sat_primary = 309.24 + 273.15
 T_PreheaterIn = 186.5 + 273.15
 RecirculationRatio = 5.3
 
 MassFlow_h.magnitude = 1900 * 1000
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
 # 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
-MassFlow_preheater.magnitude = 239.25 * 1000
-MassFlow_ReheaterDrains = 89 * 1000 / 4
+MassFlow_preheater.magnitude = 258 * 1000
+MassFlow_ReheaterDrains = 0#89 * 1000 / 4
 MassFlow_downcomer.magnitude = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
 MassFlow_c_total.magnitude = MassFlow_downcomer.magnitude + MassFlow_preheater.magnitude + MassFlow_ReheaterDrains
 
@@ -149,7 +149,7 @@ def closest_ubend(UbendLength):
     return difference.index(min(difference))
 
 
-SGFastMode = "no"
+SGFastMode = "yes"
 # select all the SG tubes to be run (by arc length)
 UBends = [1.52, 1.71, 2.31, 3.09]
 UBends = [i * 100 for i in UBends]
@@ -214,8 +214,8 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.00125  # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
+    TubeGrowth = 0.002  # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.0008  # [g/cm^2] /year = 3.25 um/year
         
     # between 1983 and 1986 (included)
     if YearStartup <= calendar_year <= YearCPP:
@@ -239,7 +239,7 @@ def sludge_fouling_resistance(Section, i, calendar_year):
 
 def pht_fouling_resistance(Section, i, calendar_year, InnerAccumulation, OuterAccumulation):
     if i == 21:
-        ThermalPlateReduction = 0.5
+        ThermalPlateReduction = 0.56
     else:
         ThermalPlateReduction = 1
     # [g/cm^2]/[g/cm^3] = [cm]
@@ -370,47 +370,27 @@ def boiling_heat_transfer(x, side, MassFlux, T_wall, Diameter, SecondarySidePres
             Density_v = 0.022529  # [g/cm^3]
             T_sat_secondary = 257 + 273.15
         T_sat = T_sat_secondary
-        
-        Density_l = nc.density(side, T_sat, SecondarySidePressure)
-        Viscosity_sat = nc.viscosity(side, T_sat, SecondarySidePressure)
+        F = 1
         Pressure = SecondarySidePressure
-        F = 1.0
         
-#         k_f = nc.thermal_conductivityH2O(side, T_sat, SecondarySidePressure)
-#         Cp = nc.HeatCapacity(side, T_sat, SecondarySidePressure)
-#         SurfaceTension_H2O = 0.024 * 1000#[N/m]
-#         
-#         h = 0.00122 * (
-#             (k_f ** 0.79) * (Cp ** 0.45) * (Density_l ** 0.49) \
-#             / ((SurfaceTension_H2O ** 0.79) * (Viscosity_sat ** 0.79) * (1128 ** 0.79) * (Density_v ** 0.79))
-#             ) * ((T_wall - T_sat) ** 0.24) * ((2 / 100) * 1000 *1000000)**0.24 
-
-        
-#         # start with Rohsenow correlation for boiling over a single tube
-#         SurfaceTension_H2O = 0.024 #[N/m]
-#         #[g/cm^3] * [(100cm)^3/m^3] * [kg/1000g] = [kg/m^3]
-#         GravitationalForce = 9.81 #[m/s^2]
-#         deltaDensity = (Density_l - Density_v) * (100 ** 3) / 1000
-        # [N/m] = [[kg m / s^2] /m]
-        #[kg/m^3] * [m/s^2] = [kg/m^2 s^2] / [kg/s^2]
+        k_l = (nc.thermal_conductivityH2O(side, T_sat, SecondarySidePressure) * 100) ** 0.79
+        C_p = (nc.HeatCapacity(side, T_sat, SecondarySidePressure) * 1000)** 0.45
+        g_c = 1 #[kg m /N s^2], N = kg m /s ^2
+        T_e = (T_wall - T_sat) ** 0.24
+        P_Twall = (0.1018 * T_wall - 49.724) * (10 ** 6) #Pa = kg/m s^2 *1000/100 = g/cm s^2
     
-        # [1/m^2] --> [1/cm^2]
-#         bubble_quotient = ((GravitationalForce * deltaDensity) / SurfaceTension_H2O) / (100 ** 2) 
-#         deltaT = 1.3
-# 
-#         Cp = nc.HeatCapacity(side, T_sat, SecondarySidePressure)
-#         # correlation-specific constant from a Table (for stainless steel surface)
-#         C_f_constant = 0.0132
-#         n = 1
-#         Pr = prandtl(side, T_sat, SecondarySidePressure)
-#         Enthalpy = 1128.4 #[J/g]
-#         #[g / cm s] * [1/cm] * [J/g] = [J / cm^2 s] = [W/cm^2] (first part)
-#         # [J/g K] * [K] / ([J/g] * [unitless] * [unitless]) = [unitless]
-#         q = (Viscosity_sat * np.sqrt(bubble_quotient) * Enthalpy * \
-#         (Cp * deltaT / (Enthalpy * C_f_constant * Pr ** n)) ** 3)
-#     
-#         HeatTransferCoefficient = q / deltaT
-#         print (q, deltaT, HeatTransferCoefficient, side, i)
+        P_sat = Pressure * (10 ** 6) #Pa
+        delta_P = (P_Twall - P_sat) ** 0.75
+        surfacetension = (0.024) ** 0.5 # N/m = kg m/s ^2 /m = kg/s^2 = g/s^2
+        mu = (nc.viscosity(side, T_sat, SecondarySidePressure) * 100 / 1000) ** 0.29
+        enthalpy = (2797 * 1000) ** 0.24 # kJ / kg * 1000 = J/kg
+        rho_v = (Density_v * (100 ** 3) / 1000) ** 0.24
+        
+        h_nb = (0.00122 * k_l * C_p * g_c * T_e * delta_P / (surfacetension * mu * enthalpy * rho_v)) / 100 / 100
+        
+        HTC = 2.5 * h_nb + (250 / (100 ** 2))
+        
+#         print (HTC, h_nb, i)
     
     elif side == "PHT":
         # quality only persists for first 2 nodes of PHT
@@ -421,25 +401,25 @@ def boiling_heat_transfer(x, side, MassFlux, T_wall, Diameter, SecondarySidePres
         Pressure = nc.PrimarySidePressure
         F = (1 + (x * prandtl(side, T_sat, Pressure) * ((Density_l / Density_v) - 1))) ** 0.35
         
-    p_crit = 22.0640  # [MPa]
+        p_crit = 22.0640  # [MPa]
+        
+        MassFlux_liquid = MassFlux * (1 - x)
     
-    MassFlux_liquid = MassFlux * (1 - x)
+        Re_D = Diameter * MassFlux_liquid / Viscosity_sat
+        Q_prime = F * h_l * (abs(T_wall - T_sat))  # [W/cm^2]
+        
+        S = (1 + 0.055 * (F ** 0.1) * (Re_D) ** 0.16) ** (-1)
+        A_p = (55 * ((4.70 / p_crit) ** 0.12) * ((-np.log10(4.70 / p_crit)) ** (-0.55)) * (nc.H2MolarMass) ** (-0.5)) \
+                / (100 ** 2)
+        
+        C = ((A_p * S) / (F * h_l) ** 2) * (Q_prime) ** (4 / 3)
+        coeff = [1, -C, -1]
+        cubic_solution = np.roots(coeff)
+        q = cubic_solution[0]
+        
+        HTC =  F * (q ** (3 / 2)) * h_l  # [W/cm^2 K]
 
-    Re_D = Diameter * MassFlux_liquid / Viscosity_sat
-    Q_prime = F * h_l * (abs(T_wall - T_sat))  # [W/cm^2]
-    
-    S = (1 + 0.055 * (F ** 0.1) * (Re_D) ** 0.16) ** (-1)
-    A_p = (55 * ((4.70 / p_crit) ** 0.12) * ((-np.log10(4.70 / p_crit)) ** (-0.55)) * (nc.H2MolarMass) ** (-0.5)) \
-            / (100 ** 2)
-    
-    C = ((A_p * S) / (F * h_l) ** 2) * (Q_prime) ** (4 / 3)
-    coeff = [1, -C, -1]
-    cubic_solution = np.roots(coeff)
-    q = cubic_solution[0]
-    
-    HeatTransferCoefficient =  F * (q ** (3 / 2)) * h_l  # [W/cm^2 K]
-
-    return HeatTransferCoefficient
+    return HTC
 
 
 def nusseltnumber(
@@ -574,10 +554,10 @@ def wall_temperature(
         calendar_year, SecondarySidePressure, m_h_leakagecorrection):
     
     TotalAccumulation = [x + y for x, y in zip (InnerAccumulation, OuterAccumulation)]
-    
+ 
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
-    T_SecondaryWall = T_PrimaryBulkIn - (2 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
+    T_SecondaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
 
     for k in range(50):
         WT_h = T_PrimaryWall
@@ -667,7 +647,7 @@ def temperature_profile(
             T_PrimaryBulkIn = T_sat_primary  # [K]
             T_SecondaryBulkIn = T_sat_secondary
             x_in = 0
-        
+
         Cp_h = nc.HeatCapacity("PHT", T_PrimaryBulkIn, None)
         Cp_c = nc.HeatCapacity("SHT", T_SecondaryBulkIn, SecondarySidePressure)
         
@@ -844,7 +824,7 @@ def station_events(calendar_year, x_pht):
         YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
          
     elif calendar_year == 1996:
-        InitialLeakage = 0.015  # controls where first post-outage point is
+        InitialLeakage = 0.017  # controls where first post-outage point is
         YearlyRateLeakage = 0
     elif calendar_year > 1996:
         InitialLeakage = 0.037  # helps second post-outage point rise

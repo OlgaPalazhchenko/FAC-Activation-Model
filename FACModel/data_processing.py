@@ -26,7 +26,7 @@ ElementTracking = "no"
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
           
-SimulationYears = 1  # years
+SimulationYears = 25  # years
 SimulationHours = SimulationYears * 876
 
 
@@ -179,16 +179,13 @@ for Zone in SGHX.selected_tubes:
                          nc.FeMolarMass, None)
     e = ld.UnitConverter(Zone, "Mol per Kg", "Grams per Cm Cubed", Zone.SolutionOxide.FeTotal, None, None, None,
                          nc.FeMolarMass, None)
-    
-    f = Zone.KpFe3O4electrochem
-    
+        
     TotalDistance.append(z)
     TotalInnerLoading.append(x)
     TotalOuterLoading.append(y)
     TotalOxide.append(q)
     Solubility.append(d) # Zone.SolutionOxide.FeSatFe3O4
     IronConcentration.append(e) # Zone.SolutionOxide.FeTotal
-    kp_Tdependent.append(f)
     Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
     TemperatureProfile.append(Temperature_C)
     
