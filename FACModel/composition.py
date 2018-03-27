@@ -34,8 +34,8 @@ def arrhenius_activaton_energy():
         # assumed this average growth rate applies to all tubes (data only available for 2 x 19.8 m long tubes)
         
         # [g/m^2 /yr] --> [g/cm^2 /yr]
-    Growth_coldavg = 34.8 / (100 ** 2) # preheater
-    Growth_hotavg = 16 / (100 ** 2)
+    Growth_coldavg = 35.15 / (100 ** 2) # preheater
+    Growth_hotavg = 16.55 / (100 ** 2)
     
     Saturation = ld.UnitConverter(
         Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeSatFe3O4, None,

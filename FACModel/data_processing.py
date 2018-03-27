@@ -26,7 +26,7 @@ ElementTracking = "no"
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
           
-SimulationYears = 25  # years
+SimulationYears = 10  # years
 SimulationHours = SimulationYears * 876
 
 
