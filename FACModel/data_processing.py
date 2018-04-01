@@ -26,7 +26,7 @@ ElementTracking = "no"
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
           
-SimulationYears = 10  # years
+SimulationYears = 1 # years
 SimulationHours = SimulationYears * 876
 
 
@@ -95,11 +95,15 @@ for j in range(SimulationHours):
     
     Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j)
     SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput, j)
-
+  
 #     print (
 #         ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
 #     None, None, None, None)
 #            )
+#     print (
+#         ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, In.Section1.CorrRate,
+#     None, None, None, None))
+           
     if Loop == "full":
         In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, ElementTracking, Activation, ConstantRate, j)
         Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, ElementTracking, Activation, ConstantRate, j)
@@ -145,7 +149,7 @@ for j in range(SimulationHours):
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
         for Section in ld.HalfLoop:
-            Section.Bulk.FeSatFe3O4 = c.iron_solubility(Section, None)
+            Section.Bulk.FeSatFe3O4 = c.def iron_solubility_TL(Section, None)
             
         if OutputLogging == "yes":
             RIHT.append(T_RIH)
@@ -259,9 +263,9 @@ def property_log10(Element, Interface):
         else:
             None
             
-        x = np.log10(Concentrations[0])
-        y = np.log10(Concentrations[1])
-        z = np.log10(Concentrations[2])
+        x = Concentrations[0]
+        y = Concentrations[1]
+        z = Concentrations[2]
     
         Sat.append(x)
         Bulk.append(y)

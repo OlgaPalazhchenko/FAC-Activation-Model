@@ -65,7 +65,7 @@ def initial_chemistry(Loop):
             Interface.ConcentrationH = c.bulkpH_calculator(Section)  # from system pH calculation
             
             # concentration/Saturation Input [mol/kg]
-            Interface.FeTotal = c.iron_solubility(Section, "initial")
+            Interface.FeTotal = c.def iron_solubility_TL(Section, "initial")
             Interface.FeSatFe3O4 = [1 * i for i in Interface.FeTotal]
             Interface.NiTotal = [i * 1 for i in Section.SolubilityNi]
             Interface.NiSatFerrite = [i * 1 for i in Section.SolubilityNi]
@@ -189,7 +189,7 @@ class PHT_FAC():
                     y[i] = a.surface_activity(self.Section1, x[i], j, i, z)
                     
             for x, y in zip (BulkConcentrations, SolutionOxideConcentrations):
-                if i > 0: 
+                if i > 0:
                     x[i] = rk_4.spatial(
                         y[i - 1], x[i - 1], ld.MassTransfer(self.Section1)[i], self.Section1.Diameter[i - 1],
                         self.Section1.Velocity[i - 1], self.Section1.Length.magnitude[i - 1]
@@ -197,8 +197,9 @@ class PHT_FAC():
                 
             # Inlet header purification system
             if self.Section1 in ld.InletSections and i == 3:      
-                for x in BulkConcentrations: 
-                    x[i] = 0.59 * x[i - 1]
+                for x in BulkConcentrations:
+                    purificationfactor = 1 
+                    x[i] = purificationfactor * x[i - 1]
                 if Activation == "yes":
                     for y in BulkActivities:
                         y[i] = 0.59 * y[i - 1]

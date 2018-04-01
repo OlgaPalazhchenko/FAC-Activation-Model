@@ -34,8 +34,8 @@ def arrhenius_activaton_energy():
         # assumed this average growth rate applies to all tubes (data only available for 2 x 19.8 m long tubes)
         
         # [g/m^2 /yr] --> [g/cm^2 /yr]
-    Growth_coldavg = 35.15 / (100 ** 2) # preheater
-    Growth_hotavg = 16.55 / (100 ** 2)
+    Growth_coldavg = 34.5 / (100 ** 2) # preheater
+    Growth_hotavg = 16.15 / (100 ** 2)
     
     Saturation = ld.UnitConverter(
         Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeSatFe3O4, None,
@@ -93,12 +93,13 @@ def arrhenius_activaton_energy():
  
 
 def plngs_precipitation_kinetics(Section, j):
-    if j < 150:
-        [ActivationEnergy, A] = arrhenius_activaton_energy()         
-        kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
-    else:
-        kp = Section.KpFe3O4electrochem
-    return kp
+#     if j < 150:
+#         [ActivationEnergy, A] = arrhenius_activaton_energy()         
+#         kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
+#     else:
+#         kp = Section.KpFe3O4electrochem
+#     return kp
+    return [nc.KpFe3O4] * Section.NodeNumber
 
 
 def temperature_dependent_parameters(Section):
@@ -258,7 +259,7 @@ def hydrolysis(Section, FeTotal, ConcentrationH):
             return ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2
 
 
-def iron_solubility(Section, Condition):
+def iron_solubility_TL(Section, Condition):
     # As temperature changes, thermochemistry and constants (k_Li, k_w, etc. change), pH changes as well, 
     # both affecting solubility --> Bulk FeSatFe3O4
     Section.SolutionOxide.ConcentrationH = bulkpH_calculator(Section)
@@ -316,6 +317,10 @@ def iron_solubility(Section, Condition):
     return FeTotalActivity
 
 
+def iron_solubility_SB():
+    None
+    
+    
 def cobalt_composition(Section):
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
         CompositionCr_Alloy = nc.FractionCr_Alloy800

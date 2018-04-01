@@ -67,10 +67,12 @@ def oxide_composition(
 def spatial(Solution, Bulk, km, Diameter, Velocity, Length):
     # Cylindrical pipe: Surface Area / Volume = Pi*Diameter*Length/(Pi*(Diameter^2)/4) = 4/Diameter
     # Allows conversion between amount/area (assuming uniform distribution across the area) to amount/volume
+    
     Solution_Bulk = Solution - Bulk
     Delta = (km * 4 / (Velocity * Diameter)) * Solution_Bulk
     # [cm]*[1/cm]*[mol/kg] + [mol/kg] = [mol/kg]
     BulkConccentration = Bulk + Delta * Length  # [x + y*Length for x,y in zip(Bulk, Delta)] 
+    
     return BulkConccentration 
 
 
@@ -86,8 +88,8 @@ def oxide_growth(
         Section.SolutionOxide.FeSatFe3O4, Section.SolutionOxide.NiSatFerrite, Section.SolutionOxide.CoSatFerrite
         ]
     ConvertedConcentrations = []
-    for i, k in zip(Concentrations, MolarMasses):  # Concentrations has 6 lists in it
-        x = [(z / 1000) * (k * y) for z, y in zip(i, Section.DensityH2O)]
+    for Conc, MW in zip(Concentrations, MolarMasses):  # Concentrations has 6 lists in it
+        x = [(z / 1000) * (MW * y) for z, y in zip(Conc, Section.DensityH2O)]
         ConvertedConcentrations.append(x)
     FeTotal, NiTotal, CoTotal, FeSat, NiSat, CoSat = ConvertedConcentrations
 

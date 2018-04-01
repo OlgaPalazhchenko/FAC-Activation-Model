@@ -48,7 +48,7 @@ for i in [U_h, U_c, U_total]:
 for i in [R_F_primary, R_F_secondary]:
     i.unit = "cm^2 K/W"
 
-T_sat_primary = 309.25 + 273.15
+T_sat_primary = 310 + 273.15
 T_PreheaterIn = 186.5 + 273.15
 RecirculationRatio = 5.3
 
@@ -151,9 +151,9 @@ def closest_ubend(UbendLength):
 
 SGFastMode = "yes"
 # select all the SG tubes to be run (by arc length)
-UBends = [1.52, 1.71, 2.31, 3.09]
+UBends = [1.52, 0.685, 2.31, 3.09]
 UBends = [i * 100 for i in UBends]
-TubeLengths = [1887, 1907.952, 1968.59, 2044.4]
+TubeLengths = [1887, 1807, 1970, 2046]
 
 def tube_picker(method):
     tubes = []
@@ -213,8 +213,8 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.0013  # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.00025  # [g/cm^2] /year = 3.25 um/year
+    TubeGrowth = 0.00125  # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
         
     # between 1983 and 1986 (included)
     if YearStartup <= calendar_year <= YearCPP:
@@ -224,8 +224,7 @@ def sludge_fouling_resistance(Section, i, calendar_year):
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
     elif YearCPP < calendar_year < YearSHTChemicalClean:
-        Accumulation = ((calendar_year - YearCPP) * ReducedTubeGrowth +
-                        (YearCPP - YearStartup) * TubeGrowth * 0.05)
+        Accumulation = (calendar_year - YearCPP) * ReducedTubeGrowth
     
     elif calendar_year >= YearSHTChemicalClean:
         Accumulation = (calendar_year - YearSHTChemicalClean) * ReducedTubeGrowth
@@ -359,6 +358,14 @@ def secondary_convection_resistance(
     return 1 / (h_o * outer_area(Section)[i])  # [K/W]
 
 
+def twophase_chen():
+    None
+    
+
+def nucleateboiling_singletube(Correlation):
+    None
+        
+
 def boiling_heat_transfer(x, side, MassFlux, T_wall, Diameter, SecondarySidePressure, i, h_l):
     
     # x = steam quality in percent
@@ -384,18 +391,18 @@ def boiling_heat_transfer(x, side, MassFlux, T_wall, Diameter, SecondarySidePres
 #         T_e = (T_wall - T_sat) ** 0.24
 # #         P_Twall = (0.1018 * T_wall - 49.724) * (10 ** 6) #Pa = kg/m s^2 *1000/100 = g/cm s^2
 #         P_Twall = (0.0017 * np.exp(0.0149 * T_wall)) * (10 ** 6)
-#         
-#      
+#          
+#       
 #         P_sat = Pressure * (10 ** 6) #Pa
 #         delta_P = (P_Twall - P_sat) ** 0.75
 #         surfacetension = (0.024) ** 0.5 # N/m = kg m/s ^2 /m = kg/s^2 = g/s^2
 #         mu = (nc.viscosity(side, T_sat, SecondarySidePressure) * 100 / 1000) ** 0.29
 #         enthalpy = (2797 * 1000) ** 0.24 # kJ / kg * 1000 = J/kg
 #         rho_v = (Density_v * (100 ** 3) / 1000) ** 0.24
-#          
+#           
 #         h_nb = (0.00122 * k_l * C_p * g_c * T_e * delta_P / (surfacetension * mu * enthalpy * rho_v)) / 100 / 100
-#          
-#         HTC = 2.2 * h_nb + (250 / (100 ** 2))
+#           
+#         HTC = 1.5 * h_nb
 #         print (HTC, lol, i)
     
     elif side == "PHT":
@@ -413,18 +420,18 @@ def boiling_heat_transfer(x, side, MassFlux, T_wall, Diameter, SecondarySidePres
         
     p_crit = 22.0640  # [MPa]
     
-    Q_prime = F * h_l * (abs(T_wall - T_sat))  # [W/cm^2]
+    Q_prime = F * h_l * (abs(T_wall - T_sat))  # [K W/cm^2]
     
     A_p = (55 * ((Pressure / p_crit) ** 0.12) * ((-np.log10(Pressure / p_crit)) ** (-0.55)) *\
             (nc.H2OMolarMass) ** (-0.5)) / (100 ** 2)
     
-    C = ((A_p * S) / (F * h_l) ** 2) * (Q_prime) ** (4 / 3)
+    C = ((A_p * S / (F * h_l)) ** 2) * Q_prime ** (4 / 3)
     coeff = [1, -C, -1]
     cubic_solution = np.roots(coeff)
     q = cubic_solution[0]
     
     HTC =  F * (q ** (3 / 2)) * h_l  # [W/cm^2 K]
-#     print (HTC, i, side)
+#     if side == "SHT": print (HTC, q, i, side)
     return HTC
 
 
@@ -458,7 +465,7 @@ def nusseltnumber(
         C1 = 0.40
         m = 0.60
         n = 0.36
-        C2 = 0.92
+        C2 = 0.955 # lower value = more supression = higher RIHT growth
         
         Prandtl_ratio = prandtl(side, T_SecondaryBulkIn, SecondarySidePressure) \
         / prandtl(side, T_SecondaryWall, SecondarySidePressure)
@@ -908,10 +915,10 @@ def energy_balance(
 #     print (calendar_year, x_pht, RIHT-273.15)
     return RIHT
     
-# UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
-# UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
-# CleanedInner = [i * 0.67 for i in UncleanedInner]
-# CleanedOuter = [i * 0.67 for i in UncleanedOuter]
-#          
-# print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876 * 0, SGFastMode="yes")
-# - 273.15)
+UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
+UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
+CleanedInner = [i * 0.67 for i in UncleanedInner]
+CleanedOuter = [i * 0.67 for i in UncleanedOuter]
+          
+print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876 * 0, SGFastMode="yes")
+- 273.15)

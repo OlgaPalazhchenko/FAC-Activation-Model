@@ -5,14 +5,14 @@ import composition as c
 import electrochemistry as e
 
 # Activation Energies [J/mol]
-ACTIVATION_ENERGY_Fe = 263509.1314  # at 80 um/a = 266254.4854
-ACTIVATION_ENERGY_H2onFe = 263164.1035  # at 80 um/a = 265246.0692
+ACTIVATION_ENERGY_Fe = 268219.7999
 
-ACTIVATION_ENERGY_ALLOY800 = 302314.6598
+ACTIVATION_ENERGY_H2onFe = 265246.0692
 
-ACTIVATION_ENERGYH2onALLOY800 = 291362.8816
+ACTIVATION_ENERGY_ALLOY800 = 297873.3418
+ACTIVATION_ENERGYH2onALLOY800 = 267277.0456
 
- 
+
 def Diffusion(Section, Element):
     # Inner oxide density is determined as a weighted average of the densities of the 2 comprising oxides 
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
@@ -27,7 +27,7 @@ def Diffusion(Section, Element):
                         + (1 - c.fraction_chromite(Section)) * nc.Fe3O4Density)
         FractionCo = nc.FractionCo_CS
         
-    if Section not in ld.FuelSections :
+    if Section not in ld.FuelSections:
         if Element == "Fe":
             MetalRetainedInsideInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe") \
             * (OxideDensity / AlloyDensity) * (1 - nc.Fe3O4Porosity_inner)  # [gFe/g CSlost]
@@ -119,7 +119,6 @@ def SolutionOxide(
         Diff = [0] * Section.NodeNumber
     else:
         Diff = [i * Diffusion(Section, Element) for i in Section.CorrRate]
-        
         if Section in ld.InletSections or Section in ld.OutletSections:
             if Element == "Ni": 
                 Diff = [0] * Section.NodeNumber
@@ -135,7 +134,12 @@ def SolutionOxide(
     else:
         print ("Error: unknown element specified")            
     # Same operation applied within function to every element in list (all nodes) 
+    
+    # Bulk concentration in mol/kg here, need to convert to g/cm^3
+
+#     if Element == "Fe": print (BulkConcentration[0], BulkConcentration_gm_cm_3[0])
     BTrans = TransfertoBulk(Section, BulkConcentration, MolarMass, km)
+    
     KineticConstant = []
     Concentration = []
     
@@ -157,9 +161,11 @@ def SolutionOxide(
             # same expression for dissolution (Oxide >0) or precipitation, subbing out appropriate kinetic constant 
             if SolutionOxideConcentration[i] >= SaturationConcentration[i]:
                 y = (Diff[i] + OxideKinetics[i] + BTrans[i]) / (Section.KpFe3O4electrochem[i] + km[i])
+#                 if Section == ld.OutletFeeder: print (Diff[i], OxideKinetics[i], BTrans[i], Section.KpFe3O4electrochem[i] + km[i], i)
             
             else:  # SolutionOxideConcentration[i] < SaturationConcentration[i]:
                 y = (Diff[i] + OxideKinetics[i] + BTrans[i]) / (Section.KdFe3O4electrochem[i] + km[i])
+#                 if Section == ld.OutletFeeder: print (Diff[i], OxideKinetics[i], BTrans[i])
             
             if Oxide[i] == 0:  
                 y = (Diff[i] + BTrans[i]) / km[i]  # No contribution from oxide kinetics
@@ -261,6 +267,8 @@ def FAC_solver(Section, ConstantRate):
     # preset desired FAC rate
     elif Section in ld.OutletSections and ConstantRate == "yes":
         rate = [1.8e-09, 2.6e-09, 1.8e-09, 1.60e-09, 1.50e-09, 1.60e-09, 1.60e-09, 9.00e-10, 1.6e-09]
+#         rate = [i * 0.4 for i in rate]
+#     elif Section in ld.InletSections: rate = [1.49543E-10] * Section.NodeNumber
 
     
     # corrosion current calculation not required of rate has been set as constant
@@ -281,10 +289,10 @@ def FAC_solver(Section, ConstantRate):
             Constant = 0
             
         rate = [x * y for x, y in zip(CorrosionCurrent, Constant)]  # [g/cm^2*s] 
-#     if Section in ld.SteamGenerator:
-#         print (ld.UnitConverter(
-#             Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, rate, None, None, None, None
-#             ))    
+    if Section == ld.OutletFeeder:
+        print (ld.UnitConverter(
+            Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, rate, None, None, None, None
+            ))    
     return rate, MixedECP 
 
 
