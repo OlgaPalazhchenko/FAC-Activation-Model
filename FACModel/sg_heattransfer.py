@@ -915,10 +915,10 @@ def energy_balance(
 #     print (calendar_year, x_pht, RIHT-273.15)
     return RIHT
     
-UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
-UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
-CleanedInner = [i * 0.67 for i in UncleanedInner]
-CleanedOuter = [i * 0.67 for i in UncleanedOuter]
-          
-print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876 * 0, SGFastMode="yes")
-- 273.15)
+# UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
+# UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
+# CleanedInner = [i * 0.67 for i in UncleanedInner]
+# CleanedOuter = [i * 0.67 for i in UncleanedOuter]
+#           
+# print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876 * 0, SGFastMode="yes")
+# - 273.15)

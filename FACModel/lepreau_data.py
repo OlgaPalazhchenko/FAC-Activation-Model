@@ -345,21 +345,21 @@ def MassTransfer(Section):
     Sherwood = [0.0165 * (x ** 0.86) * (y ** 0.33) for x, y in zip(Reynolds, Schmidt)]  
     # Berger & Hau for straight pipe, single phase, fully developed (turbulent) flow
 # 
-#     SurfaceRoughness = 0.000075  # [m]
-#     # [unitless]
-#     HydraulicResistance = [(1.8 * np.log10((6.9 / x) + (SurfaceRoughness / (3.75 * y)) ** 1.11)) ** (-2) for x, y in
-#                            zip(Reynolds, Section.Diameter)]
-#     
-#     Sherwood = [(x/8) * y * z / (1.07 + np.sqrt(x / 8) * ((z**0.667) - 1)) for x, y, z in zip(
-#         HydraulicResistance, Reynolds, Schmidt)]
-#     
-#     r_elbow = 0.382 #0.09225 # [m]
-#     
+    SurfaceRoughness = 0.000075  # [m]
+    # [unitless]
+    HydraulicResistance = [(1.8 * np.log10((6.9 / x) + (SurfaceRoughness / (3.75 * y)) ** 1.11)) ** (-2) for x, y in
+                           zip(Reynolds, Section.Diameter)]
+     
+    Sherwood = [(x/8) * y * z / (1.07 + np.sqrt(x / 8) * ((z**0.667) - 1)) for x, y, z in zip(
+        HydraulicResistance, Reynolds, Schmidt)]
+     
+    r_elbow = 0.382 #0.09225 # [m]
+     
 #     GeometryFactor= [0.68 + (1.2 - 0.044 * np.log(x)) * np.exp(-0.065 * r_elbow / y) + 0.58/(np.log(z + 2.5)) for
-#                       x, y, z in zip(Reynolds, Section.Diameter, Schmidt)]
-    GeometryFactor = [1] * Section.NodeNumber
-    h_BH =  [z* nc.FeDiffusivity * x / y for x, y, z in zip(Sherwood, Section.Diameter, GeometryFactor)] # [cm/s]
+#                     x, y, z in zip(Reynolds, Section.Diameter, Schmidt)]
+    GeometryFactor = [1.1] * Section.NodeNumber
     
+    h_BH =  [z* nc.FeDiffusivity * x / y for x, y, z in zip(Sherwood, Section.Diameter, GeometryFactor)] # [cm/s]
 #     if Section in OutletSections:
 #         h_BH[1] = h_BH[1] * GeometryFactor[1]
     

@@ -9,8 +9,8 @@ ACTIVATION_ENERGY_Fe = 268219.7999
 
 ACTIVATION_ENERGY_H2onFe = 265246.0692
 
-ACTIVATION_ENERGY_ALLOY800 = 297873.3418
-ACTIVATION_ENERGYH2onALLOY800 = 267277.0456
+ACTIVATION_ENERGY_ALLOY800 = 321276.4779
+ACTIVATION_ENERGYH2onALLOY800 = 310324.6997
 
 
 def Diffusion(Section, Element):
@@ -289,10 +289,7 @@ def FAC_solver(Section, ConstantRate):
             Constant = 0
             
         rate = [x * y for x, y in zip(CorrosionCurrent, Constant)]  # [g/cm^2*s] 
-    if Section == ld.OutletFeeder:
-        print (ld.UnitConverter(
-            Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, rate, None, None, None, None
-            ))    
+    
     return rate, MixedECP 
 
 

@@ -56,8 +56,8 @@ NiDiffusivity = 0.00041
 CoDiffusivity = 0.00041
 
 # Kinetic precipitation/dissolution constants [cm/s]
-KpFe3O4 = .07
-KdFe3O4 = .35
+KpFe3O4 = .01
+KdFe3O4 = .05
 # KpFe_Ferrite = 0.014 #same as magnetite precipitation
 # KdFe_Ferrite  = 0.044 'same as magnetite dissolution
 
@@ -68,7 +68,7 @@ FracCo_Fe3O4 = 0.000049
 
 H2 = 10  # [cm^3/kg]
 SAFactor = 1.73  # surface area factor
-CobaltWear = 0.0000000015  # mol/kg (spike input term)
+CobaltWear = 0.00000000015  # mol/kg (spike input term)
 
 ErosionConstant = 2.4e-11  # [g/cm^2 s]
 

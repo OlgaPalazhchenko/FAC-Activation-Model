@@ -65,7 +65,7 @@ def initial_chemistry(Loop):
             Interface.ConcentrationH = c.bulkpH_calculator(Section)  # from system pH calculation
             
             # concentration/Saturation Input [mol/kg]
-            Interface.FeTotal = c.def iron_solubility_TL(Section, "initial")
+            Interface.FeTotal = c.iron_solubility_SB(Section)
             Interface.FeSatFe3O4 = [1 * i for i in Interface.FeTotal]
             Interface.NiTotal = [i * 1 for i in Section.SolubilityNi]
             Interface.NiSatFerrite = [i * 1 for i in Section.SolubilityNi]

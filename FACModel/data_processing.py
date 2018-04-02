@@ -20,14 +20,14 @@ Activation = "no"
 PlotOutput = "yes"
 OutputLogging = "yes"
 Loop = "half"
-ElementTracking = "no"
+ElementTracking = "yes"
 
 # 1.52 m is the u-bend arc length of an average SG tube
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
           
 SimulationYears = 1 # years
-SimulationHours = SimulationYears * 876
+SimulationHours = 100#SimulationYears * 876
 
 
 if OutputLogging == "yes":
@@ -144,12 +144,12 @@ for j in range(SimulationHours):
 #                                 UncleanedOuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j) - 273.15
 #                  )
 
-        print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, T_RIH)
+#         print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, T_RIH)
         x_pht = SGHX.pht_steam_quality(T_RIH + 273.15, j)
         
         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
         for Section in ld.HalfLoop:
-            Section.Bulk.FeSatFe3O4 = c.def iron_solubility_TL(Section, None)
+            Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)
             
         if OutputLogging == "yes":
             RIHT.append(T_RIH)
