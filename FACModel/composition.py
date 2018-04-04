@@ -22,6 +22,11 @@ KFeOH3POLYNOMIAL = [-4.667E-10, 1.0496E-06, -0.000935775, 0.413186, -97.4709]
 # KNiOH2POLYNOMIAL = [-3.04309E-10, 6.66757E-07, -0.000580137, 0.255160282, -60.03240922]
 # KNiOH3POLYNOMIAL = [8.49674E-10, -1.5126E-06, 0.000945292, -0.211217025, -16.71117746]
 
+def purification_system():
+    
+    
+    return None
+
 
 def arrhenius_activaton_energy():
     Section = ld.SteamGenerator[57]
@@ -93,14 +98,14 @@ def arrhenius_activaton_energy():
  
 
 def plngs_precipitation_kinetics(Section, j):
-#     if j < 250:
-#         [ActivationEnergy, A] = arrhenius_activaton_energy()         
-#         kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
-# #         print (kp, A, ActivationEnergy)
-#     else:
-#         kp = Section.KpFe3O4electrochem
-#     return kp
-    return [nc.KpFe3O4] * Section.NodeNumber
+    if j < 250:
+        [ActivationEnergy, A] = arrhenius_activaton_energy()         
+        kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
+#         print (kp, A, ActivationEnergy)
+    else:
+        kp = Section.KpFe3O4electrochem
+    return kp
+#     return [nc.KpFe3O4] * Section.NodeNumber
 
 
 def temperature_dependent_parameters(Section):

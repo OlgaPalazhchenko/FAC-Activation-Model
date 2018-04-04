@@ -2,8 +2,8 @@ import csv
 import numpy as np
 
 
-TIME_STEP = 10 # hr
-TIME_INCREMENT = 3600 * TIME_STEP # s  Based on desired time step (3600 3600s/h for 1h time step)
+TIME_STEP = 1  # hr
+TIME_INCREMENT = 3600 * TIME_STEP # [s] Based on desired time step (e.g., 3600s/h for 1h time step)
 
 
 # General electrochemistry constants
@@ -56,8 +56,8 @@ NiDiffusivity = 0.00041
 CoDiffusivity = 0.00041
 
 # Kinetic precipitation/dissolution constants [cm/s]
-KpFe3O4 = .01
-KdFe3O4 = .05
+KpFe3O4 = .1
+KdFe3O4 = .1
 # KpFe_Ferrite = 0.014 #same as magnetite precipitation
 # KdFe_Ferrite  = 0.044 'same as magnetite dissolution
 

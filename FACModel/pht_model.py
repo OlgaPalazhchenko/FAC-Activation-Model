@@ -198,11 +198,12 @@ class PHT_FAC():
             # Inlet header purification system
             if self.Section1 in ld.InletSections and i == 3:      
                 for x in BulkConcentrations:
-                    purificationfactor = 1 
-                    x[i] = purificationfactor * x[i - 1]
+                    purificationfactor = 1900 / (1900 + 24)
+                    numberrecirculations = 1 #nc.TIME_INCREMENT / 40
+                    x[i] =  purificationfactor * x[i - 1]
                 if Activation == "yes":
                     for y in BulkActivities:
-                        y[i] = 0.59 * y[i - 1]
+                        y[i] = purificationfactor * y[i - 1]
             
             elif self.Section1 in ld.InletSections and i > 3:
                 if Activation == "yes":

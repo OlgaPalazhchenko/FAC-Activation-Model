@@ -20,14 +20,14 @@ Activation = "no"
 PlotOutput = "yes"
 OutputLogging = "yes"
 Loop = "half"
-ElementTracking = "yes"
+ElementTracking = "no"
 
 # 1.52 m is the u-bend arc length of an average SG tube
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
           
-SimulationYears = 1 # years
-SimulationHours = 100#SimulationYears * 876
+SimulationYears = 16 # years
+SimulationHours = 8760#SimulationYears * 876
 
 
 if OutputLogging == "yes":
@@ -99,7 +99,7 @@ for j in range(SimulationHours):
 #     print (
 #         ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
 #     None, None, None, None)
-#            )
+#             )
 #     print (
 #         ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, In.Section1.CorrRate,
 #     None, None, None, None))

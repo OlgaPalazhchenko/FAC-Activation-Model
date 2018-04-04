@@ -406,16 +406,17 @@ def spalling_time(
                  * (SolutionOxideFeSat - SolutionOxideFeTotal)
                 )
         else:  # no outer oxide layer 
-            SpTime = (OUTLET_INNER_SPALL_CONSTANT * Particle / 3600) / (
-                (Velocity ** 2) * nc.Fe3O4Porosity_inner * KdFe3O4electrochem\
-                 * (SolutionOxideFeSat - SolutionOxideFeTotal)
+            SpTime = (OUTLET_INNER_SPALL_CONSTANT * Particle / 3600) / \
+            (
+                (Velocity ** 2) * nc.Fe3O4Porosity_inner * KdFe3O4electrochem * (SolutionOxideFeSat - SolutionOxideFeTotal)
                 )
     else:  # Inlet 
         if OuterOxThickness > 0:
             SpTime = (INLET_OUTER_SPALL_CONSTANT * Particle / 3600) / (Velocity ** 2)
         else:  # no outer oxide layer 
             SpTime = (INLET_INNER_SPALL_CONSTANT * Particle / 3600) / (Velocity ** 2)
-
+    
+    # [hr]        
     return SpTime
 
 

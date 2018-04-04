@@ -357,10 +357,10 @@ def MassTransfer(Section):
      
 #     GeometryFactor= [0.68 + (1.2 - 0.044 * np.log(x)) * np.exp(-0.065 * r_elbow / y) + 0.58/(np.log(z + 2.5)) for
 #                     x, y, z in zip(Reynolds, Section.Diameter, Schmidt)]
-    GeometryFactor = [1.1] * Section.NodeNumber
+    GeometryFactor = [1] * Section.NodeNumber
     
     h_BH =  [z* nc.FeDiffusivity * x / y for x, y, z in zip(Sherwood, Section.Diameter, GeometryFactor)] # [cm/s]
-#     if Section in OutletSections:
-#         h_BH[1] = h_BH[1] * GeometryFactor[1]
+    if Section in OutletSections:
+        h_BH[7] = h_BH[7] * 1.5
     
     return h_BH

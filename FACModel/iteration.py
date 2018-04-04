@@ -5,9 +5,8 @@ import composition as c
 import electrochemistry as e
 
 # Activation Energies [J/mol]
-ACTIVATION_ENERGY_Fe = 268219.7999
-
-ACTIVATION_ENERGY_H2onFe = 265246.0692
+ACTIVATION_ENERGY_Fe = 269850.7017
+ACTIVATION_ENERGY_H2onFe = 267277.0456
 
 ACTIVATION_ENERGY_ALLOY800 = 321276.4779
 ACTIVATION_ENERGYH2onALLOY800 = 310324.6997
@@ -265,11 +264,9 @@ def FAC_solver(Section, ConstantRate):
     if Section in ld.FuelSections:
         rate = [0] * Section.NodeNumber
     # preset desired FAC rate
-    elif Section in ld.OutletSections and ConstantRate == "yes":
-        rate = [1.8e-09, 2.6e-09, 1.8e-09, 1.60e-09, 1.50e-09, 1.60e-09, 1.60e-09, 9.00e-10, 1.6e-09]
+#     elif Section in ld.OutletSections and ConstantRate == "yes":
+#         rate = [1.8e-09, 2.6e-09, 1.8e-09, 1.60e-09, 1.50e-09, 1.60e-09, 1.60e-09, 9.00e-10, 1.6e-09]
 #         rate = [i * 0.4 for i in rate]
-#     elif Section in ld.InletSections: rate = [1.49543E-10] * Section.NodeNumber
-
     
     # corrosion current calculation not required of rate has been set as constant
     else:
