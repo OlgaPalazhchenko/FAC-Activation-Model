@@ -27,7 +27,7 @@ Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
           
 SimulationYears = 16 # years
-SimulationHours = 8760#SimulationYears * 876
+SimulationHours = 300#SimulationYears * 876
 
 
 if OutputLogging == "yes":
@@ -168,7 +168,13 @@ for j in range(SimulationHours):
             
     else:
         None
-          
+
+print (
+    ld.UnitConverter(Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Ou.Section1.CorrRate,
+None, None, None, None)
+        )
+
+
 for Zone in SGHX.selected_tubes:
     x = ld.UnitConverter(
     Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerIronOxThickness, None, None, None

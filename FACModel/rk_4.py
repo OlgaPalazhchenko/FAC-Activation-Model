@@ -8,8 +8,8 @@ import random
 import sg_heattransfer as SGHX
 
 # Spalling thermochemistry_and_constants depend heavily on particle size distribution
-OUTLET_OUTER_SPALL_CONSTANT = 7000
-OUTLET_INNER_SPALL_CONSTANT = 1000
+OUTLET_OUTER_SPALL_CONSTANT = 90000
+OUTLET_INNER_SPALL_CONSTANT = 20000
 INLET_OUTER_SPALL_CONSTANT = 1.00E+18  # Different units for inlet versus outlet (different functions)
 INLET_INNER_SPALL_CONSTANT = 1.00E+5
 
@@ -392,29 +392,25 @@ def particle_size():
     else:
         print (r)
 
-    return Size * 0.0001 * nc.Fe3O4Density  # [um to cm to g/cm^2]
+    return Size * 0.0001 * nc.Fe3O4Density / 10  # [um to cm to g/cm^2]
 
 
-def spalling_time(
-        Section, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4electrochem, OuterOxThickness, Velocity
-        ):
+def spalling_time(Section, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4, OuterOxThickness, Velocity):
 
     if SolutionOxideFeSat > SolutionOxideFeTotal:  # Outlet 
         if OuterOxThickness > 0:
-            SpTime = (OUTLET_OUTER_SPALL_CONSTANT * Particle / 3600) / (
-                (Velocity ** 2) * nc.Fe3O4Porosity_outer * KdFe3O4electrochem\
-                 * (SolutionOxideFeSat - SolutionOxideFeTotal)
-                )
+            SpTime = (OUTLET_OUTER_SPALL_CONSTANT * Particle) / \
+            ((Velocity ** 2) * nc.Fe3O4Porosity_outer * KdFe3O4 * (SolutionOxideFeSat - SolutionOxideFeTotal))
+        
         else:  # no outer oxide layer 
-            SpTime = (OUTLET_INNER_SPALL_CONSTANT * Particle / 3600) / \
-            (
-                (Velocity ** 2) * nc.Fe3O4Porosity_inner * KdFe3O4electrochem * (SolutionOxideFeSat - SolutionOxideFeTotal)
-                )
+            SpTime = (OUTLET_INNER_SPALL_CONSTANT * Particle) / \
+            ((Velocity ** 2) * nc.Fe3O4Porosity_inner * KdFe3O4 * (SolutionOxideFeSat - SolutionOxideFeTotal))
+    
     else:  # Inlet 
         if OuterOxThickness > 0:
-            SpTime = (INLET_OUTER_SPALL_CONSTANT * Particle / 3600) / (Velocity ** 2)
+            SpTime = (INLET_OUTER_SPALL_CONSTANT * Particle) / (Velocity ** 2)
         else:  # no outer oxide layer 
-            SpTime = (INLET_INNER_SPALL_CONSTANT * Particle / 3600) / (Velocity ** 2)
+            SpTime = (INLET_INNER_SPALL_CONSTANT * Particle) / (Velocity ** 2)
     
     # [hr]        
     return SpTime

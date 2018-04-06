@@ -47,7 +47,7 @@ CoDensity = 8.9
 Fe3O4Porosity_inner = 0.1
 Fe3O4Porosity_outer = 0.3
 # FeCr2O4Porosity = 0.15
-Fe3O4Tortuosity = 1.8
+Fe3O4Tortuosity = 2
 FeCr2O4Tortuosity = 1.2
 
 # Diffusivity coefficients [cm^2/s]
@@ -56,8 +56,8 @@ NiDiffusivity = 0.00041
 CoDiffusivity = 0.00041
 
 # Kinetic precipitation/dissolution constants [cm/s]
-KpFe3O4 = .1
-KdFe3O4 = .1
+KpFe3O4 = .05
+KdFe3O4 = .05
 # KpFe_Ferrite = 0.014 #same as magnetite precipitation
 # KdFe_Ferrite  = 0.044 'same as magnetite dissolution
 

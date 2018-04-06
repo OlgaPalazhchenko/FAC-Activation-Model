@@ -208,6 +208,12 @@ for OutletPiping in OutletSections:
     OutletPiping.Diameter = [6.4, 6.4, 6.4, 6.4, 8.9, 8.9, 8.9, 116, 40.8] 
     OutletPiping.Velocity = [1619, 1619, 1619, 1619, 857, 857, 857, 306, 1250]
     OutletPiping.Length.magnitude = [17, 3.5, 139.5, 432, 225.5, 460.3, 460.3, 400, 100]
+    OutletPiping.Length.label = (["entrance"] + # grayloc
+                                 ["first bend"] + 
+                                 [None] * 5 +
+                                 ["header"] * 2
+                                 )
+    
     OutletPiping.SolubilityNi = [1.54584E-09] * OutletPiping.NodeNumber
     OutletPiping.SolubilityCo = [1.44E-09] * OutletPiping.NodeNumber
     OutletPiping.SolubilityCr = [4.84E-11] * OutletPiping.NodeNumber
@@ -330,10 +336,13 @@ for Section in FullLoop:
 
     Section.Distance = np.cumsum(Section.Length.magnitude)
 
-    
+
 def ReynoldsNumber(Section, Diameter):
     # Diameter is an input due to difference in desired dimension (e.g., inner, outer, hydraulic, etc.)
     # [cm/s][cm][g/cm^3]/([g/cm s]
+#     Section.DensityH2O = [nc.density("PHT", x, None) for x in Section.PrimaryBulkTemperature]
+#     Section.ViscosityH2O = [nc.viscosity("PHT", x, None) for x in Section.PrimaryBulkTemperature]
+    
     Reynolds = [x * y * q / z  
                 for x, y, z, q in zip(Section.Velocity, Diameter, Section.ViscosityH2O, Section.DensityH2O)]
     return Reynolds
@@ -344,23 +353,42 @@ def MassTransfer(Section):
     Reynolds = ReynoldsNumber(Section, Section.Diameter)
     Sherwood = [0.0165 * (x ** 0.86) * (y ** 0.33) for x, y in zip(Reynolds, Schmidt)]  
     # Berger & Hau for straight pipe, single phase, fully developed (turbulent) flow
-# 
-    SurfaceRoughness = 0.000075  # [m]
-    # [unitless]
-    HydraulicResistance = [(1.8 * np.log10((6.9 / x) + (SurfaceRoughness / (3.75 * y)) ** 1.11)) ** (-2) for x, y in
-                           zip(Reynolds, Section.Diameter)]
-     
-    Sherwood = [(x/8) * y * z / (1.07 + np.sqrt(x / 8) * ((z**0.667) - 1)) for x, y, z in zip(
-        HydraulicResistance, Reynolds, Schmidt)]
-     
-    r_elbow = 0.382 #0.09225 # [m]
+    
+#     SurfaceRoughness = 0.000075  # [m]
+#     # [unitless]
+#     HydraulicResistance = [(1.8 * np.log10((6.9 / x) + (SurfaceRoughness / (3.75 * y)) ** 1.11)) ** (-2) for x, y in
+#                            zip(Reynolds, Section.Diameter)]
+#      
+#     Sherwood = [(x/8) * y * z / (1.07 + np.sqrt(x / 8) * ((z**0.667) - 1)) for x, y, z in zip(
+#         HydraulicResistance, Reynolds, Schmidt)]
+#      
+#     r_elbow = 0.382 #0.09225 # [m]
      
 #     GeometryFactor= [0.68 + (1.2 - 0.044 * np.log(x)) * np.exp(-0.065 * r_elbow / y) + 0.58/(np.log(z + 2.5)) for
 #                     x, y, z in zip(Reynolds, Section.Diameter, Schmidt)]
-    GeometryFactor = [1] * Section.NodeNumber
     
-    h_BH =  [z* nc.FeDiffusivity * x / y for x, y, z in zip(Sherwood, Section.Diameter, GeometryFactor)] # [cm/s]
     if Section in OutletSections:
-        h_BH[7] = h_BH[7] * 1.5
+        GeometryFactor = []
+        EntranceEffect = []
+        for i in range(Section.NodeNumber):
+            if i == 1:
+                GF = 1.3
+            else: 
+                GF = 1
+                
+            if i <= 1:
+                EF = 1.4 * Section.Distance[i] / Section.Diameter[i]
+            else:
+                EF = 0
+            GeometryFactor.append(GF)
+            EntranceEffect.append(EF)
+    else:
+        GeometryFactor = [1] * Section.NodeNumber
+        EntranceEffect = [0] * Section.NodeNumber
+        
     
-    return h_BH
+    h_BH =  [nc.FeDiffusivity * x / y for x, y in zip(Sherwood, Section.Diameter)] # [cm/s]
+    
+    h = [(x + y) * z for x, y, z in zip(h_BH, EntranceEffect, GeometryFactor)]
+
+    return h
