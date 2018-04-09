@@ -104,6 +104,7 @@ class Section():  # Defining each primary heat transport section as a class
         self.Length = nc.SGParameters() 
         self.Distance = None 
         self.PrimaryBulkTemperature = None
+        self.HeatFlux = None
         # self.PrimaryWallTemperature = None
         # self.SecondaryWallTemperature = None
         self.SecondaryBulkTemperature = None

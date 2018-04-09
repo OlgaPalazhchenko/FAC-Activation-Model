@@ -27,7 +27,7 @@ Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
 
 SimulationYears = 16 # years
-SimulationHours = 876 # SimulationYears * 876
+SimulationHours = 200 # SimulationYears * 876
 
 
 if OutputLogging == "yes":

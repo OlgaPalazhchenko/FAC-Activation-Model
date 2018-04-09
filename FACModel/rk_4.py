@@ -78,9 +78,8 @@ def spatial(Solution, Bulk, km, Diameter, Velocity, Length):
 
 
 def oxide_growth(
-        Section, ElementTracking,  RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness
-        ):
-    
+        Section, ElementTracking,  RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness):
+
     MolarMasses = [nc.FeMolarMass, nc.FeMolarMass, nc.NiMolarMass, nc.NiMolarMass, nc.CoMolarMass, nc.CoMolarMass]
     
     # Converts all concentration units to be used within RK4 from [mol/kg] to [g/cm^3]
@@ -115,10 +114,8 @@ def oxide_growth(
                 q = Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide  # dy/dt = f(y)
             
             if FeTotal[i] >= FeSat[i]:  # precipitation of outer layer magnetite 
+                    
                 x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
-                
-                if Section in SteamGeneratorSections and Section.Length.Label[i] == "preheater":
-                    None
                 
             else:  # FeTotal[i] < FeSat[i]:
                 x = Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
@@ -130,7 +127,19 @@ def oxide_growth(
                 else:
                     q = Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide 
                 
-                x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
+                
+                if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
+                    print ("lol")
+                    if Section.Length.label[i] == "preheater":
+                        Q = Section.HeatFlux[i]
+                        HFE = (1.0866 / 100) * (np.exp((9.4157e-3) * Q - (3.8084e-6) * (Q ** 2)) - 1)
+                        print (1 + HFE, i)
+                    else:
+                        HFE = 0
+                else:
+                    HFE = 0
+        
+                x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i]) * (1 + 5 * HFE)
             
             else:  # if FeTotal[i] < FeSat[i]:
                 if Section in ld.FuelSections:
@@ -321,7 +330,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
                 Section.NiThickness = [
                     x + (y + 2 * z + 2 * q + e) / 6 for x, y, z, q, e in zip(Section.NiThickness, P[0], P[1], P[2], P[3])
                     ]
-        
+                
         Layers = [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Section.CoThickness, Section.NiThickness]
         # 4 different layers at each node. If any thicknesses are negative due to dissolution of respective layer, 
         # thickness = 0

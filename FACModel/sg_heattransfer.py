@@ -654,6 +654,7 @@ def temperature_profile(
     PrimaryBulk = []
     SecondaryBulk = []
     SecondaryWall = []
+    HeatFlux = []
 
     for i in range(Section.NodeNumber):
         if i == 0:
@@ -673,7 +674,7 @@ def temperature_profile(
         Q = U * (T_PrimaryBulkIn - T_SecondaryBulkIn) * outer_area(Section)[i] * TotalSGTubeNumber
         # all nodes other than preheater
         
-#         HeatFlux = (T_wh - T_wc) * U * 100 * 100 / 1000 #[kW/m^2]
+        q_Flux = (T_PrimaryBulkIn - T_SecondaryBulkIn) * U * 100 * 100 / 1000 #[kW/m^2]
 #         if Section == selected_tubes[0]: print (HeatFlux, T_PrimaryBulkIn - 273.15, T_SecondaryBulkIn - 273.15, i)
         
         if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater" and \
@@ -728,6 +729,7 @@ def temperature_profile(
             SecondaryBulk.append(T_SecondaryBulkOut)
             PrimaryWall.append(T_wh)
             SecondaryWall.append(T_wc)
+            HeatFlux.append(q_Flux)
             
 #             if i > 11:
 #                 x_in = (x_in * MassFlow_downcomer.magnitude) / MassFlow_c_total.magnitude
@@ -798,6 +800,7 @@ def temperature_profile(
             SecondaryBulk.append(T_SecondaryBulkOut)
             PrimaryWall.append(T_wh)
             SecondaryWall.append(T_wc)
+            HeatFlux.append(q_Flux)
 
 #     print (calendar_year, T_sat_secondary-273.15)
 #     print ([j - 273.15 for j in PrimaryBulk])
@@ -806,7 +809,7 @@ def temperature_profile(
 #     print ([j-273.15 for j in SecondaryBulk])
 #     print ([j-273.15 for j in SecondaryWall])
 #     print()
-    return PrimaryBulk
+    return PrimaryBulk, HeatFlux
 
 def pht_massflow():
     None
@@ -900,9 +903,9 @@ def energy_balance(
 #         RemainingPHTMassFlow_fouling = (
 #             RemainingPHTMassFlow * ((Zone.Diameter[0] - 2 * AverageDeposit) ** 2) / (Zone.Diameter[0] ** 2))
         
-        Zone.PrimaryBulkTemperature = temperature_profile(
+        [Zone.PrimaryBulkTemperature, Zone.HeatFlux] = temperature_profile(
             Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, calendar_year
-            ) 
+            )
         
         m_timesH = (Zone.TubeNumber / TotalSGTubeNumber) * RemainingPHTMassFlow \
             * nc.enthalpy("PHT", Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode], None)
@@ -918,10 +921,10 @@ def energy_balance(
 #     print (calendar_year, x_pht, RIHT-273.15)
     return RIHT
      
-# UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
-# UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
-# CleanedInner = [i * 0.67 for i in UncleanedInner]
-# CleanedOuter = [i * 0.67 for i in UncleanedOuter]
-#            
+UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
+UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
+CleanedInner = [i * 0.67 for i in UncleanedInner]
+CleanedOuter = [i * 0.67 for i in UncleanedOuter]
+            
 # print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876 * 0, SGFastMode="yes")
 # - 273.15)

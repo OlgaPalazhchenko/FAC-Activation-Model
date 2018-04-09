@@ -98,14 +98,13 @@ def arrhenius_activaton_energy():
  
 
 def plngs_precipitation_kinetics(Section, j):
-#     if j < 250:
-#         [ActivationEnergy, A] = arrhenius_activaton_energy()         
-#         kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
-# #         print (kp, A, ActivationEnergy)
-#     else:
-#         kp = Section.KpFe3O4electrochem
-#     return kp
-    return [nc.KpFe3O4] * Section.NodeNumber
+    
+    ActivationEnergy = 7918.8 * nc.R  
+    A = np.exp(11.494)    
+    kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
+  
+    return kp
+#     return [nc.KpFe3O4] * Section.NodeNumber
 
 
 def temperature_dependent_parameters(Section):
@@ -132,6 +131,7 @@ def bulkpH_calculator(Section):  # Bulk pH calculation
     ConcentrationH = 0.0000000001  # initial guess [mol/kg]
     gamma_1 = 1  # initial guess
     for i in range(Section.NodeNumber):
+
         ConcentrationOH = Section.k_W[i] / ((gamma_1 ** 2) * (ConcentrationH))
 
         # At high temp, LiOH doesn't dissociate 100% - eq'm established: LiOH(aq) <-> Li+(aq) + OH-(aq)
