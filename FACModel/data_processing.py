@@ -25,9 +25,9 @@ ElementTracking = "no"
 # 1.52 m is the u-bend arc length of an average SG tube
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
-          
+
 SimulationYears = 16 # years
-SimulationHours = 300#SimulationYears * 876
+SimulationHours = 876 # SimulationYears * 876
 
 
 if OutputLogging == "yes":
@@ -189,7 +189,8 @@ for Zone in SGHX.selected_tubes:
                          nc.FeMolarMass, None)
     e = ld.UnitConverter(Zone, "Mol per Kg", "Grams per Cm Cubed", Zone.SolutionOxide.FeTotal, None, None, None,
                          nc.FeMolarMass, None)
-        
+    f = Zone.KpFe3O4electrochem
+       
     TotalDistance.append(z)
     TotalInnerLoading.append(x)
     TotalOuterLoading.append(y)
@@ -198,6 +199,7 @@ for Zone in SGHX.selected_tubes:
     IronConcentration.append(e) # Zone.SolutionOxide.FeTotal
     Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
     TemperatureProfile.append(Temperature_C)
+    kp_Tdependent.append(f)
     
 Data = [SGHX.TubeLengths, TotalDistance, TotalInnerLoading, TotalOuterLoading, TotalOxide, Solubility, IronConcentration,
         TemperatureProfile,kp_Tdependent]

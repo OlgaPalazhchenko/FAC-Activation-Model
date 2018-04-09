@@ -661,7 +661,7 @@ def temperature_profile(
             T_PrimaryBulkIn = T_sat_primary  # [K]
             T_SecondaryBulkIn = T_sat_secondary
             x_in = 0
-
+        
         Cp_h = nc.HeatCapacity("PHT", T_PrimaryBulkIn, None)
         Cp_c = nc.HeatCapacity("SHT", T_SecondaryBulkIn, SecondarySidePressure)
         
@@ -672,6 +672,9 @@ def temperature_profile(
         # [W/ cm^2 K] * [K] * [cm^2] = [W] = [J/s]
         Q = U * (T_PrimaryBulkIn - T_SecondaryBulkIn) * outer_area(Section)[i] * TotalSGTubeNumber
         # all nodes other than preheater
+        
+#         HeatFlux = (T_wh - T_wc) * U * 100 * 100 / 1000 #[kW/m^2]
+#         if Section == selected_tubes[0]: print (HeatFlux, T_PrimaryBulkIn - 273.15, T_SecondaryBulkIn - 273.15, i)
         
         if Section.Length.label[i] != "preheater start" and Section.Length.label[i] != "preheater" and \
             Section.Length.label[i] != "thermal plate":
@@ -914,11 +917,11 @@ def energy_balance(
     RIHT = nc.temperature_from_enthalpy("PHT", Enthalpy, None)
 #     print (calendar_year, x_pht, RIHT-273.15)
     return RIHT
-    
+     
 # UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
 # UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
 # CleanedInner = [i * 0.67 for i in UncleanedInner]
 # CleanedOuter = [i * 0.67 for i in UncleanedOuter]
-#           
+#            
 # print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876 * 0, SGFastMode="yes")
 # - 273.15)

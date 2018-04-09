@@ -6,6 +6,7 @@ import iteration as it
 import electrochemistry as e
 import random
 import sg_heattransfer as SGHX
+from lepreau_data import SteamGeneratorSections
 
 # Spalling thermochemistry_and_constants depend heavily on particle size distribution
 OUTLET_OUTER_SPALL_CONSTANT = 90000
@@ -115,6 +116,10 @@ def oxide_growth(
             
             if FeTotal[i] >= FeSat[i]:  # precipitation of outer layer magnetite 
                 x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
+                
+                if Section in SteamGeneratorSections and Section.Length.Label[i] == "preheater":
+                    None
+                
             else:  # FeTotal[i] < FeSat[i]:
                 x = Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
         

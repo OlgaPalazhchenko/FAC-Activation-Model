@@ -5,8 +5,8 @@ import composition as c
 import electrochemistry as e
 
 # Activation Energies [J/mol]
-ACTIVATION_ENERGY_Fe = 265813.5395 #269850.7017
-ACTIVATION_ENERGY_H2onFe = 263239.8834 #267277.0456
+ACTIVATION_ENERGY_Fe = 265409.3837 #269850.7017
+ACTIVATION_ENERGY_H2onFe = 262835.72763 #267277.0456
 
 ACTIVATION_ENERGY_ALLOY800 = 321276.4779
 ACTIVATION_ENERGYH2onALLOY800 = 310324.6997
@@ -68,13 +68,16 @@ def MetalOxideInterfaceConcentration(
                   + (y * nc.Fe3O4Tortuosity / (OxideDensity * (1 - nc.Fe3O4Porosity_outer)))
                   for x, y in zip(InnerOxThickness, OuterOxThickness)] 
     
+    # more oxide = longer path length
     DiffusivityTerm = [x * nc.Fe3O4Porosity_inner / y for x, y in zip(Diffusivity, PathLength)]
     
+    #longer path length = lower diffusivity term
     SolutionConcentration = ld.UnitConverter(
         Section, "Mol per Kg", "Grams per Cm Cubed", SolutionOxideInterfaceConcentration, None, None, None, MolarMass,
         None
         )
-    
+    # higher FAC rate = higher M/O concentration
+    # lower diffusivity term = lower M/O concentration
     MOConcentration = [(x * Diffusion(Section, Element) / y) + z for x, y, z in
                        zip(Corrosion, DiffusivityTerm, SolutionConcentration)]
 
