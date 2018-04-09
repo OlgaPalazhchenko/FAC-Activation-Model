@@ -99,8 +99,8 @@ def arrhenius_activaton_energy():
 
 def plngs_precipitation_kinetics(Section, j):
     
-    ActivationEnergy = 7918.8 * nc.R  
-    A = np.exp(11.494)    
+    ActivationEnergy = 5254 * nc.R  
+    A = np.exp(6.5447)    
     kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
   
     return kp
@@ -131,7 +131,6 @@ def bulkpH_calculator(Section):  # Bulk pH calculation
     ConcentrationH = 0.0000000001  # initial guess [mol/kg]
     gamma_1 = 1  # initial guess
     for i in range(Section.NodeNumber):
-
         ConcentrationOH = Section.k_W[i] / ((gamma_1 ** 2) * (ConcentrationH))
 
         # At high temp, LiOH doesn't dissociate 100% - eq'm established: LiOH(aq) <-> Li+(aq) + OH-(aq)

@@ -114,8 +114,19 @@ def oxide_growth(
                 q = Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide  # dy/dt = f(y)
             
             if FeTotal[i] >= FeSat[i]:  # precipitation of outer layer magnetite 
+                
+                if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
+                
+                    if Section.Length.label[i] == "preheater":
+                        Q = Section.HeatFlux[i]
+                        HFE = (1.0866 / 100) * (np.exp((9.4157e-3) * Q - (3.8084e-6) * (Q ** 2)) - 1)
+                       
+                    else:
+                        HFE = 0
+                else:
+                    HFE = 0 
                     
-                x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
+                x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i]) * (1 + 3 * HFE)
                 
             else:  # FeTotal[i] < FeSat[i]:
                 x = Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
@@ -126,20 +137,8 @@ def oxide_growth(
                     q = 0
                 else:
                     q = Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide 
-                
-                
-                if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
-                    print ("lol")
-                    if Section.Length.label[i] == "preheater":
-                        Q = Section.HeatFlux[i]
-                        HFE = (1.0866 / 100) * (np.exp((9.4157e-3) * Q - (3.8084e-6) * (Q ** 2)) - 1)
-                        print (1 + HFE, i)
-                    else:
-                        HFE = 0
-                else:
-                    HFE = 0
         
-                x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i]) * (1 + 5 * HFE)
+                x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i]) 
             
             else:  # if FeTotal[i] < FeSat[i]:
                 if Section in ld.FuelSections:
