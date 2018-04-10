@@ -195,8 +195,8 @@ class PHT_FAC():
                         self.Section1.Velocity[i - 1], self.Section1.Length.magnitude[i - 1]
                         )
                 
-            # Inlet header purification system
-            if self.Section1 in ld.InletSections and i == 3:      
+            # Inlet header purification systemc comes off of only one inlet feeder header in a full figure-of-8 loop
+            if self.Section1 == ld.InletFeeder and i == 3:      
                 for x in BulkConcentrations:
                     purificationfactor = 1900 / (1900 + 24)
                     numberrecirculations = 1 #nc.TIME_INCREMENT / 40

@@ -22,89 +22,88 @@ KFeOH3POLYNOMIAL = [-4.667E-10, 1.0496E-06, -0.000935775, 0.413186, -97.4709]
 # KNiOH2POLYNOMIAL = [-3.04309E-10, 6.66757E-07, -0.000580137, 0.255160282, -60.03240922]
 # KNiOH3POLYNOMIAL = [8.49674E-10, -1.5126E-06, 0.000945292, -0.211217025, -16.71117746]
 
-def purification_system():
-    
-    
-    return None
-
-
-def arrhenius_activaton_energy():
-    Section = ld.SteamGenerator[57]
-# #     year = (j / 8760) 
-# #     calendar_year = year + 1983
+# def purification_system():
 #     
-#     Tube = SGHX.closest_tubelength(1980)
-
-        # based on chemical clean (AECL) of plngs pulled tubes in 1994
-        # assumed this average growth rate applies to all tubes (data only available for 2 x 19.8 m long tubes)
-        
-        # [g/m^2 /yr] --> [g/cm^2 /yr]
-    Growth_coldavg = 34.5 / (100 ** 2)  # preheater
-    Growth_hotavg = 16.15 / (100 ** 2)
-    
-    Saturation = ld.UnitConverter(
-        Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeSatFe3O4, None,
-        None, None, nc.FeMolarMass, None
-        )
-    
-    Concentration = ld.UnitConverter(
-        Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeTotal, None,
-        None, None, nc.FeMolarMass, None
-        )
-    
-    ConcentrationGradient_cold = Concentration[19] - Saturation[19]
-    ConcentrationGradient_hot = Concentration[7] - Saturation[7]
-    
-    if ConcentrationGradient_cold == 0 or ConcentrationGradient_hot == 0:
-        kp_cold = nc.KpFe3O4
-        kp_hot = nc.KpFe3O4
-    
-    else:
-        kp_cold = Growth_coldavg / ConcentrationGradient_cold
-        kp_hot = Growth_hotavg / ConcentrationGradient_hot
-        
-        kp_cold = kp_cold / (365 * 24 * 3600)  # [cm/yr] * 365 d/yr * 24 h/d * 3600 s/h = [cm/s]
-        kp_hot = kp_hot / (365 * 24 * 3600)
-    # assume first ~4 m of hot leg have minimal deposition 
-    
-    if kp_cold and kp_hot < 0:
-        kp_cold = nc.KpFe3O4
-        kp_hot = nc.KpFe3O4
-        
-    T_cold = []
-    T_hot = []
-        
-#     for i in range(SteamGenerator[Tube].NodeNumber - 1):
-#         if (SteamGenerator[Tube].Length.label[i] == "preheater"
-#             or SteamGenerator[Tube].Length.label[i] == "preheater start"):
-#             # preheater area
-#             T_cold.append(SteamGenerator[Tube].PrimaryBulkTemperature[i])
-#             
-#         if 3 < i < 12:
-#             T_hot.append(SteamGenerator[Tube].PrimaryBulkTemperature[i])
-
-    T_coldavg = Section.PrimaryBulkTemperature[19]  # preheater
-    T_hotavg = Section.PrimaryBulkTemperature[7]
-    
-#     T_coldavg = sum(T_cold) / len(T_cold)  # preheater
-#     T_hotavg = sum(T_hot) / len(T_hot)  # hot leg not including preheater or first 4 m
-#     print (kp_cold, kp_hot)
-    # natural logarithm, ln, [J/K mol][K] = [J/mol]
-    ActivationEnergy = (nc.R * T_coldavg * T_hotavg / (T_coldavg - T_hotavg)) * np.log(kp_cold / kp_hot)
-
-    A = kp_cold / np.exp(-ActivationEnergy / (nc.R * T_coldavg)) 
-    
-    return ActivationEnergy, A
+#     
+#     return None
+# 
+# 
+# def arrhenius_activaton_energy():
+#     Section = ld.SteamGenerator[57]
+# # #     year = (j / 8760) 
+# # #     calendar_year = year + 1983
+# #     
+# #     Tube = SGHX.closest_tubelength(1980)
+# 
+#         # based on chemical clean (AECL) of plngs pulled tubes in 1994
+#         # assumed this average growth rate applies to all tubes (data only available for 2 x 19.8 m long tubes)
+#         
+#         # [g/m^2 /yr] --> [g/cm^2 /yr]
+#     Growth_coldavg = 34.5 / (100 ** 2)  # preheater
+#     Growth_hotavg = 16.15 / (100 ** 2)
+#     
+#     Saturation = ld.UnitConverter(
+#         Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeSatFe3O4, None,
+#         None, None, nc.FeMolarMass, None
+#         )
+#     
+#     Concentration = ld.UnitConverter(
+#         Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeTotal, None,
+#         None, None, nc.FeMolarMass, None
+#         )
+#     
+#     ConcentrationGradient_cold = Concentration[19] - Saturation[19]
+#     ConcentrationGradient_hot = Concentration[7] - Saturation[7]
+#     
+#     if ConcentrationGradient_cold == 0 or ConcentrationGradient_hot == 0:
+#         kp_cold = nc.KpFe3O4
+#         kp_hot = nc.KpFe3O4
+#     
+#     else:
+#         kp_cold = Growth_coldavg / ConcentrationGradient_cold
+#         kp_hot = Growth_hotavg / ConcentrationGradient_hot
+#         
+#         kp_cold = kp_cold / (365 * 24 * 3600)  # [cm/yr] * 365 d/yr * 24 h/d * 3600 s/h = [cm/s]
+#         kp_hot = kp_hot / (365 * 24 * 3600)
+#     # assume first ~4 m of hot leg have minimal deposition 
+#     
+#     if kp_cold and kp_hot < 0:
+#         kp_cold = nc.KpFe3O4
+#         kp_hot = nc.KpFe3O4
+#         
+#     T_cold = []
+#     T_hot = []
+#         
+# #     for i in range(SteamGenerator[Tube].NodeNumber - 1):
+# #         if (SteamGenerator[Tube].Length.label[i] == "preheater"
+# #             or SteamGenerator[Tube].Length.label[i] == "preheater start"):
+# #             # preheater area
+# #             T_cold.append(SteamGenerator[Tube].PrimaryBulkTemperature[i])
+# #             
+# #         if 3 < i < 12:
+# #             T_hot.append(SteamGenerator[Tube].PrimaryBulkTemperature[i])
+# 
+#     T_coldavg = Section.PrimaryBulkTemperature[19]  # preheater
+#     T_hotavg = Section.PrimaryBulkTemperature[7]
+#     
+# #     T_coldavg = sum(T_cold) / len(T_cold)  # preheater
+# #     T_hotavg = sum(T_hot) / len(T_hot)  # hot leg not including preheater or first 4 m
+# #     print (kp_cold, kp_hot)
+#     # natural logarithm, ln, [J/K mol][K] = [J/mol]
+#     ActivationEnergy = (nc.R * T_coldavg * T_hotavg / (T_coldavg - T_hotavg)) * np.log(kp_cold / kp_hot)
+# 
+#     A = kp_cold / np.exp(-ActivationEnergy / (nc.R * T_coldavg)) 
+#     
+#     return ActivationEnergy, A
  
 
 def plngs_precipitation_kinetics(Section, j):
     
-    ActivationEnergy = 5254 * nc.R  
-    A = np.exp(6.5447)    
+    ActivationEnergy = 4624 * nc.R  
+    A = np.exp(5.369)    
     kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
   
     return kp
-#     return [nc.KpFe3O4] * Section.NodeNumber
 
 
 def temperature_dependent_parameters(Section):
