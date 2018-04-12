@@ -27,7 +27,7 @@ Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
 
 SimulationYears = 16 # years
-SimulationHours = 30240 # SimulationYears * 876
+SimulationHours = 30241 # SimulationYears * 876
 
 
 if OutputLogging == "yes":
@@ -148,8 +148,13 @@ for j in range(SimulationHours):
             
         if OutputLogging == "yes":
             Time.append(j)
+            # S/O concentrations are updated individually in code, e.g., self.Section1.FeTotal
+            # Bulk concentrations are not, so same location is pointed to, so all places self.Section1.Bulk.FeTotal
+            # was used change to updated values, even previously appended values
+            # new list needs to be created for bulk concentrations only
+            x = list(In.Section1.Bulk.FeTotal)
             
-            InletBulkConcentration.append(In.Section1.Bulk.FeTotal)
+            InletBulkConcentration.append(x)
             InletSOConcentration.append(In.Section1.SolutionOxide.FeTotal)
             OutletCorrosionRate.append(Ou.Section1.CorrRate)
             
@@ -242,14 +247,14 @@ AvgCorrRate = []
 
 for Rate, Conc1, Conc2 in zip(OutletCorrosionRate, InletBulkConcentration, InletSOConcentration):
     x = ld.UnitConverter(
-    Section, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None
+    Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None
     )
     y = ld.UnitConverter(
-        Section, "Mol per Kg", "Grams per Cm Cubed", Conc1, None, None, None, nc.FeMolarMass, None)
+        In.Section1, "Mol per Kg", "Grams per Cm Cubed", Conc1, None, None, None, nc.FeMolarMass, None)
     
     z = ld.UnitConverter(
-        Section, "Mol per Kg", "Grams per Cm Cubed", Conc2, None, None, None, nc.FeMolarMass,
-        None)
+        In.Section1, "Mol per Kg", "Grams per Cm Cubed", Conc2, None, None, None, nc.FeMolarMass, None
+        )
     q = sum(x) / Ou.Section1.NodeNumber
     
     OutletCorrosionRate_uma.append(x)
@@ -259,7 +264,7 @@ for Rate, Conc1, Conc2 in zip(OutletCorrosionRate, InletBulkConcentration, Inlet
 
 
 csvfile = "PurificationOutput.csv"
-with open(csvfile, "w") as output:
+with open(csvfile, "a") as output:
     writer = csv.writer(output, lineterminator='\n')
     writer.writerow(['Outlet Corrosion Rate (g/cm^2 s and um/a)'])
     writer.writerows(OutletCorrosionRate)

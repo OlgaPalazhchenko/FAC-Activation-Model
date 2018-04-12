@@ -61,19 +61,19 @@ MassFlow_downcomer.magnitude = (RecirculationRatio - 1) * MassFlow_preheater.mag
 MassFlow_c_total.magnitude = MassFlow_downcomer.magnitude + MassFlow_preheater.magnitude + MassFlow_ReheaterDrains
 
 
-def thermalplate_temp():
-    LeakageRate = 0.1
-    MassFlow_recirculation = (1 - LeakageRate) * \
-    (MassFlow_preheater.magnitude * RecirculationRatio - MassFlow_preheater.magnitude)
-    Enthalpy_recirculation = nc.enthalpy("SHT", 258.66 + 273.15, 4.593)
-    Enthalpy_preheater = nc.enthalpy("SHT", T_PreheaterIn, 4.593)
-    
-    TotalMass = MassFlow_preheater.magnitude * LeakageRate + MassFlow_recirculation
-    Enthalpy_under_thermalplate = ((Enthalpy_preheater * (MassFlow_preheater.magnitude * LeakageRate)
-                                   + MassFlow_recirculation * Enthalpy_recirculation) / TotalMass)
-    
-    T_under_thermalplate = nc.temperature_from_enthalpy("SHT", Enthalpy_under_thermalplate, 4.593)
-    return T_under_thermalplate                               
+# def thermalplate_temp():
+#     LeakageRate = 0.1
+#     MassFlow_recirculation = (1 - LeakageRate) * \
+#     (MassFlow_preheater.magnitude * RecirculationRatio - MassFlow_preheater.magnitude)
+#     Enthalpy_recirculation = nc.enthalpy("SHT", 258.66 + 273.15, 4.593)
+#     Enthalpy_preheater = nc.enthalpy("SHT", T_PreheaterIn, 4.593)
+#     
+#     TotalMass = MassFlow_preheater.magnitude * LeakageRate + MassFlow_recirculation
+#     Enthalpy_under_thermalplate = ((Enthalpy_preheater * (MassFlow_preheater.magnitude * LeakageRate)
+#                                    + MassFlow_recirculation * Enthalpy_recirculation) / TotalMass)
+#     
+#     T_under_thermalplate = nc.temperature_from_enthalpy("SHT", Enthalpy_under_thermalplate, 4.593)
+#     return T_under_thermalplate                               
 
 
 ShellDiameter.magnitude = 2.28 * 100
@@ -154,6 +154,7 @@ SGFastMode = "yes"
 UBends = [1.52, 0.685, 2.31, 3.09]
 UBends = [i * 100 for i in UBends]
 TubeLengths = [1887, 1807, 1970, 2046]
+
 
 def tube_picker(method):
     tubes = []

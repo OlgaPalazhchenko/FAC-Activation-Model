@@ -65,16 +65,17 @@ def oxide_composition(
             return None
 
 
-def spatial(Solution, Bulk, km, Diameter, Velocity, Length):
+def spatial(Section, Solution, Bulk, km, Diameter, Velocity, Length, i):
     # Cylindrical pipe: Surface Area / Volume = Pi*Diameter*Length/(Pi*(Diameter^2)/4) = 4/Diameter
     # Allows conversion between amount/area (assuming uniform distribution across the area) to amount/volume
     
     Solution_Bulk = Solution - Bulk
     Delta = (km * 4 / (Velocity * Diameter)) * Solution_Bulk
     # [cm]*[1/cm]*[mol/kg] + [mol/kg] = [mol/kg]
-    BulkConccentration = Bulk + Delta * Length  # [x + y*Length for x,y in zip(Bulk, Delta)] 
+    BulkConcentration = Bulk + Delta * Length  # [x + y*Length for x,y in zip(Bulk, Delta)] 
     
-    return BulkConccentration 
+#     if Section == ld.InletFeeder and i ==2 : print (BulkConcentration)
+    return BulkConcentration 
 
 
 def oxide_growth(
