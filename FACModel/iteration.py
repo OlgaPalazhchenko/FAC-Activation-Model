@@ -10,8 +10,12 @@ import electrochemistry as e
 # Fe: 265409.3837
 # H2: 262835.72763
 
-ACTIVATION_ENERGY_Fe =  269388.7273 #265409.3837
-ACTIVATION_ENERGY_H2onFe = 266815.0713 #262835.72763 
+#Mid FAC (25-40 um/a):
+# Fe: 270812.6057
+# H2: 268238.9496
+
+ACTIVATION_ENERGY_Fe = 265036.3487
+ACTIVATION_ENERGY_H2onFe = 262462.6927
 
 ACTIVATION_ENERGY_ALLOY800 = 321276.4779
 ACTIVATION_ENERGYH2onALLOY800 = 310324.6997
@@ -74,7 +78,7 @@ def MetalOxideInterfaceConcentration(
                   for x, y in zip(InnerOxThickness, OuterOxThickness)] 
     
     # more oxide = longer path length
-    DiffusivityTerm = [x * nc.Fe3O4Porosity_inner / y for x, y in zip(Diffusivity, PathLength)]
+    DiffusivityTerm = [x * nc.Fe3O4Porosity_inner / (y) for x, y in zip(Diffusivity, PathLength)]
     
     #longer path length = lower diffusivity term
     SolutionConcentration = ld.UnitConverter(

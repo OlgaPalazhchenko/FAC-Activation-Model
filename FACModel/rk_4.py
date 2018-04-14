@@ -9,10 +9,10 @@ import sg_heattransfer as SGHX
 from lepreau_data import SteamGeneratorSections
 
 # Spalling thermochemistry_and_constants depend heavily on particle size distribution
-OUTLET_OUTER_SPALL_CONSTANT = 90000
-OUTLET_INNER_SPALL_CONSTANT = 20000
-INLET_OUTER_SPALL_CONSTANT = 1.00E+18  # Different units for inlet versus outlet (different functions)
-INLET_INNER_SPALL_CONSTANT = 1.00E+5
+OUTLET_OUTER_SPALL_CONSTANT = 40
+OUTLET_INNER_SPALL_CONSTANT = 40
+INLET_OUTER_SPALL_CONSTANT = 1.00E+12  # Different units for inlet versus outlet (different functions)
+INLET_INNER_SPALL_CONSTANT = 1.00E+4
 
 
 def oxide_composition(
@@ -145,8 +145,13 @@ def oxide_growth(
                 if Section in ld.FuelSections:
                     q = 0
                 else: # no outer layer and dissolution conditions - inner layer begins to dissolve 
-                    q = ((Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide)
-                         + Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i]))
+                    OxideGrowth = (Section.CorrRate[i] * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide)
+                    Dissolution = Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
+                    
+                    q = OxideGrowth + Dissolution
+                    
+                    if Section == ld.OutletFeeder and OxideGrowth == Dissolution: 
+                        print(OxideGrowth, Dissolution, i)
                 
                 x = 0  # nothing to dissolve (no outer layer and dissolution conditions)
             
@@ -544,11 +549,15 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
     for i in range(Section.NodeNumber):
         
         if Section in ld.OutletSections:  # Outlet header spalling corrector 
-                if SpallTime[i] >= 4000:
-                    SpallTime[i] = 2000 
+
+#             print (SpallTime, i)
+            
+            
+            if SpallTime[i] >= 4000:
+                SpallTime[i] = 6000 
         
         if Section not in ld.FuelSections:
             if Section.InnerIronOxThickness[i] <= 8e-6:
-                Section.InnerIronOxThickness[i] = 0.00025  # Resets to original thickness
+                Section.InnerIronOxThickness[i] = 0.000025  # Resets to original thickness
 
     return ElapsedTime, SpallTime

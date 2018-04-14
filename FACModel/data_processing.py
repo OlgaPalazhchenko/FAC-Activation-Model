@@ -16,23 +16,24 @@ rc('mathtext', default='regular')
 
 # preset corrosion rate instead of calculated from FAC model
 ConstantRate = "yes"
+Purification = "yes"
 Activation = "no"
 PlotOutput = "yes"
 OutputLogging = "yes"
 Loop = "half"
 ElementTracking = "no"
-
 # 1.52 m is the u-bend arc length of an average SG tube
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
 
 SimulationYears = 16 # years
-SimulationHours = 30241 # SimulationYears * 876
+SimulationHours =550 # SimulationYears * 876
 
 
 if OutputLogging == "yes":
-    
-    InletSOConcentration = []
+    SGOxide =[]
+    OutletOxide = []
+    OutletBulkConcentration = []
     InletBulkConcentration = []
     OutletCorrosionRate = []
     
@@ -114,7 +115,7 @@ for j in range(SimulationHours):
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )   
     
-    if j % (4320) == 0:  # 2190 h * 10 = twice a year  
+    if j % (50) == 0:  # 2190 h * 10 = twice a year  
         
         if j ==0:
             x_pht = 0.002 # PHT steam fraction for "clean" boiler
@@ -129,7 +130,7 @@ for j in range(SimulationHours):
         else:
             CleanedInnerOxide = None
             CleanedOuterOxide = None
-            
+
             UncleanedInnerOxide = None
             UncleanedOuterOxide = None
             
@@ -154,8 +155,10 @@ for j in range(SimulationHours):
             # new list needs to be created for bulk concentrations only
             x = list(In.Section1.Bulk.FeTotal)
             
+            SGOxide.append(Sg.Section1.OuterFe3O4Thickness)
+            OutletOxide.append(Ou.Section1.InnerIronOxThickness)
             InletBulkConcentration.append(x)
-            InletSOConcentration.append(In.Section1.SolutionOxide.FeTotal)
+            OutletBulkConcentration.append(In.Section1.SolutionOxide.FeTotal)
             OutletCorrosionRate.append(Ou.Section1.CorrRate)
             
             RIHT.append(T_RIH)
@@ -242,10 +245,10 @@ for j in range(SimulationHours):
 
 OutletCorrosionRate_uma = []
 InletBulkConcentration_gcm3 = []
-InletSOConcentration_gcm3 = []
+OutletBulkConcentration_gcm3 = []
 AvgCorrRate = []
 
-for Rate, Conc1, Conc2 in zip(OutletCorrosionRate, InletBulkConcentration, InletSOConcentration):
+for Rate, Conc1, Conc2 in zip(OutletCorrosionRate, InletBulkConcentration, OutletBulkConcentration):
     x = ld.UnitConverter(
     Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None
     )
@@ -259,38 +262,46 @@ for Rate, Conc1, Conc2 in zip(OutletCorrosionRate, InletBulkConcentration, Inlet
     
     OutletCorrosionRate_uma.append(x)
     InletBulkConcentration_gcm3.append(y)
-    InletSOConcentration_gcm3.append(z)
+    OutletBulkConcentration_gcm3.append(z)
     AvgCorrRate.append(q)
 
 
 csvfile = "PurificationOutput.csv"
-with open(csvfile, "a") as output:
+with open(csvfile, "w") as output:
     writer = csv.writer(output, lineterminator='\n')
+    writer.writerow([Purification])
+    writer.writerow([''])
     writer.writerow(['Outlet Corrosion Rate (g/cm^2 s and um/a)'])
-    writer.writerows(OutletCorrosionRate)
+#     writer.writerows(OutletCorrosionRate)
     writer.writerows(OutletCorrosionRate_uma)
     writer.writerow([''])
     writer.writerow(['Time (s)'])
     writer.writerow(Time)
     writer.writerow(['Average Corrosion Rate (um/a)'])
-   
     writer.writerow(AvgCorrRate)
-#     writer.writerow(np.sum(OutletCorrosionRate) / Ou.Section1.NodeNumber)
 
     writer.writerow([''])
     writer.writerow(['Inlet Bulk Concentration (mol/kg and g/cm^3)'])
-    writer.writerows(InletBulkConcentration)
-    writer.writerow([''])
+#     writer.writerows(InletBulkConcentration)
+#     writer.writerow([''])
     writer.writerows(InletBulkConcentration_gcm3)
     
     writer.writerow([''])
-    writer.writerow(['Inlet S/O Concentration (mol/kg and g/cm^3)'])
-    writer.writerows(InletSOConcentration)
+    writer.writerow(['Outlet Oxide (g/cm2)'])
+    writer.writerows(OutletOxide)
+    
     writer.writerow([''])
-    writer.writerows(InletSOConcentration_gcm3)
+    writer.writerow(['Outlet Bulk Concentration (mol/kg and g/cm^3)'])
+#     writer.writerows(OutletBulkConcentration)
+#     writer.writerow([''])
+    writer.writerows(OutletBulkConcentration_gcm3)
+    writer.writerow([''])
+    
+    writer.writerow(['SG Oxide (g/cm2)'])
+    writer.writerows(SGOxide)
     writer.writerow([''])
 
-    
+
 end_time = time.time()
 delta_time = end_time - start_time
  
