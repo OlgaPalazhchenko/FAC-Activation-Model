@@ -9,9 +9,9 @@ import sg_heattransfer as SGHX
 from lepreau_data import SteamGeneratorSections
 
 # Spalling thermochemistry_and_constants depend heavily on particle size distribution
-OUTLET_OUTER_SPALL_CONSTANT = 40
-OUTLET_INNER_SPALL_CONSTANT = 40
-INLET_OUTER_SPALL_CONSTANT = 1.00E+12  # Different units for inlet versus outlet (different functions)
+OUTLET_OUTER_SPALL_CONSTANT = 5
+OUTLET_INNER_SPALL_CONSTANT = 5
+INLET_OUTER_SPALL_CONSTANT = 5.00E+10  # Different units for inlet versus outlet (different functions)
 INLET_INNER_SPALL_CONSTANT = 1.00E+4
 
 
@@ -74,12 +74,12 @@ def spatial(Section, Solution, Bulk, km, Diameter, Velocity, Length, i):
     # [cm]*[1/cm]*[mol/kg] + [mol/kg] = [mol/kg]
     BulkConcentration = Bulk + Delta * Length  # [x + y*Length for x,y in zip(Bulk, Delta)] 
     
-#     if Section == ld.InletFeeder and i ==2 : print (BulkConcentration)
     return BulkConcentration 
 
 
 def oxide_growth(
-        Section, ElementTracking,  RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness):
+        Section, ElementTracking,  RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness,
+        j):
 
     MolarMasses = [nc.FeMolarMass, nc.FeMolarMass, nc.NiMolarMass, nc.NiMolarMass, nc.CoMolarMass, nc.CoMolarMass]
     
@@ -150,8 +150,9 @@ def oxide_growth(
                     
                     q = OxideGrowth + Dissolution
                     
-                    if Section == ld.OutletFeeder and OxideGrowth == Dissolution: 
-                        print(OxideGrowth, Dissolution, i)
+#                     if Section == ld.OutletFeeder:
+#                         if j % (25) == 0:
+#                             print(OxideGrowth - Dissolution, i)
                 
                 x = 0  # nothing to dissolve (no outer layer and dissolution conditions)
             
@@ -251,7 +252,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
             # oxide growth functions based on S/O and M/O concentrations
             [GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt] = oxide_growth(
                     Section, ElementTracking,  Section.InnerIronOxThickness, Section.OuterFe3O4Thickness,
-                    Section.NiThickness, Section.CoThickness
+                    Section.NiThickness, Section.CoThickness, j
                     )
             
             # uniform oxide growth (preset corrosion rate)
@@ -294,7 +295,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
                 
                 GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt = oxide_growth(
                     Section, ElementTracking,  RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness,
-                    RK4_CoThickness
+                    RK4_CoThickness, j
                     )
                 
                 # iterate using previously solved RK4 thickness: re-evaluates growth functions based on S/O + M/O 
@@ -411,7 +412,7 @@ def particle_size():
     else:
         print (r)
 
-    return Size * 0.0001 * nc.Fe3O4Density / 10  # [um to cm to g/cm^2]
+    return Size * 0.0001 * nc.Fe3O4Density  # [um to cm to g/cm^2]
 
 
 def spalling_time(Section, Particle, SolutionOxideFeSat, SolutionOxideFeTotal, KdFe3O4, OuterOxThickness, Velocity):
@@ -451,8 +452,8 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
     # Ni at each node of current section 
 
     # Silences spalling for desired sections
-    if Section not in ld.OutletSections:
-        Section.Particle = [0] * Section.NodeNumber 
+#     if Section not in ld.OutletSections:
+    Section.Particle = [0] * Section.NodeNumber 
 
     ConvertedConcentrations = []
     Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.SolutionOxide.FeTotal]
@@ -501,6 +502,7 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
             ElapsedTime = [0] * Section.NodeNumber  # No time has elapsed yet at first time step for all nodes
 
         else:  # after first time step
+#             if Section ==ld.OutletFeeder: print (Section.Particle[i], SpallTime[i], ElapsedTime[i], j, i)
             if ElapsedTime[i] >= SpallTime[i]:
                 # enough time elapsed for particle of that size (with respective spall time) to come off
                 if Section.OuterOxThickness[i] > 0:
@@ -542,6 +544,9 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
                     Section, Section.Particle[i], FeSat[i], FeTotal[i], Section.KdFe3O4electrochem[i],
                     Section.OuterFe3O4Thickness[i], Section.Velocity[i]
                     )
+                
+                # Elapsed time needs to reset to zero after spalling event occurs
+                ElapsedTime[i] = 0 
 
             else:  # not enough time has passed
                 ElapsedTime[i] = ElapsedTime[i] + 1 * (nc.TIME_INCREMENT / 3600)
@@ -553,11 +558,11 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
 #             print (SpallTime, i)
             
             
-            if SpallTime[i] >= 4000:
-                SpallTime[i] = 6000 
+            if SpallTime[i] > 4000:
+                SpallTime[i] = 3000 
         
         if Section not in ld.FuelSections:
-            if Section.InnerIronOxThickness[i] <= 8e-6:
+            if Section.InnerIronOxThickness[i] <= 5e-6:
                 Section.InnerIronOxThickness[i] = 0.000025  # Resets to original thickness
 
     return ElapsedTime, SpallTime

@@ -373,7 +373,7 @@ def MassTransfer(Section):
         EntranceEffect = []
         for i in range(Section.NodeNumber):
             if i == 1:
-                GF = 1.1
+                GF = 1.3
             else: 
                 GF = 1
                 
