@@ -28,7 +28,7 @@ Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
 
 SimulationYears = 16 # years
-SimulationHours = 150# SimulationYears * 876
+SimulationHours = 3360# SimulationYears * 876
 
 
 if OutputLogging == "yes":
@@ -116,7 +116,7 @@ for j in range(SimulationHours):
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )   
     
-    if j % (17) == 0:  # 2190 h * 10 = twice a year  
+    if j % (240) == 0:  # 2190 h * 10 = twice a year  
         
         if j ==0:
             x_pht = 0.002 # PHT steam fraction for "clean" boiler
@@ -262,7 +262,7 @@ for Rate, Conc1, Conc2 in zip(OutletCorrosionRate, InletBulkConcentration, Outle
     q = sum(x) / Ou.Section1.NodeNumber
     
     OutletCorrosionRate_uma.append(x)
-#     InletBulkConcentration_gcm3.append(y)
+    InletBulkConcentration_gcm3.append(y)
     OutletSOConcentration_gcm3.append(z)
     AvgCorrRate.append(q)
 
@@ -283,7 +283,7 @@ for Concentration, Rate in zip(OutletSOConcentration_gcm3, OutletCorrosionRate):
     DeltaOx.append(delta)
 
 csvfile = "PurificationOutput.csv"
-with open(csvfile, "w") as output:
+with open(csvfile, "a") as output:
     writer = csv.writer(output, lineterminator='\n')
     writer.writerow([Purification])
     writer.writerow([''])
@@ -296,34 +296,32 @@ with open(csvfile, "w") as output:
     writer.writerow(['Average Corrosion Rate (um/a)'])
     writer.writerow(AvgCorrRate)
 
-#     writer.writerow([''])
-#     writer.writerow(['Inlet Bulk Concentration (mol/kg and g/cm^3)'])
+    writer.writerow([''])
+    writer.writerow(['Inlet Bulk Concentration (mol/kg and g/cm^3)'])
 #     writer.writerows(InletBulkConcentration)
 #     writer.writerow([''])
-#     writer.writerows(InletBulkConcentration_gcm3)
+    writer.writerows(InletBulkConcentration_gcm3)
     
 #     writer.writerow([''])
 #     writer.writerow(['Outlet Oxide (g/cm2)'])
 #     writer.writerows(OutletOxide)
-    
-#     writer.writerow([''])
-#     writer.writerow(['Outlet S/O Concentration (g/cm^3)'])
-#     writer.writerows(OutletBulkConcentration)
-#     writer.writerow([''])
-#     writer.writerows(OutletSOConcentration_gcm3)
-#     writer.writerow([''])
+     
+    writer.writerow([''])
+    writer.writerow(['Outlet S/O Concentration (g/cm^3)'])
+    writer.writerows(OutletSOConcentration_gcm3)
+    writer.writerow([''])
     
 #     writer.writerow(['Outlet Solubility (g/cm^3)'])
 #     writer.writerow(OutletSolubility_gcm3)
     
-    writer.writerow([''])
+#     writer.writerow([''])
     writer.writerow(['Dissolution Rate (g/cm^2 s)'])
     writer.writerows(DissolutionRate)
 #     writer.writerow([''])
     
-    writer.writerow([''])
-    writer.writerow(['Inner Oxide Growth from Corrosion (g/cm^2 s)'])
-    writer.writerows(InnerOxideGrowth)
+#     writer.writerow([''])
+#     writer.writerow(['Inner Oxide Growth from Corrosion (g/cm^2 s)'])
+#     writer.writerows(InnerOxideGrowth)
     
     writer.writerow([''])
     writer.writerow(['Growth - Dissolution (g/cm^2 s)'])

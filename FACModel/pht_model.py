@@ -198,9 +198,9 @@ class PHT_FAC():
             # Inlet header purification systemc comes off of only one inlet feeder header in a full figure-of-8 loop
             if self.Section1 == ld.InletFeeder and i == 2:
                 purificationfactor = 1900 / (1900 + 24)     
-                if j > 67: 
-                    for x in BulkConcentrations:
-                        x[i] =  purificationfactor * x[i - 1]
+#                 if j > 125: 
+                for x in BulkConcentrations:
+                    x[i] =  purificationfactor * x[i - 1]
                 if Activation == "yes":
                     for y in BulkActivities:
                         y[i] = purificationfactor * y[i - 1]
