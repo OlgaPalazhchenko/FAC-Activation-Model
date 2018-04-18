@@ -452,8 +452,8 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
     # Ni at each node of current section 
 
     # Silences spalling for desired sections
-    if Section not in ld.OutletSections:
-        Section.Particle = [0] * Section.NodeNumber 
+#     if Section not in ld.OutletSections:
+    Section.Particle = [0] * Section.NodeNumber 
 
     ConvertedConcentrations = []
     Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.SolutionOxide.FeTotal]

@@ -212,7 +212,31 @@ def SolutionOxide(
     return Conc    
         
             
-def FAC_solver(Section, ConstantRate):
+
+def EmpiricalFAC_solver(Section, j):
+    k_FAC = 0.19 # cm/s
+    if j < 168:
+        PurificationRemoval = 0
+    else:
+        PurificationRemoval = 0.0167
+    
+    Saturation = ld.UnitConverter(
+        Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeSatFe3O4, None, None, None, nc.FeMolarMass,
+        None
+        )
+    
+    Concentration = ld.UnitConverter(
+        Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeTotal, None, None, None, nc.FeMolarMass,
+        None
+        )
+    
+    rate = [k_FAC * (x - (y - PurificationRemoval * y)) for x, y in zip(Saturation, Concentration)]
+    
+    return rate
+
+
+
+def FAC_solver(Section, ConstantRate, j):
     
     # updates hydrolysis distribution of Fe species. Even if FAC rate kept constant, oxide thickness changes
     # M/O Fe total concentration changes w.r.t. thickness, so species cncentrations change too
@@ -276,9 +300,8 @@ def FAC_solver(Section, ConstantRate):
     if Section in ld.FuelSections:
         rate = [0] * Section.NodeNumber
     # preset desired FAC rate
-#     elif Section in ld.OutletSections and ConstantRate == "yes":
-#         rate = [1.8e-09, 2.6e-09, 1.8e-09, 1.60e-09, 1.50e-09, 1.60e-09, 1.60e-09, 9.00e-10, 1.6e-09]
-#         rate = [i * 0.4 for i in rate]
+    elif Section in ld.OutletSections:
+        rate = EmpiricalFAC_solver(Section, j)
     
     # corrosion current calculation not required of rate has been set as constant
     else:
@@ -335,7 +358,7 @@ def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturati
             Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
             Section.CorrRate
             )
-        Section.CorrRate, Section.MetalOxide.MixedPotential = FAC_solver(Section, ConstantRate)
+        Section.CorrRate, Section.MetalOxide.MixedPotential = FAC_solver(Section, ConstantRate, j)
 
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
         Section.MetalOxide.NiTotal = MetalOxideInterfaceConcentration(

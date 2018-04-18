@@ -28,7 +28,7 @@ Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
 
 SimulationYears = 16 # years
-SimulationHours = 3360# SimulationYears * 876
+SimulationHours = 851 # SimulationYears * 876
 
 
 if OutputLogging == "yes":
@@ -116,7 +116,7 @@ for j in range(SimulationHours):
             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )   
     
-    if j % (240) == 0:  # 2190 h * 10 = twice a year  
+    if j % (17) == 0:  # 2190 h * 10 = twice a year  
         
         if j ==0:
             x_pht = 0.002 # PHT steam fraction for "clean" boiler
@@ -289,6 +289,7 @@ with open(csvfile, "a") as output:
     writer.writerow([''])
     writer.writerow(['Outlet Corrosion Rate (g/cm^2 s and um/a)'])
     writer.writerows(OutletCorrosionRate_uma)
+#     writer.writerows(OutletCorrosionRate)
     
     writer.writerow([''])
     writer.writerow(['Time (s)'])
