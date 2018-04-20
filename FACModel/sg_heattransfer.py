@@ -338,23 +338,23 @@ def secondary_convection_resistance(
                                             - (np.pi / 4) * (Section.OuterDiameter[i] ** 2))\
                                             / (np.pi * Section.OuterDiameter[i])
         
-        Nu_D_l = nusseltnumber(
-            Section, "SHT", T_PrimaryBulkIn, T_SecondaryBulkIn, T_SecondaryWall, SecondarySidePressure, i, None,
-            None
-            )
+#         Nu_D_l = nusseltnumber(
+#             Section, "SHT", T_PrimaryBulkIn, T_SecondaryBulkIn, T_SecondaryWall, SecondarySidePressure, i, None,
+#             None
+#             )
     
         h_l = nc.thermal_conductivityH2O("SHT", T_SecondaryBulkIn, SecondarySidePressure) * Nu_D_l \
         / EquivalentDiameter.magnitude
         
-        if x_in > 0:
-            MassFlux_c.magnitude = MassFlux_c(Section, i)
+#         if x_in > 0:
+#             MassFlux_c.magnitude = MassFlux_c(Section, i)
             
-            h_o = boiling_heat_transfer(
-                x_in, "SHT", MassFlux_c.magnitude, T_SecondaryWall, Section.OuterDiameter[i],
-                SecondarySidePressure, i, h_l)
-       
-        else:
-            h_o = h_l
+#             h_o = boiling_heat_transfer(
+#                 x_in, "SHT", MassFlux_c.magnitude, T_SecondaryWall, Section.OuterDiameter[i],
+#                 SecondarySidePressure, i, h_l)
+#        
+#         else:
+#             h_o = h_l
     
     return 1 / (h_o * outer_area(Section)[i])  # [K/W]
 
@@ -363,45 +363,47 @@ def twophase_chen():
     None
     
 
-def nucleateboiling_singletube(Correlation):
-    None
+def nucleateboiling_singletube(Correlation, Pressure):
+    
+    T_sat = nc.saturation_temperature(Pressure) # [K]
+    Density_v = nc.density_vapour(Pressure, T_sat) # [g/cm^3]
+    Enthalpy = nc.enthalpy_vapour(Pressure, T_sat) # [kJ/kg K]   
+       
+    surfacetension = 0.024
+    
+    
+    if Correlation == "FZ":
+        k_l = (nc.thermal_conductivityH2O(side, T_sat, SecondarySidePressure) * 100) ** 0.79
+        C_p = (nc.HeatCapacity(side, T_sat, SecondarySidePressure) * 1000)** 0.45
+        g_c = 1 #[kg m /N s^2], N = kg m /s ^2
+        T_e = (T_wall - T_sat) ** 0.24
+#         P_Twall = (0.1018 * T_wall - 49.724) * (10 ** 6) #Pa = kg/m s^2 *1000/100 = g/cm s^2
+        P_Twall = (0.0017 * np.exp(0.0149 * T_wall)) * (10 ** 6)
+          
+       
+        P_sat = Pressure * (10 ** 6) #Pa
+        delta_P = (P_Twall - P_sat) ** 0.75
+        surfacetension = (0.024) ** 0.5 # N/m = kg m/s ^2 /m = kg/s^2 = g/s^2
+        mu = (nc.viscosity(side, T_sat, SecondarySidePressure) * 100 / 1000) ** 0.29
+        E = Enthalpy ** 0.24 # kJ / kg * 1000 = J/kg
+        rho_v = (Density_v * (100 ** 3) / 1000) ** 0.24
+           
+        h_nb = (0.00122 * k_l * C_p * g_c * T_e * delta_P / (surfacetension * mu * E * rho_v)) / 100 / 100
         
 
 def boiling_heat_transfer(x, side, MassFlux, T_wall, Diameter, SecondarySidePressure, i, h_l):
     
     # x = steam quality in percent
     if side == "SHT":
-        if SecondarySidePressure == 4.593:
-            Density_v = 0.023187  # [g/cm^3]
-            T_sat_secondary = 258.69 + 273.15
-            surfacetension = 0.024
-        elif SecondarySidePressure < 4.593:
-            Density_v = 0.022529  # [g/cm^3]
-            T_sat_secondary = 257 + 273.15
-            surfacetension = 24.4
+        
         T_sat = T_sat_secondary
-        Density_l = nc.density(side, T_sat, SecondarySidePressure)
+        Density_l = nc.density_liquid(side, T_sat, SecondarySidePressure)
         F = 1
-#         S = 1
+        S = 1
         Pressure = SecondarySidePressure
         Viscosity_sat = nc.viscosity(side, T_sat, SecondarySidePressure)
         
-#         k_l = (nc.thermal_conductivityH2O(side, T_sat, SecondarySidePressure) * 100) ** 0.79
-#         C_p = (nc.HeatCapacity(side, T_sat, SecondarySidePressure) * 1000)** 0.45
-#         g_c = 1 #[kg m /N s^2], N = kg m /s ^2
-#         T_e = (T_wall - T_sat) ** 0.24
-# #         P_Twall = (0.1018 * T_wall - 49.724) * (10 ** 6) #Pa = kg/m s^2 *1000/100 = g/cm s^2
-#         P_Twall = (0.0017 * np.exp(0.0149 * T_wall)) * (10 ** 6)
-#          
-#       
-#         P_sat = Pressure * (10 ** 6) #Pa
-#         delta_P = (P_Twall - P_sat) ** 0.75
-#         surfacetension = (0.024) ** 0.5 # N/m = kg m/s ^2 /m = kg/s^2 = g/s^2
-#         mu = (nc.viscosity(side, T_sat, SecondarySidePressure) * 100 / 1000) ** 0.29
-#         enthalpy = (2797 * 1000) ** 0.24 # kJ / kg * 1000 = J/kg
-#         rho_v = (Density_v * (100 ** 3) / 1000) ** 0.24
-#           
-#         h_nb = (0.00122 * k_l * C_p * g_c * T_e * delta_P / (surfacetension * mu * enthalpy * rho_v)) / 100 / 100
+
 #           
 #         HTC = 1.5 * h_nb
 #         print (HTC, lol, i)
@@ -456,11 +458,12 @@ def nusseltnumber(
         # [g/s] / [g/cm^3] = [cm^3/s] / [cm^2]
         A_Cross = (np.pi / 4) * ((ShellDiameter.magnitude ** 2) - (TotalSGTubeNumber * Section.OuterDiameter[i] ** 2))
         
-        Velocity = MassFlow_c_total.magnitude / (nc.density(side, T_SecondaryBulkIn, SecondarySidePressure) * A_Cross)
+        Velocity = (
+            MassFlow_c_total.magnitude / (nc.density_liquid(side, T_SecondaryBulkIn, SecondarySidePressure) * A_Cross))
         
         V_max = (TubePitch.magnitude / (TubePitch.magnitude - Section.Diameter[i])) * Velocity
         
-        Re_D_max = V_max * Section.Diameter[i] * nc.density(side, T_SecondaryBulkIn, SecondarySidePressure) \
+        Re_D_max = V_max * Section.Diameter[i] * nc.density_liquid(side, T_SecondaryBulkIn, SecondarySidePressure) \
         / nc.viscosity(side, T_SecondaryBulkIn, SecondarySidePressure)
         
         C1 = 0.40
@@ -538,9 +541,9 @@ def pht_steam_quality(Temperature, j):
     # core inlet enthalpy at RIHT + that added from fuel
     # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
     H_pht = Power / CoreMassFlow
-    H_satliq_outlet = nc.enthalpy("PHT", T_sat_primary, None)
+    H_satliq_outlet = nc.enthalpy_liquid("PHT", T_sat_primary, None)
     # no quality in return primary flow
-    H_current = nc.enthalpy("PHT", Temperature, None) + H_pht
+    H_current = nc.enthalpy_liquid("PHT", Temperature, None) + H_pht
     x = (H_current - H_satliq_outlet) / (EnthalpySaturatedSteam.magnitude - H_satliq_outlet)
     
     if x < 0:
@@ -548,15 +551,14 @@ def pht_steam_quality(Temperature, j):
     return x
 # print (pht_steam_quality(262.13 +273.15, 876*0))
 
+
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
         
     # [J/s] / [g/s] = [J /g]
     H_pht = Q / (MassFlow_c)  # [kJ/kg]
-    H_satliq = nc.enthalpy("SHT", T_sat_secondary, SecondarySidePressure)
-    if SecondarySidePressure == 4.593:
-        H_SaturatedSteam = 2797.3  # [kJ/kg]
-    elif SecondarySidePressure < 4.593:
-        H_SaturatedSteam = 2798.2
+    H_satliq = nc.enthalpy_liquid("SHT", T_sat_secondary, SecondarySidePressure)
+    H_SaturatedSteam = nc.enthalpy_vapour(SecondarySidePressure, T_sat_secondary)  # [kJ/kg]
+
     H_prev = H_satliq + x * (H_SaturatedSteam - H_satliq)
     H_current = H_pht + H_prev
 
@@ -641,15 +643,14 @@ def wall_temperature(
 
             return T_PrimaryWall, T_SecondaryWall, U_total.magnitude
 
+
 def temperature_profile(
         Section, InnerOxide, OuterOxide, m_h_leakagecorrection, SecondarySidePressure, x_pht, calendar_year):
     
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
-    if SecondarySidePressure == 4.593: 
-        T_sat_secondary = 258.69 + 273.15
-    elif SecondarySidePressure < 4.593:
-        T_sat_secondary = 257 + 273.15
+    
+    T_sat_secondary = nc.saturation_temperature(SecondarySidePressure)
     
     PrimaryWall = []
     PrimaryBulk = []
@@ -689,7 +690,7 @@ def temperature_profile(
             T_SecondaryBulkOut = T_sat_secondary
 
             if x_pht > 0:
-                DeltaH = EnthalpySaturatedSteam.magnitude - nc.enthalpy("PHT", T_sat_primary, None)
+                DeltaH = EnthalpySaturatedSteam.magnitude - nc.enthalpy_liquid("PHT", T_sat_primary, None)
                 
                 LatentHeatAvailable = x_pht * DeltaH * m_h_leakagecorrection
                 # if x_pht = 0 (entire quality entering ith section) is not enough to transfer all of heat need to SHT
@@ -812,8 +813,6 @@ def temperature_profile(
 #     print()
     return PrimaryBulk, HeatFlux
 
-def pht_massflow():
-    None
 
 def station_events(calendar_year, x_pht):
     # Divider plate leakage, mechanical cleaning, and pressure changes 
@@ -909,11 +908,11 @@ def energy_balance(
             )
         
         m_timesH = (Zone.TubeNumber / TotalSGTubeNumber) * RemainingPHTMassFlow \
-            * nc.enthalpy("PHT", Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode], None)
+            * nc.enthalpy_liquid("PHT", Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode], None)
 
         Energy.append(m_timesH)
         
-        Enthalpy_dp_sat_liq = nc.enthalpy("PHT", T_sat_primary, None)
+        Enthalpy_dp_sat_liq = nc.enthalpy_liquid("PHT", T_sat_primary, None)
         Enthalpy_dividerplate = Enthalpy_dp_sat_liq + x_pht * (EnthalpySaturatedSteam.magnitude - Enthalpy_dp_sat_liq)
         
         Enthalpy = (sum(Energy) + MasssFlow_dividerplate.magnitude * Enthalpy_dividerplate) / MassFlow_h.magnitude 
@@ -921,7 +920,8 @@ def energy_balance(
     RIHT = nc.temperature_from_enthalpy("PHT", Enthalpy, None)
 #     print (calendar_year, x_pht, RIHT-273.15)
     return RIHT
-     
+
+
 UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
 UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
 CleanedInner = [i * 0.67 for i in UncleanedInner]

@@ -28,7 +28,7 @@ Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
 
 SimulationYears = 16 # years
-SimulationHours = 851 # SimulationYears * 876
+SimulationHours = 851 # SimulationYears * 876 # 851
 
 
 if OutputLogging == "yes":
@@ -283,9 +283,9 @@ for Concentration, Rate in zip(OutletSOConcentration_gcm3, OutletCorrosionRate):
     DeltaOx.append(delta)
 
 csvfile = "PurificationOutput.csv"
-with open(csvfile, "a") as output:
+with open(csvfile, "w") as output:
     writer = csv.writer(output, lineterminator='\n')
-    writer.writerow([Purification])
+    writer.writerow(['1.67 %'])
     writer.writerow([''])
     writer.writerow(['Outlet Corrosion Rate (g/cm^2 s and um/a)'])
     writer.writerows(OutletCorrosionRate_uma)

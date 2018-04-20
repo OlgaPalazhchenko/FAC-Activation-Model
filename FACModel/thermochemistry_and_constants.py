@@ -2,8 +2,8 @@ import csv
 import numpy as np
 
 
-TIME_STEP = 1   # hr
-TIME_INCREMENT = 3600 * TIME_STEP # [s] Based on desired time step (e.g., 3600s/h for 1h time step)
+TIME_STEP = 1  # hr
+TIME_INCREMENT = 3600 * TIME_STEP  # [s] Based on desired time step (e.g., 3600s/h for 1h time step)
 
 
 # General electrochemistry constants
@@ -136,7 +136,7 @@ class ThermoDimensionlessInput():
 ReferenceValues = ThermoDimensionlessInput()
 
 
-def enthalpy(side, Temperature, SecondarySidePressure):
+def enthalpy_liquid(side, Temperature, SecondarySidePressure):
     if side == "PHT" or side == "PHTS" or side == "phts" or side == "pht":
         p = PrimarySidePressure  # MPa
     else:
@@ -149,12 +149,59 @@ def enthalpy(side, Temperature, SecondarySidePressure):
         [x * ((7.1 - ratio_pressures) ** y) * z * ((ratio_temperatures - 1.222) ** (z - 1))
         for x, y, z in zip(n_IAPWS, I_IAPWS, J_IAPWS)]
         )
-    return ratio_temperatures * Gibbs_T * R_IAPWS * Temperature  # [J/g mol]*[K] = [J/g]
+    E = ratio_temperatures * Gibbs_T * R_IAPWS * Temperature  # [J/g mol]*[K] = [J/g]
+    
+    return E
+
+
+def enthalpy_vapour(Pressure, Temperature):
+    # Pressure input in MPa, Temperature input in K
+    Ii = [
+        1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9, 10, 10, 10, 16, 16, 18, 20,
+        20, 20, 21, 22, 23, 24, 24, 24
+        ]
+    Ji = [
+        0, 1, 2, 3, 6, 1, 2, 4, 7, 36, 0, 1, 3, 6, 35, 1, 2, 3, 7, 3, 16, 35, 0, 11, 25, 8, 36, 13, 4, 10, 14, 29, 50,
+        57, 20, 35, 48, 21, 53, 39, 26, 40, 58
+        ]
+    ni = [
+        -0.17731742473213E-2, -0.17834862292358E-1, -0.45996013696365E-1, -0.57581259083432E-1, -0.50325278727930E-1,
+        -0.33032641670203E-4, -0.18948987516315E-3, -0.39392777243355E-2, -0.43797295650573E-1, -0.26674547914087E-4,
+        0.20481737692309E-7, 0.43870667284435E-6, -0.32277677238570E-4, -0.15033924542148E-2, -0.40668253562649E-1,
+        -0.78847309559367E-9, 0.12790717852285E-7, 0.48225372718507E-6, 0.22922076337661E-5, -0.16714766451061E-10,
+        -0.21171472321355E-2, -0.23895741934104E2, -0.59059564324270E-17, -0.12621808899101E-5, -0.38946842435739E-1,
+        0.11256211360459E-10, -0.82311340897998E1, 0.19809712802088E-7, 0.10406965210174E-18, --0.10234747095929E-12,
+        -0.10018179379511E-8, -0.80882908646985E-10, 0.10693031879409, -0.33662250574171, 0.89185845355421E-24,
+        0.30629316876232E-12, -0.42002467698208E-5, -0.59056029685639E-25, 0.37826947613457E-5, -0.12768608934681E-14,
+        0.73087610595061E-28, 0.55414715350778E-16, -0.94369707241210E-6]
+    
+    P_ref = 1  # [MPa]
+    T_ref = 540  # [K]
+    P = Pressure
+    ratio_pressures = P / P_ref
+    
+    J0 = [0, 1, -5, -4, -3, -2, -1, 2, 3]
+    n0 = [
+        -0.96927686500217E1, 0.10086655968018E2, -0.56087911283020E-2, 0.71452738081455E-1, -0.40710498223928,
+        0.14240819171444E1, -0.43839511319450E1, -0.28408632460772, 0.21268463753307E-1
+        ]
+    
+    ratio_temperatures = T_ref / Temperature
+    
+    Gibbs_idealgas_T = sum([x * y * ratio_temperatures **(y - 1) for x, y in zip(n0, J0)])
+    
+    Gibbs_reduced_T_sum = sum(
+        [x * (ratio_pressures ** y) * z * (ratio_temperatures - 0.5) ** (z - 1) for x, y, z in zip(ni, Ii, Ji)]
+        )
+    
+    H = R_IAPWS * Temperature * ratio_temperatures * (Gibbs_idealgas_T + Gibbs_reduced_T_sum)  # [kJ / kg K]
+    print (Gibbs_reduced_T_sum, H)
+    
 
 
 def enthalpy_D2O(Temperature):
     T = Temperature - 273.15
-    return 4.7307 * T - 546.55 # [kJ/kg]
+    return 4.7307 * T - 546.55  # [kJ/kg]
 
 
 def temperature_from_enthalpy_D2O(Enthalpy):
@@ -182,11 +229,72 @@ def temperature_from_enthalpy(side, Enthalpy, SecondarySidePressure):
     return ratio_temmperatures * T_ref
 
 
-def saturation_temperature():
-    None
+def saturation_temperature(Pressure):
+    # for H2O, light water
+    # Pressure input is in MPa
 
-           
-def density(side, Temperature, SecondarySidePressure):
+    n = [
+        0.11670521452767 * 10 ** 4, -0.72421316703206 * 10 ** 6, -0.17073846940092 * 10 ** 2,
+         0.12020824702470 * 10 ** 5, -0.32325550322333 * 10 ** 7, 0.14915108613530 * 10 ** 2,
+         - 0.48232657361591 * 10 ** 4, 0.40511340542057 * 10 ** 6, -0.23855557567849, 0.65017534844798 * 10 ** 3
+         ]
+    P_ref = 1  # [MPa]
+    T_ref = 1  # [K] 
+    Beta_ = (Pressure / P_ref) ** (1 / 4)
+    
+    E = (Beta_ ** 2) + n[2] * Beta_ + n[5]
+    F = n[0] * (Beta_ ** 2) + n[3] * Beta_ + n[6]
+    G = n[1] * (Beta_ ** 2) + n[4] * Beta_ + n[7]
+    D = 2 * G / ((-F) - ((F ** 2) - 4 * E * G) ** (1 / 2))
+    
+    T_s = T_ref * (n[9] + D - ((n[9] + D) ** 2 - 4 * (n[8] + n[9] * D)) ** (1 / 2)) / 2
+    
+    # returns temperature in Kelvin
+    return T_s
+    
+
+def density_vapour(Pressure, Temperature):
+    # Pressure input in MPa, Temperature input in K
+    Ii = [
+        1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9, 10, 10, 10, 16, 16, 18, 20,
+        20, 20, 21, 22, 23, 24, 24, 24
+        ]
+    Ji = [
+        0, 1, 2, 3, 6, 1, 2, 4, 7, 36, 0, 1, 3, 6, 35, 1, 2, 3, 7, 3, 16, 35, 0, 11, 25, 8, 36, 13, 4, 10, 14, 29, 50,
+        57, 20, 35, 48, 21, 53, 39, 26, 40, 58
+        ]
+    ni = [
+        -0.17731742473213E-2, -0.17834862292358E-1, -0.45996013696365E-1, -0.57581259083432E-1, -0.50325278727930E-1,
+        -0.33032641670203E-4, -0.18948987516315E-3, -0.39392777243355E-2, -0.43797295650573E-1, -0.26674547914087E-4,
+        0.20481737692309E-7, 0.43870667284435E-6, -0.32277677238570E-4, -0.15033924542148E-2, -0.40668253562649E-1,
+        -0.78847309559367E-9, 0.12790717852285E-7, 0.48225372718507E-6, 0.22922076337661E-5, -0.16714766451061E-10,
+        -0.21171472321355E-2, -0.23895741934104E2, -0.59059564324270E-17, -0.12621808899101E-5, -0.38946842435739E-1,
+        0.11256211360459E-10, -0.82311340897998E1, 0.19809712802088E-7, 0.10406965210174E-18, --0.10234747095929E-12,
+        -0.10018179379511E-8, -0.80882908646985E-10, 0.10693031879409, -0.33662250574171, 0.89185845355421E-24,
+        0.30629316876232E-12, -0.42002467698208E-5, -0.59056029685639E-25, 0.37826947613457E-5, -0.12768608934681E-14,
+        0.73087610595061E-28, 0.55414715350778E-16, -0.94369707241210E-6]
+    
+    
+    P_ref = 1  # [MPa]
+    T_ref = 540  # [K]
+    P = Pressure
+    ratio_pressures = P / P_ref
+    ratio_temperatures = T_ref / Temperature
+    
+    Gibbs_idealgas_p = 1 / ratio_pressures
+    
+    Gibbs_reduced_p_sum = sum(
+        [x * y * (ratio_pressures ** (y - 1)) * (ratio_temperatures - 0.5) ** z for x, y, z in zip(ni, Ii, Ji)]
+        )
+    
+    # [kg / m^3]
+    rho_vap = (Pressure / (R_IAPWS * Temperature * ratio_pressures * (Gibbs_idealgas_p + Gibbs_reduced_p_sum))) * 1000
+    
+    # [g/cm^3]
+    return rho_vap * 1000 / (100 ** 3) 
+
+     
+def density_liquid(side, Temperature, SecondarySidePressure):
     
     if side == "phts" or side == "PHTS" or side == "PHT":
         p = PrimarySidePressure
@@ -205,12 +313,14 @@ def density(side, Temperature, SecondarySidePressure):
         for x, y, z in zip(n_IAPWS, I_IAPWS, J_IAPWS)]
         )
   
-    return (1 / (R_IAPWS * Temperature * ratio_pressures * (Gibbs_p / (p * 1000)))) * 1000 / (100 ** 3)  # [g/cm^3] 
+    rho_l = (1 / (R_IAPWS * Temperature * ratio_pressures * (Gibbs_p / (p * 1000)))) * 1000 / (100 ** 3)  # [g/cm^3]
+    
+    return rho_l 
 
     
 def D2O_density(Temperature):
     T = Temperature - 273
-    return -0.0023 * T + 1.4646 #[g/cm^3]
+    return -0.0023 * T + 1.4646  # [g/cm^3]
 
 
 def D2O_viscosity(Temperature):
@@ -228,13 +338,13 @@ def D2O_viscosity(Temperature):
     Lj = [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 6]
     
     Lij = [0.4864192, -0.2448372, -0.8702035, 0.8716056, -1.051126, 0.3458395, 0.3509007, 1.315436, 1.297752, 1.353448,
-           -0.2847572, -1.037026, -1.287846, -0.02148229, 0.07013759, 0.4660127, 0.2292075, -0.4857462, 0.01641220,
-           -0.02884911, 0.1607171, -0.009603846, -0.01163815, -0.008239587, 0.004559914, -0.003886659]
+           - 0.2847572, -1.037026, -1.287846, -0.02148229, 0.07013759, 0.4660127, 0.2292075, -0.4857462, 0.01641220,
+           - 0.02884911, 0.1607171, -0.009603846, -0.01163815, -0.008239587, 0.004559914, -0.003886659]
 
     arr = [lij * (1 / T_ref - 1) ** i * (rho_rel - 1) ** j for i, j, lij in zip(Li, Lj, Lij)]
     fi1 = np.exp(rho_rel * sum(arr))
     
-    return mu_ref * fi0 * fi1 #[g/cm s]
+    return mu_ref * fi0 * fi1  # [g/cm s]
     
   
 def viscosity(side, Temperature, SecondarySidePressure):

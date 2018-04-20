@@ -14,8 +14,8 @@ import electrochemistry as e
 # Fe: 270812.6057
 # H2: 268238.9496
 
-ACTIVATION_ENERGY_Fe = 271579.5272
-ACTIVATION_ENERGY_H2onFe = 269005.8712
+ACTIVATION_ENERGY_Fe = 264860.0725
+ACTIVATION_ENERGY_H2onFe = 262286.4165
 
 ACTIVATION_ENERGY_ALLOY800 = 321276.4779
 ACTIVATION_ENERGYH2onALLOY800 = 310324.6997
@@ -78,7 +78,7 @@ def MetalOxideInterfaceConcentration(
                   for x, y in zip(InnerOxThickness, OuterOxThickness)] 
     
     # more oxide = longer path length
-    DiffusivityTerm = [x * nc.Fe3O4Porosity_inner / (20 * y) for x, y in zip(Diffusivity, PathLength)]
+    DiffusivityTerm = [x * nc.Fe3O4Porosity_inner / y for x, y in zip(Diffusivity, PathLength)]
     
     #longer path length = lower diffusivity term
     SolutionConcentration = ld.UnitConverter(
@@ -213,12 +213,8 @@ def SolutionOxide(
         
             
 
-def EmpiricalFAC_solver(Section, j):
-    k_FAC = 0.19 # cm/s
-    if j < 168:
-        PurificationRemoval = 0
-    else:
-        PurificationRemoval = 0.0167
+def EmpiricalFAC_solver(Section):
+    k_FAC = 0.2 # cm/s
     
     Saturation = ld.UnitConverter(
         Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeSatFe3O4, None, None, None, nc.FeMolarMass,
@@ -230,13 +226,13 @@ def EmpiricalFAC_solver(Section, j):
         None
         )
     
-    rate = [k_FAC * (x - (y - PurificationRemoval * y)) for x, y in zip(Saturation, Concentration)]
+    rate = [k_FAC * (x - y) for x, y in zip(Saturation, Concentration)]
     
     return rate
 
 
 
-def FAC_solver(Section, ConstantRate, j):
+def FAC_solver(Section, ConstantRate):
     
     # updates hydrolysis distribution of Fe species. Even if FAC rate kept constant, oxide thickness changes
     # M/O Fe total concentration changes w.r.t. thickness, so species cncentrations change too
@@ -301,7 +297,7 @@ def FAC_solver(Section, ConstantRate, j):
         rate = [0] * Section.NodeNumber
     # preset desired FAC rate
     elif Section in ld.OutletSections:
-        rate = EmpiricalFAC_solver(Section, j)
+        rate = EmpiricalFAC_solver(Section)
     
     # corrosion current calculation not required of rate has been set as constant
     else:
@@ -358,7 +354,7 @@ def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturati
             Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
             Section.CorrRate
             )
-        Section.CorrRate, Section.MetalOxide.MixedPotential = FAC_solver(Section, ConstantRate, j)
+        Section.CorrRate, Section.MetalOxide.MixedPotential = FAC_solver(Section, ConstantRate)
 
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
         Section.MetalOxide.NiTotal = MetalOxideInterfaceConcentration(

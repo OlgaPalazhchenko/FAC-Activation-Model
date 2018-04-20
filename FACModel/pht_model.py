@@ -49,7 +49,7 @@ def initial_chemistry(Loop):
         Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
         
         Section.DensityH2O = [
-            nc.density("PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
+            nc.density_liquid("PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
             ]
         Section.ViscosityH2O = [
             nc.viscosity("PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
@@ -105,7 +105,7 @@ def initial_chemistry(Loop):
         if Section in ld.FuelSections:
             Section.CorrRate == [0] * Section.NodeNumber
         else:
-            Section.CorrRate, Section.MetalOxide.MixedPotential = it.FAC_solver(Section, ConstantRate="yes")
+            Section.CorrRate, Section.MetalOxide.MixedPotential = it.FAC_solver(Section, "yes")
             
         
         Section.KpFe3O4electrochem = [nc.KpFe3O4] * Section.NodeNumber
@@ -198,9 +198,9 @@ class PHT_FAC():
             # Inlet header purification systemc comes off of only one inlet feeder header in a full figure-of-8 loop
             if self.Section1 == ld.InletFeeder and i == 2:
                 purificationfactor = 1900 / (1900 + 12)     
-#                 if j > 168: 
-#                     for x in BulkConcentrations:
-#                         x[i] =  purificationfactor * x[i - 1]
+                if j >= 168: 
+                    for x in BulkConcentrations:
+                        x[i] =  purificationfactor * x[i - 1]
                 if Activation == "yes":
                     for y in BulkActivities:
                         y[i] = purificationfactor * y[i - 1]
