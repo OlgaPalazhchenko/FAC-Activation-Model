@@ -15,8 +15,8 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('mathtext', default='regular')
 
-# preset corrosion rate instead of calculated from FAC model
-ConstantRate = "yes"
+
+ConstantRate = "yes" # preset corrosion rate instead of calculated from FAC model
 Purification = "no"
 Activation = "no"
 PlotOutput = "yes"
@@ -28,7 +28,7 @@ Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
 
 SimulationYears = 16 # years
-SimulationHours = 851 # SimulationYears * 876 # 851
+SimulationHours = 100 # SimulationYears * 876 # 851
 
 
 if OutputLogging == "yes":
@@ -149,18 +149,18 @@ for j in range(SimulationHours):
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)
             
         if OutputLogging == "yes":
-            Time.append(j)
+#             Time.append(j)
             # S/O concentrations are updated individually in code, e.g., self.Section1.FeTotal
             # Bulk concentrations are not, so same location is pointed to, so all places self.Section1.Bulk.FeTotal
             # was used change to updated values, even previously appended values
             # new list needs to be created for bulk concentrations only
-            x = list(In.Section1.Bulk.FeTotal)
+#             x = list(In.Section1.Bulk.FeTotal)
             
 #             SGOxide.append(Sg.Section1.OuterFe3O4Thickness)
-            OutletOxide.append(Ou.Section1.InnerIronOxThickness)
-            InletBulkConcentration.append(x)
-            OutletSOConcentration.append(Ou.Section1.SolutionOxide.FeTotal)
-            OutletCorrosionRate.append(Ou.Section1.CorrRate)
+#             OutletOxide.append(Ou.Section1.InnerIronOxThickness)
+#             InletBulkConcentration.append(x)
+#             OutletSOConcentration.append(Ou.Section1.SolutionOxide.FeTotal)
+#             OutletCorrosionRate.append(Ou.Section1.CorrRate)
             
             RIHT.append(T_RIH)
             pht_SteamFraction.append(x_pht)
@@ -244,93 +244,93 @@ for j in range(SimulationHours):
 #     writer.writerow(OutletTemperatures2)
     
 
-OutletCorrosionRate_uma = []
-InletBulkConcentration_gcm3 = []
-OutletSOConcentration_gcm3 = []
-AvgCorrRate = []
-
-for Rate, Conc1, Conc2 in zip(OutletCorrosionRate, InletBulkConcentration, OutletSOConcentration):
-    x = ld.UnitConverter(
-    Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None
-    )
-    y = ld.UnitConverter(
-        In.Section1, "Mol per Kg", "Grams per Cm Cubed", Conc1, None, None, None, nc.FeMolarMass, None)
-    
-    z = ld.UnitConverter(
-        Ou.Section1, "Mol per Kg", "Grams per Cm Cubed", Conc2, None, None, None, nc.FeMolarMass, None
-        )
-    q = sum(x) / Ou.Section1.NodeNumber
-    
-    OutletCorrosionRate_uma.append(x)
-    InletBulkConcentration_gcm3.append(y)
-    OutletSOConcentration_gcm3.append(z)
-    AvgCorrRate.append(q)
-
-OutletSolubility_gcm3 = ld.UnitConverter(
-        Ou.Section1, "Mol per Kg", "Grams per Cm Cubed", Ou.Section1.SolutionOxide.FeSatFe3O4, None, None, None,
-        nc.FeMolarMass, None
-        )
-
-DissolutionRate = []
-InnerOxideGrowth = []
-DeltaOx = []
-for Concentration, Rate in zip(OutletSOConcentration_gcm3, OutletCorrosionRate):
-    diss = [nc.KdFe3O4 * (x - y) for x, y in zip (OutletSolubility_gcm3, Concentration)]
-    growth = [i * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide for i in Rate]
-    delta = [x - y for x, y in zip(growth, diss)]
-    DissolutionRate.append(diss)
-    InnerOxideGrowth.append(growth)
-    DeltaOx.append(delta)
-
-csvfile = "PurificationOutput.csv"
-with open(csvfile, "w") as output:
-    writer = csv.writer(output, lineterminator='\n')
-    writer.writerow(['1.67 %'])
-    writer.writerow([''])
-    writer.writerow(['Outlet Corrosion Rate (g/cm^2 s and um/a)'])
-    writer.writerows(OutletCorrosionRate_uma)
-#     writer.writerows(OutletCorrosionRate)
-    
-    writer.writerow([''])
-    writer.writerow(['Time (s)'])
-    writer.writerow(Time)
-    writer.writerow(['Average Corrosion Rate (um/a)'])
-    writer.writerow(AvgCorrRate)
-
-    writer.writerow([''])
-    writer.writerow(['Inlet Bulk Concentration (mol/kg and g/cm^3)'])
-#     writer.writerows(InletBulkConcentration)
+# OutletCorrosionRate_uma = []
+# InletBulkConcentration_gcm3 = []
+# OutletSOConcentration_gcm3 = []
+# AvgCorrRate = []
+# 
+# for Rate, Conc1, Conc2 in zip(OutletCorrosionRate, InletBulkConcentration, OutletSOConcentration):
+#     x = ld.UnitConverter(
+#     Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None
+#     )
+#     y = ld.UnitConverter(
+#         In.Section1, "Mol per Kg", "Grams per Cm Cubed", Conc1, None, None, None, nc.FeMolarMass, None)
+#     
+#     z = ld.UnitConverter(
+#         Ou.Section1, "Mol per Kg", "Grams per Cm Cubed", Conc2, None, None, None, nc.FeMolarMass, None
+#         )
+#     q = sum(x) / Ou.Section1.NodeNumber
+#     
+#     OutletCorrosionRate_uma.append(x)
+#     InletBulkConcentration_gcm3.append(y)
+#     OutletSOConcentration_gcm3.append(z)
+#     AvgCorrRate.append(q)
+# 
+# OutletSolubility_gcm3 = ld.UnitConverter(
+#         Ou.Section1, "Mol per Kg", "Grams per Cm Cubed", Ou.Section1.SolutionOxide.FeSatFe3O4, None, None, None,
+#         nc.FeMolarMass, None
+#         )
+# 
+# DissolutionRate = []
+# InnerOxideGrowth = []
+# DeltaOx = []
+# for Concentration, Rate in zip(OutletSOConcentration_gcm3, OutletCorrosionRate):
+#     diss = [nc.KdFe3O4 * (x - y) for x, y in zip (OutletSolubility_gcm3, Concentration)]
+#     growth = [i * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide for i in Rate]
+#     delta = [x - y for x, y in zip(growth, diss)]
+#     DissolutionRate.append(diss)
+#     InnerOxideGrowth.append(growth)
+#     DeltaOx.append(delta)
+# 
+# csvfile = "PurificationOutput.csv"
+# with open(csvfile, "w") as output:
+#     writer = csv.writer(output, lineterminator='\n')
+#     writer.writerow(['1.67 %'])
 #     writer.writerow([''])
-    writer.writerows(InletBulkConcentration_gcm3)
-    
+#     writer.writerow(['Outlet Corrosion Rate (g/cm^2 s and um/a)'])
+#     writer.writerows(OutletCorrosionRate_uma)
+# #     writer.writerows(OutletCorrosionRate)
+#     
 #     writer.writerow([''])
-#     writer.writerow(['Outlet Oxide (g/cm2)'])
-#     writer.writerows(OutletOxide)
-     
-    writer.writerow([''])
-    writer.writerow(['Outlet S/O Concentration (g/cm^3)'])
-    writer.writerows(OutletSOConcentration_gcm3)
-    writer.writerow([''])
-    
-#     writer.writerow(['Outlet Solubility (g/cm^3)'])
-#     writer.writerow(OutletSolubility_gcm3)
-    
+#     writer.writerow(['Time (s)'])
+#     writer.writerow(Time)
+#     writer.writerow(['Average Corrosion Rate (um/a)'])
+#     writer.writerow(AvgCorrRate)
+# 
 #     writer.writerow([''])
-    writer.writerow(['Dissolution Rate (g/cm^2 s)'])
-    writer.writerows(DissolutionRate)
+#     writer.writerow(['Inlet Bulk Concentration (mol/kg and g/cm^3)'])
+# #     writer.writerows(InletBulkConcentration)
+# #     writer.writerow([''])
+#     writer.writerows(InletBulkConcentration_gcm3)
+#     
+# #     writer.writerow([''])
+# #     writer.writerow(['Outlet Oxide (g/cm2)'])
+# #     writer.writerows(OutletOxide)
+#      
 #     writer.writerow([''])
-    
+#     writer.writerow(['Outlet S/O Concentration (g/cm^3)'])
+#     writer.writerows(OutletSOConcentration_gcm3)
 #     writer.writerow([''])
-#     writer.writerow(['Inner Oxide Growth from Corrosion (g/cm^2 s)'])
-#     writer.writerows(InnerOxideGrowth)
-    
-    writer.writerow([''])
-    writer.writerow(['Growth - Dissolution (g/cm^2 s)'])
-    writer.writerows(DeltaOx)
-    writer.writerow([''])
-#     writer.writerow(['SG Oxide (g/cm2)'])
-#     writer.writerows(SGOxide)
+#     
+# #     writer.writerow(['Outlet Solubility (g/cm^3)'])
+# #     writer.writerow(OutletSolubility_gcm3)
+#     
+# #     writer.writerow([''])
+#     writer.writerow(['Dissolution Rate (g/cm^2 s)'])
+#     writer.writerows(DissolutionRate)
+# #     writer.writerow([''])
+#     
+# #     writer.writerow([''])
+# #     writer.writerow(['Inner Oxide Growth from Corrosion (g/cm^2 s)'])
+# #     writer.writerows(InnerOxideGrowth)
+#     
 #     writer.writerow([''])
+#     writer.writerow(['Growth - Dissolution (g/cm^2 s)'])
+#     writer.writerows(DeltaOx)
+#     writer.writerow([''])
+# #     writer.writerow(['SG Oxide (g/cm2)'])
+# #     writer.writerows(SGOxide)
+# #     writer.writerow([''])
 
 end_time = time.time()
 delta_time = end_time - start_time
@@ -343,8 +343,12 @@ print('%d:%d:%d' % (hours, minutes, seconds))
 
 
 
-if Loop == "full" or Loop == "half":
-    Sections = [In.Section1, Co.Section1, Ou.Section1, SteamGeneratorTubes[0].Section1]
+if Loop == "half":
+    Sections = [In.Section1, Co.Section1, Ou.Section1, Sg.Section1]
+elif Loop == "full":
+    Sections = [
+        In.Section1, Co.Section1, Ou.Section1, Sg.Section1, In_2.Section1, Co_2.Section1, Ou_2.Section1, Sg_2.Section1
+        ]
 else:
     Sections = [In.Section1, Co.Section1, Ou.Section1, Sg.Section1]
     
@@ -443,10 +447,6 @@ def activity_volumetric(Isotope):
    
 def plot_output():
     LoopDistance = []
-    if Loop == "full" or Loop == "half":
-        Sections = [ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder, SteamGeneratorTubes[0].Section1]
-    else:
-        Sections = [ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder, ld.SteamGenerator[Default_Tube]]
     
     for Section in Sections:
         x = Section.Length.magnitude

@@ -301,7 +301,7 @@ def primary_convection_resistance(Section, T_PrimaryBulkIn, T_SecondaryBulkIn, T
 
 
 def secondary_convection_resistance(
-        Section, T_PrimaryBulkIn, T_SecondaryBulkIn, T_SecondaryWall, SecondaryT_film, x_in,SecondarySidePressure, i
+        Section, T_PrimaryBulkIn, T_SecondaryBulkIn, T_SecondaryWall, SecondaryT_film, x_in, SecondarySidePressure, i
         ):
     
     # split into boiling and non-boiling (preheater) sections
@@ -322,10 +322,10 @@ def secondary_convection_resistance(
         # [W/cm K]/[cm] = [W/cm^2 K]
         k = thermal_conductivity(SecondaryT_film, "water", SecondarySidePressure)
         h_o = (k * 0.2 / Section.OuterDiameter[i]) \
-            * ((Section.OuterDiameter[i] * G_e / nc.viscosity("SHT", SecondaryT_film, SecondarySidePressure)) ** 0.6) \
+            * ((Section.OuterDiameter[i] * G_e / nc.viscosity(SecondaryT_film, SecondarySidePressure)) ** 0.6) \
             * (
-                nc.HeatCapacity("SHT", SecondaryT_film, SecondarySidePressure) \
-                * nc.viscosity("SHT", SecondaryT_film, SecondarySidePressure) \
+                nc.heatcapacity("SHT", SecondaryT_film, SecondarySidePressure) \
+                * nc.viscosity(SecondaryT_film, SecondarySidePressure) \
                 / thermal_conductivity(SecondaryT_film, "water", SecondarySidePressure)
                 ) ** 0.33
     
@@ -361,8 +361,38 @@ def secondary_convection_resistance(
 
 def twophase_chen():
     None
+
+
+def twophase_Mostinski(T_SecondaryWall, T_sat, SecondarySidePressure):
+    P_crit = 22.064 * 10 **3 #kPa
+    T_e = T_SecondaryWall - T_sat # K
+    P_r = SecondarySidePressure / P_crit
+    F_p = 1.8 * (P_r ** 0.17) + 4 * (P_r ** 1.2) + 10 * (P_r ** 10)
+    
+    h_nb = (1.167 * 10 ** (-8)) * (P_crit ** 2.3) * (T_e ** 2.333) * F_p ** 3.333
+    
+    h_nb = h_nb / (100 ** 2)
+    
+    return h_nb
     
 
+def twophase_ForsterZuber(T_sat, T_SecondaryWall, SecondarySidePressure):
+    lambda_l = nc.thermal_conductivityH2O("SHT", T_sat, SecondarySidePressure) * 100 ** 2 # W/m^2K thermal conductivity
+    cp_l = nc.heatcapacity("SHT", T_sat, SecondarySidePressure) * 1000 #J / g K --> J / kg K, liquid specific heat
+    rho_l = nc.density_liquid("SHT", T_sat, SecondarySidePressure) * (100 **3) / 1000 # g/cm^3 --> kg/m^3
+    rho_v = nc.density_vapour(SecondarySidePressure, T_sat) * (100 ** 3) / 1000 # kg/m^3
+    sigma = 0.024 #surface tension N/m
+    mu = nc.viscosity(T_sat, SecondarySidePressure) / 10 # liquid viscosity #kg/m s 
+    h_lg = nc.enthalpy_vapour(SecondarySidePressure, T_sat) * 1000 # J / g --> J /kg
+    deltaT_sat = T_SecondaryWall - T_sat # K
+    deltaP_sat = 
+    
+    h_nb = (
+        0.00122 * ((lambda_l ** 0.79) * (cp_l ** 0.45) * (rho_l ** 0.49)) / 
+        ((sigma ** 0.5) * (mu ** 0.29) * (h_lg ** 0.24) * (rho_v ** 0.24))) * 
+    return None
+    
+    
 def nucleateboiling_singletube(Correlation, Pressure):
     
     T_sat = nc.saturation_temperature(Pressure) # [K]
@@ -374,7 +404,7 @@ def nucleateboiling_singletube(Correlation, Pressure):
     
     if Correlation == "FZ":
         k_l = (nc.thermal_conductivityH2O(side, T_sat, SecondarySidePressure) * 100) ** 0.79
-        C_p = (nc.HeatCapacity(side, T_sat, SecondarySidePressure) * 1000)** 0.45
+        C_p = (nc.heatcapacity(side, T_sat, SecondarySidePressure) * 1000)** 0.45
         g_c = 1 #[kg m /N s^2], N = kg m /s ^2
         T_e = (T_wall - T_sat) ** 0.24
 #         P_Twall = (0.1018 * T_wall - 49.724) * (10 ** 6) #Pa = kg/m s^2 *1000/100 = g/cm s^2
@@ -384,7 +414,7 @@ def nucleateboiling_singletube(Correlation, Pressure):
         P_sat = Pressure * (10 ** 6) #Pa
         delta_P = (P_Twall - P_sat) ** 0.75
         surfacetension = (0.024) ** 0.5 # N/m = kg m/s ^2 /m = kg/s^2 = g/s^2
-        mu = (nc.viscosity(side, T_sat, SecondarySidePressure) * 100 / 1000) ** 0.29
+        mu = (nc.viscosity(T_sat, SecondarySidePressure) * 100 / 1000) ** 0.29
         E = Enthalpy ** 0.24 # kJ / kg * 1000 = J/kg
         rho_v = (Density_v * (100 ** 3) / 1000) ** 0.24
            
@@ -401,7 +431,7 @@ def boiling_heat_transfer(x, side, MassFlux, T_wall, Diameter, SecondarySidePres
         F = 1
         S = 1
         Pressure = SecondarySidePressure
-        Viscosity_sat = nc.viscosity(side, T_sat, SecondarySidePressure)
+        Viscosity_sat = nc.viscosity(T_sat, SecondarySidePressure)
         
 
 #           
@@ -464,7 +494,7 @@ def nusseltnumber(
         V_max = (TubePitch.magnitude / (TubePitch.magnitude - Section.Diameter[i])) * Velocity
         
         Re_D_max = V_max * Section.Diameter[i] * nc.density_liquid(side, T_SecondaryBulkIn, SecondarySidePressure) \
-        / nc.viscosity(side, T_SecondaryBulkIn, SecondarySidePressure)
+        / nc.viscosity(T_SecondaryBulkIn, SecondarySidePressure)
         
         C1 = 0.40
         m = 0.60
@@ -487,12 +517,12 @@ def prandtl(side, Temperature, SecondarySidePressure):
     
     if side == "PHT":
         Viscosity = nc.D2O_viscosity(Temperature)
-        HeatCapacity = nc.HeatCapacity(side, Temperature, None)
+        HeatCapacity = nc.heatcapacity(side, Temperature, None)
         ThermalConductivity = nc.thermal_conductivityH2O("PHT", Temperature, None)
     
     elif side == "SHT":
-        Viscosity = nc.viscosity(side, Temperature, SecondarySidePressure)
-        HeatCapacity = nc.HeatCapacity(side, Temperature, SecondarySidePressure)
+        Viscosity = nc.viscosity(Temperature, SecondarySidePressure)
+        HeatCapacity = nc.heatcapacity(side, Temperature, SecondarySidePressure)
         ThermalConductivity = nc.thermal_conductivityH2O(side, Temperature, SecondarySidePressure)
     
     else:
@@ -517,8 +547,8 @@ def pht_steam_quality(Temperature, j):
          
     CoreMassFlow = (1925000 / 1000) * 4  # [kg /s]
     Delta_T = T_sat_primary - (259.25 + 273.15)  # [K]
-    C_p_cold = nc.HeatCapacity("PHT", 259.25, SecondarySidePressure=None)
-    C_p_hot = nc.HeatCapacity("PHT", T_sat_primary, SecondarySidePressure=None)
+    C_p_cold = nc.heatcapacity("PHT", 259.25, SecondarySidePressure=None)
+    C_p_hot = nc.heatcapacity("PHT", T_sat_primary, SecondarySidePressure=None)
     C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
     
     Power = CoreMassFlow * C_p_avg * Delta_T  # [kW]
@@ -665,8 +695,8 @@ def temperature_profile(
             T_SecondaryBulkIn = T_sat_secondary
             x_in = 0
         
-        Cp_h = nc.HeatCapacity("PHT", T_PrimaryBulkIn, None)
-        Cp_c = nc.HeatCapacity("SHT", T_SecondaryBulkIn, SecondarySidePressure)
+        Cp_h = nc.heatcapacity("PHT", T_PrimaryBulkIn, None)
+        Cp_c = nc.heatcapacity("SHT", T_SecondaryBulkIn, SecondarySidePressure)
         
         T_wh, T_wc, U = wall_temperature(
             Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerOxide, OuterOxide, calendar_year,
@@ -740,8 +770,8 @@ def temperature_profile(
         else:
             # just upstream of preheater
             if Section.Length.label[i] == "preheater start":
-                Cp_h = nc.HeatCapacity("PHT", T_PrimaryBulkIn, None)
-                Cp_c = nc.HeatCapacity("SHT", T_PreheaterIn, SecondarySidePressure)
+                Cp_h = nc.heatcapacity("PHT", T_PrimaryBulkIn, None)
+                Cp_c = nc.heatcapacity("SHT", T_PreheaterIn, SecondarySidePressure)
                 
                 T_PrimaryBulkOut = T_PrimaryBulkIn - Q / (Cp_h * m_h_leakagecorrection)
                 T_PrimaryBulkIn = T_PrimaryBulkOut

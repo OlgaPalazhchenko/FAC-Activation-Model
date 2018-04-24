@@ -57,7 +57,7 @@ CoDiffusivity = 0.00041
 
 # Kinetic precipitation/dissolution constants [cm/s]
 KpFe3O4 = .07
-KdFe3O4 = .12
+KdFe3O4 = .2
 # KpFe_Ferrite = 0.014 #same as magnetite precipitation
 # KdFe_Ferrite  = 0.044 'same as magnetite dissolution
 
@@ -229,6 +229,11 @@ def temperature_from_enthalpy(side, Enthalpy, SecondarySidePressure):
     return ratio_temmperatures * T_ref
 
 
+
+def saturation_pressure(Temperature):
+    
+
+
 def saturation_temperature(Pressure):
     # for H2O, light water
     # Pressure input is in MPa
@@ -347,7 +352,7 @@ def D2O_viscosity(Temperature):
     return mu_ref * fi0 * fi1  # [g/cm s]
     
   
-def viscosity(side, Temperature, SecondarySidePressure):
+def viscosity(Temperature, SecondarySidePressure):
     
     T_ref = 647.096  # K
     rho_ref = ReferenceValues.rho_ref
@@ -376,7 +381,7 @@ def viscosity(side, Temperature, SecondarySidePressure):
     return (mu_ref * (mu_0 * mu_1 * mu_2) / 1000000) * 10  # [g/cm s]
 
 
-def HeatCapacity(side, Temperature, SecondarySidePressure):
+def heatcapacity(side, Temperature, SecondarySidePressure):
     if side == "PHT" or side == "PHTS" or side == "phts" or side == "pht":
         p = PrimarySidePressure
     else:
@@ -408,7 +413,7 @@ def thermal_conductivityH2O(side, Temperature, SecondarySidePressure):
     T_ref = 647.096  # [K]
 #     p_ref = 22.064 #[MPa]
 
-    ratio_densities = density(side, Temperature, SecondarySidePressure) / ReferenceValues.rho_ref
+    ratio_densities = density_liquid(side, Temperature, SecondarySidePressure) / ReferenceValues.rho_ref
     ratio_temperatures = Temperature / T_ref
     # ratio_pressures = p/p_ref
 
