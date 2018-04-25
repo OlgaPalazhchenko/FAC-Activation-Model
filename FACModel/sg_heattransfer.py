@@ -272,40 +272,36 @@ def conduction_resistance(Section, Twall, SecondarySidePressure, i):
     return R_cond
 
 
-def primary_convection_resistance(Section, T_PrimaryBulkIn, T_SecondaryBulkIn, T_PrimaryWall, T_SecondaryWall,
-                                  SecondarySidePressure, x_pht, i, m_h_leakagecorrection, TotalAccumulation):
+def primary_convection_resistance(Section, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i):
     # R_1,Convective = 1/(h_1,convectove *A)
     # A = inner area (based on inner diameter)
     # [W/cm K]/ [cm] = [W/K cm^2]
     
+    Diameter = Section.Diameter[i]
     # T_PrimaryBulkIn used in place of Tavg (of in and out for that node)
-    Nu_D = nusseltnumber(
-            Section, "PHT", T_PrimaryBulkIn, T_SecondaryBulkIn, T_SecondaryWall, None,
-            i, x_pht, m_h_leakagecorrection
-            )
+    
+    MassFlux_h.magnitude = m_h_leakagecorrection / (TotalSGTubeNumber * (np.pi / 4) * (Diameter ** 2))
+   
+    Nu_D = nusseltnumber(Section, "PHT", T_PrimaryBulkIn, MassFlux_h.magnitude, i)
+    
     h_l =  Nu_D * thermal_conductivity(T_PrimaryBulkIn, "water", None) / Section.Diameter[i]
     
-    # PHT boiling 
+    # quality only persists for first 2 nodes of PHT
     if x_pht > 0:
-        MassFlux_h.magnitude = m_h_leakagecorrection / (TotalSGTubeNumber * (np.pi / 4) * (Section.Diameter[i] ** 2))
-        
-        h_i = boiling_heat_transfer(
-            x_pht, "PHT", MassFlux_h.magnitude, T_PrimaryWall, Section.Diameter[i],
-            SecondarySidePressure, i, h_l 
-            )
-         
+        h_i = in_tube_boiling_LiuWinterton(x_pht, MassFlux_h.magnitude, Diameter, T_PrimaryWall, h_l, i)
     else:
         h_i =  h_l
 
-    return 1 / (h_i * inner_area(Section, TotalAccumulation)[i])  # [K/W]
+    return 1 / (h_i * inner_area(Section)[i])  # [K/W]
 
 
 def secondary_convection_resistance(
-        Section, T_PrimaryBulkIn, T_SecondaryBulkIn, T_SecondaryWall, SecondaryT_film, x_in, SecondarySidePressure, i
+        Section, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_sht, i
         ):
     
     # split into boiling and non-boiling (preheater) sections
     if Section.Length.label[i] == "preheater":  # from Silpsrikul thesis
+        
         # Based on PLGS data and Silpsrikul calculations
         f_b = 0.2119  # fraction of cross-sectional area of shell occupied by a baffle window
         N_b = f_b * TotalSGTubeNumber  # number of tubes in baffle window
@@ -320,195 +316,267 @@ def secondary_convection_resistance(
 
         # First two (raised to exponent) terms are unitless
         # [W/cm K]/[cm] = [W/cm^2 K]
-        k = thermal_conductivity(SecondaryT_film, "water", SecondarySidePressure)
+        k = thermal_conductivity(T_SecondaryFilm, "water", SecondarySidePressure)
         h_o = (k * 0.2 / Section.OuterDiameter[i]) \
-            * ((Section.OuterDiameter[i] * G_e / nc.viscosity(SecondaryT_film, SecondarySidePressure)) ** 0.6) \
+            * ((Section.OuterDiameter[i] * G_e / nc.viscosity(T_SecondaryFilm, SecondarySidePressure)) ** 0.6) \
             * (
-                nc.heatcapacity("SHT", SecondaryT_film, SecondarySidePressure) \
-                * nc.viscosity(SecondaryT_film, SecondarySidePressure) \
-                / thermal_conductivity(SecondaryT_film, "water", SecondarySidePressure)
+                nc.heatcapacity("SHT", T_SecondaryFilm, SecondarySidePressure) \
+                * nc.viscosity(T_SecondaryFilm, SecondarySidePressure) \
+                / thermal_conductivity(T_SecondaryFilm, "water", SecondarySidePressure)
                 ) ** 0.33
     
-    # outside preheater, no cross-flow/baffles
+    # outside preheater, no cross-flow/baffles, but two-phase flow
     else:
-        # Zukasuskas correlation-based heat transfer coefficient for a bundle, non boiling, not in pre-heater
-         # [cm]
-       
-        EquivalentDiameter.magnitude = 4 * ((TubePitch.magnitude ** 2) \
-                                            - (np.pi / 4) * (Section.OuterDiameter[i] ** 2))\
-                                            / (np.pi * Section.OuterDiameter[i])
+        T_sat_Secondary = nc.saturation_temperature(SecondarySidePressure)
+        # [W/cm^2 K]
+        h_o = outside_bundle_pool_boiling(
+            None, Section, x_sht, T_sat_Secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
+            )
         
+        # outside_bundle_pool_boiling(None, T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
+        
+        # Zukasuskas correlation-based heat transfer coefficient for a bundle, non boiling, not in pre-heater
+        # [cm]
+        
+#         EquivalentDiameter.magnitude = 4 * ((TubePitch.magnitude ** 2) \
+#                                             - (np.pi / 4) * (Section.OuterDiameter[i] ** 2))\
+#                                             / (np.pi * Section.OuterDiameter[i])
+#          
 #         Nu_D_l = nusseltnumber(
 #             Section, "SHT", T_PrimaryBulkIn, T_SecondaryBulkIn, T_SecondaryWall, SecondarySidePressure, i, None,
 #             None
 #             )
-    
-        h_l = nc.thermal_conductivityH2O("SHT", T_SecondaryBulkIn, SecondarySidePressure) * Nu_D_l \
-        / EquivalentDiameter.magnitude
-        
+#      
+#         h_l = nc.thermal_conductivityH2O("SHT", T_SecondaryBulkIn, SecondarySidePressure) * Nu_D_l \
+#         / EquivalentDiameter.magnitude
+#          
 #         if x_in > 0:
 #             MassFlux_c.magnitude = MassFlux_c(Section, i)
-            
+#              
 #             h_o = boiling_heat_transfer(
 #                 x_in, "SHT", MassFlux_c.magnitude, T_SecondaryWall, Section.OuterDiameter[i],
 #                 SecondarySidePressure, i, h_l)
-#        
+#         
 #         else:
 #             h_o = h_l
     
     return 1 / (h_o * outer_area(Section)[i])  # [K/W]
 
 
-def twophase_chen():
-    None
-
-
-def twophase_Mostinski(T_SecondaryWall, T_sat, SecondarySidePressure):
+def outside_tube_boiling_Mostinski(T_sat_Secondary, T_SecondaryWall, SecondarySidePressure):
+    
     P_crit = 22.064 * 10 **3 #kPa
-    T_e = T_SecondaryWall - T_sat # K
-    P_r = SecondarySidePressure / P_crit
+    T_e = T_SecondaryWall - T_sat_Secondary # K
+    P_r = (SecondarySidePressure * 10 **3) / P_crit
+    
     F_p = 1.8 * (P_r ** 0.17) + 4 * (P_r ** 1.2) + 10 * (P_r ** 10)
     
     h_nb = (1.167 * 10 ** (-8)) * (P_crit ** 2.3) * (T_e ** 2.333) * F_p ** 3.333
     
-    h_nb = h_nb / (100 ** 2)
+    h_nb = h_nb / (100 ** 2) # [W/cm^2 K]
     
     return h_nb
+
+
+def outside_tube_boiling_Zukauskas(Section, side, T_sat_Secondary, T_SecondaryBulkIn, SecondarySidePressure, i):
+    
+    A_Cross = (np.pi / 4) * ((ShellDiameter.magnitude ** 2) - (TotalSGTubeNumber * Section.OuterDiameter[i] ** 2))
+
+    Velocity = MassFlow_c_total.magnitude / (nc.density_liquid(side, T_sat_Secondary, SecondarySidePressure) * A_Cross)
+    
+    V_max = (TubePitch.magnitude / (TubePitch.magnitude - Section.Diameter[i])) * Velocity
+    
+    Re_D_max = V_max * Section.OuterDiameter[i] * nc.density_liquid("SHT", T_sat_Secondary, SecondarySidePressure) \
+    / nc.viscosity(side, T_SecondaryBulkIn, SecondarySidePressure)
+    
+    C1 = 0.40
+    m = 0.60
+    n = 0.36
+    C2 = 0.955 # lower value = more supression = higher RIHT growth
+    
+    Prandtl_ratio = prandtl(side, T_SecondaryBulkIn, SecondarySidePressure) \
+    / prandtl(side, T_SecondaryWall, SecondarySidePressure)
+    
+    Nu_D_l = C2 * C1 * (Re_D_max ** m) * ((prandtl(side, T_SecondaryBulkIn, SecondarySidePressure)) ** n) \
+    * Prandtl_ratio ** 0.25
+    
+    OD = Section.OuterDiameter[i]
+    
+    EuivalentDiameter.magnitude = 4 * ((TubePitch.magnitude ** 2) - (np.pi / 4) * (OD ** 2)) / (np.pi * OD)
+    
+    ED = EquivalentDiameter.magnitude
+    h_l = nc.thermal_conductivityH2O(side, T_SecondaryBulkIn, SecondarySidePressure) * Nu_D_l / ED
+    
+    return h_l
     
 
-def twophase_ForsterZuber(T_sat, T_SecondaryWall, SecondarySidePressure):
-    lambda_l = nc.thermal_conductivityH2O("SHT", T_sat, SecondarySidePressure) * 100 ** 2 # W/m^2K thermal conductivity
-    cp_l = nc.heatcapacity("SHT", T_sat, SecondarySidePressure) * 1000 #J / g K --> J / kg K, liquid specific heat
-    rho_l = nc.density_liquid("SHT", T_sat, SecondarySidePressure) * (100 **3) / 1000 # g/cm^3 --> kg/m^3
-    rho_v = nc.density_vapour(SecondarySidePressure, T_sat) * (100 ** 3) / 1000 # kg/m^3
-    sigma = 0.024 #surface tension N/m
-    mu = nc.viscosity(T_sat, SecondarySidePressure) / 10 # liquid viscosity #kg/m s 
-    h_lg = nc.enthalpy_vapour(SecondarySidePressure, T_sat) * 1000 # J / g --> J /kg
-    deltaT_sat = T_SecondaryWall - T_sat # K
-    deltaP_sat = 
+def outside_bundle_LiuWinterton(
+        Section, x_sht, T_sat_Secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
+        ):
     
-    h_nb = (
-        0.00122 * ((lambda_l ** 0.79) * (cp_l ** 0.45) * (rho_l ** 0.49)) / 
-        ((sigma ** 0.5) * (mu ** 0.29) * (h_lg ** 0.24) * (rho_v ** 0.24))) * 
-    return None
+    h_l = outside_tube_boiling_Zukauskas(Section, "SHT", T_sat_Secondary, T_SecondaryBulkIn, SecondarySidePressure, i)
+     
+    Pressure = SecondarySidePressure
+    T_sat_Secondary = nc.saturation_temperature(Pressure)
+    rho_v = nc.density_vapour(Pressure, T_sat_Secondary)  # [g/cm^3]
+    rho_l = nc.density_liquid("SHT", T_sat_Secondary, SecondarySidePressure)
+    Viscosity_sat = nc.viscosity(T_sat_Secondary, SecondarySidePressure)
+     
+    F = (1 + x_sht * prandtl("SHT", T_sat_Secondary, Pressure) * ((rho_l / rho_v) - 1)) ** 0.35
+     
+    h_l = outside_tube_boiling_Zukauskas(Section, "SHT", T_sat_Secondary, T_SecondaryBulkIn, SecondarySidePressure, i)
+     
     
-    
-def nucleateboiling_singletube(Correlation, Pressure):
-    
-    T_sat = nc.saturation_temperature(Pressure) # [K]
-    Density_v = nc.density_vapour(Pressure, T_sat) # [g/cm^3]
-    Enthalpy = nc.enthalpy_vapour(Pressure, T_sat) # [kJ/kg K]   
-       
-    surfacetension = 0.024
-    
-    
-    if Correlation == "FZ":
-        k_l = (nc.thermal_conductivityH2O(side, T_sat, SecondarySidePressure) * 100) ** 0.79
-        C_p = (nc.heatcapacity(side, T_sat, SecondarySidePressure) * 1000)** 0.45
-        g_c = 1 #[kg m /N s^2], N = kg m /s ^2
-        T_e = (T_wall - T_sat) ** 0.24
-#         P_Twall = (0.1018 * T_wall - 49.724) * (10 ** 6) #Pa = kg/m s^2 *1000/100 = g/cm s^2
-        P_Twall = (0.0017 * np.exp(0.0149 * T_wall)) * (10 ** 6)
-          
-       
-        P_sat = Pressure * (10 ** 6) #Pa
-        delta_P = (P_Twall - P_sat) ** 0.75
-        surfacetension = (0.024) ** 0.5 # N/m = kg m/s ^2 /m = kg/s^2 = g/s^2
-        mu = (nc.viscosity(T_sat, SecondarySidePressure) * 100 / 1000) ** 0.29
-        E = Enthalpy ** 0.24 # kJ / kg * 1000 = J/kg
-        rho_v = (Density_v * (100 ** 3) / 1000) ** 0.24
-           
-        h_nb = (0.00122 * k_l * C_p * g_c * T_e * delta_P / (surfacetension * mu * E * rho_v)) / 100 / 100
-        
-
-def boiling_heat_transfer(x, side, MassFlux, T_wall, Diameter, SecondarySidePressure, i, h_l):
-    
-    # x = steam quality in percent
-    if side == "SHT":
-        
-        T_sat = T_sat_secondary
-        Density_l = nc.density_liquid(side, T_sat, SecondarySidePressure)
-        F = 1
-        S = 1
-        Pressure = SecondarySidePressure
-        Viscosity_sat = nc.viscosity(T_sat, SecondarySidePressure)
-        
-
-#           
-#         HTC = 1.5 * h_nb
-#         print (HTC, lol, i)
-    
-    elif side == "PHT":
-        # quality only persists for first 2 nodes of PHT
-        T_sat = T_sat_primary
-        Density_v = 1000 * 55.462 / (100 ** 3)  # [g/cm^3]
-        Density_l = nc.D2O_density(T_sat)
-        Viscosity_sat = nc.D2O_viscosity(T_sat)
-        Pressure = nc.PrimarySidePressure
-        F = (1 + (x * prandtl(side, T_sat, Pressure) * ((Density_l / Density_v) - 1))) ** 0.35
-    
-    MassFlux_liquid = MassFlux * (1 - x)
-    Re_D = Diameter * MassFlux_liquid / Viscosity_sat
+    MassFlux_c.magnitude = MassFlux_c(Section, i)
+    MassFlux_liquid = MassFlux_c.magnitude * (1 - x_sht)
+     
+    Re_D = Section.OuterDiameter[i] * MassFlux_liquid / Viscosity_sat
+     
     S = (1 + 0.055 * (F ** 0.1) * (Re_D) ** 0.16) ** (-1)
-        
+    
     p_crit = 22.0640  # [MPa]
+    P_r = Pressure / p_crit   
+   
+    q_l = F * h_l * (abs(T_SecondaryWall - T_sat_primary))  # [K W/cm^2]
     
-    Q_prime = F * h_l * (abs(T_wall - T_sat))  # [K W/cm^2]
+    A_p = (55 * (P_r ** 0.12) * ((-np.log10(P_r)) ** (-0.55)) * (nc.H2OMolarMass) ** (-0.5)) / (100 ** 2)
     
-    A_p = (55 * ((Pressure / p_crit) ** 0.12) * ((-np.log10(Pressure / p_crit)) ** (-0.55)) *\
-            (nc.H2OMolarMass) ** (-0.5)) / (100 ** 2)
-    
-    C = ((A_p * S / (F * h_l)) ** 2) * Q_prime ** (4 / 3)
+    C = ((A_p * S / (F * h_l)) ** 2) * q_l ** (4 / 3)
     coeff = [1, -C, -1]
     cubic_solution = np.roots(coeff)
     q = cubic_solution[0]
     
-    HTC =  F * (q ** (3 / 2)) * h_l  # [W/cm^2 K]
+    h_twophase =  F * (q ** (3 / 2)) * h_l  # [W/cm^2 K]
 #     if side == "SHT": print (HTC, q, i, side)
-    return HTC
+    return h_twophase
 
 
-def nusseltnumber(
-        Section, side, T_PrimaryBulkIn, T_SecondaryBulkIn, T_SecondaryWall, SecondarySidePressure, i, x_pht,
-        m_h_leakagecorrection):
+# def outside_tube_boiling_Cooper(T_sat_Secondary, T_SecondaryWall, SecondarySidePressure):
+#     P_crit = 22.064 * (10 ** 3) #kPa
+#     deltaT_sat = T_SecondaryWall - T_sat_Secondary # K
+#     P_r = (SecondarySidePressure * 10 ** 3) / P_crit
+#     
+#     h = ((55 * deltaT_sat ** 0.67) * (P_r ** 0.12) * (-np.log10(P_r)) ** (-0.55) * (nc.H2OMolarMass ** -0.5))
+#     
+#     h_nb = h  ** (1 / 0.33)
+#     
+#     h_nb = h_nb / (100 ** 2)
+#     
+#     return h_nb     
+
+
+def outside_tube_boiling_ForsterZuber(T_sat_Secondary, T_SecondaryWall, SecondarySidePressure):
+
+    # W/m K thermal conductivity
+    lambda_l = (nc.thermal_conductivityH2O("SHT", T_sat_Secondary, SecondarySidePressure) * 100) ** 0.79 
+    #J / g K --> J / kg K, liquid specific heat
+    cp_l = (nc.heatcapacity("SHT", T_sat_Secondary, SecondarySidePressure) * 1000) ** 0.45 
+    rho_l = (nc.density_liquid("SHT", T_sat_Secondary, SecondarySidePressure) * (100 ** 3) / 1000) ** 0.49 # g/cm^3 --> kg/m^3
+    rho_v = (nc.density_vapour(SecondarySidePressure, T_sat_Secondary) * (100 ** 3) / 1000) ** 0.24 # kg/m^3
+    sigma = (0.024) ** 0.5 #surface tension N/m
+    mu = (nc.viscosity(T_sat_Secondary, SecondarySidePressure) / 10) ** 0.29 # liquid viscosity #kg/m s 
+    
+    h_lg = (nc.enthalpy_vapour(SecondarySidePressure, T_sat_Secondary) * 1000) ** 0.24 # J / g --> J /kg
+    deltaT_sat = (T_SecondaryWall - T_sat_Secondary) ** 0.24 # K
+    P_w = nc.saturation_pressure(T_SecondaryWall) * 10 ** 6
+    P_s = nc.saturation_pressure(T_sat_Secondary) * 10 ** 6
+    
+    deltaP_sat = (P_w - P_s) ** 0.75 # MPa
+    
+    h_nb = 0.00122 * lambda_l * cp_l * rho_l * deltaT_sat * deltaP_sat / (sigma * mu * h_lg * rho_v) 
+    
+    h_nb = h_nb / (100 ** 2) # [W/cm^2 K]
+    
+    return h_nb
+
+
+def outside_bundle_pool_boiling(
+        Correlation, Section, x_sht, T_sat_Secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
+        ):
+    
+    F = .09 # bundle boiling factor (empirical)
+    if Correlation == "FZ":
+        h_nb = outside_tube_boiling_ForsterZuber(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
+    else:
+        h_nb = outside_bundle_LiuWinterton(
+            Section, x_sht, T_sat_Secondary, T_SecondaryWall, T_SecondaryBulkIn,
+                                           SecondarySidePressure, i
+                                           )
+        #h_nb = outside_tube_boiling_Cooper(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
+        # outside_tube_boiling_Mostinski(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
+
+    h_twophase = F * h_nb
+    print (h_nb)
+    return h_twophase
+    
+
+def in_tube_boiling_LiuWinterton(x_pht, MassFlux, Diameter, T_PrimaryWall, h_l, i):
+    
+    Pressure = nc.PrimarySidePressure
+    Density_v = nc.density_vapour(Pressure, T_sat_primary)  # [g/cm^3]
+    Density_l = nc.D2O_density(T_sat_primary)
+    Viscosity_sat = nc.D2O_viscosity(T_sat_primary)
+    
+    F = (1 + (x_pht * prandtl("SHT", T_sat_primary, Pressure) * ((Density_l / Density_v) - 1))) ** 0.35
+    
+    MassFlux_liquid = MassFlux * (1 - x_pht)
+    Re_D = Diameter * MassFlux_liquid / Viscosity_sat
+    S = (1 + 0.055 * (F ** 0.1) * (Re_D) ** 0.16) ** (-1)
+    
+    p_crit = 22.0640  # [MPa]
+    P_r = Pressure / p_crit   
    
-    if side == "PHT":        
-        MassFlux_h.magnitude = m_h_leakagecorrection / (TotalSGTubeNumber * (np.pi / 4) * (Section.Diameter[i] ** 2))
-        
+    q_l = F * h_l * (abs(T_PrimaryWall - T_sat_primary))  # [K W/cm^2]
+    
+    A_p = (55 * (P_r ** 0.12) * ((-np.log10(P_r)) ** (-0.55)) * (nc.H2OMolarMass) ** (-0.5)) / (100 ** 2)
+    
+    C = ((A_p * S / (F * h_l)) ** 2) * q_l ** (4 / 3)
+    coeff = [1, -C, -1]
+    cubic_solution = np.roots(coeff)
+    q = cubic_solution[0]
+    
+    h_twophase =  F * (q ** (3 / 2)) * h_l  # [W/cm^2 K]
+#     if side == "SHT": print (HTC, q, i, side)
+    return h_twophase
+
+
+def nusseltnumber(Section, side, T_PrimaryBulkIn, MassFlux, i):
+   
+    if side == "PHT":
         #Dittus-boelter evaluated at average T between inlet and outlet for section - approximated as T_in here
-        Re_D = [(MassFlux_h.magnitude / nc.D2O_viscosity(T_PrimaryBulkIn)) * i for i in Section.Diameter]
+        Re_D = [(MassFlux / nc.D2O_viscosity(T_PrimaryBulkIn)) * i for i in Section.Diameter]
         
         n = 1 / 3
         C = 0.023
         m = 4 / 5
         
-        Nu_D = C * (Re_D[i] ** m) * (prandtl(side, T_PrimaryBulkIn, SecondarySidePressure)) ** n
+        Nu_D = C * (Re_D[i] ** m) * (prandtl(side, T_PrimaryBulkIn, SecondarySidePressure = None)) ** n
 
-    elif side == "SHT":
-        # [g/s] / [g/cm^3] = [cm^3/s] / [cm^2]
-        A_Cross = (np.pi / 4) * ((ShellDiameter.magnitude ** 2) - (TotalSGTubeNumber * Section.OuterDiameter[i] ** 2))
-        
-        Velocity = (
-            MassFlow_c_total.magnitude / (nc.density_liquid(side, T_SecondaryBulkIn, SecondarySidePressure) * A_Cross))
-        
-        V_max = (TubePitch.magnitude / (TubePitch.magnitude - Section.Diameter[i])) * Velocity
-        
-        Re_D_max = V_max * Section.Diameter[i] * nc.density_liquid(side, T_SecondaryBulkIn, SecondarySidePressure) \
-        / nc.viscosity(T_SecondaryBulkIn, SecondarySidePressure)
-        
-        C1 = 0.40
-        m = 0.60
-        n = 0.36
-        C2 = 0.955 # lower value = more supression = higher RIHT growth
-        
-        Prandtl_ratio = prandtl(side, T_SecondaryBulkIn, SecondarySidePressure) \
-        / prandtl(side, T_SecondaryWall, SecondarySidePressure)
-        
-        Nu_D = C2 * C1 * (Re_D_max ** m) * ((prandtl(side, T_SecondaryBulkIn, SecondarySidePressure)) ** n) \
-        * Prandtl_ratio ** 0.25
-        
-    else:
-        None
+#     elif side == "SHT":
+#         # [g/s] / [g/cm^3] = [cm^3/s] / [cm^2]
+#         A_Cross = (np.pi / 4) * ((ShellDiameter.magnitude ** 2) - (TotalSGTubeNumber * Section.OuterDiameter[i] ** 2))
+#         
+#         Velocity = (
+#             MassFlow_c_total.magnitude / (nc.density_liquid(side, T_SecondaryBulkIn, SecondarySidePressure) * A_Cross))
+#         
+#         V_max = (TubePitch.magnitude / (TubePitch.magnitude - Section.Diameter[i])) * Velocity
+#         
+#         Re_D_max = V_max * Section.Diameter[i] * nc.density_liquid(side, T_SecondaryBulkIn, SecondarySidePressure) \
+#         / nc.viscosity(T_SecondaryBulkIn, SecondarySidePressure)
+#         
+#         C1 = 0.40
+#         m = 0.60
+#         n = 0.36
+#         C2 = 0.955 # lower value = more supression = higher RIHT growth
+#         
+#         Prandtl_ratio = prandtl(side, T_SecondaryBulkIn, SecondarySidePressure) \
+#         / prandtl(side, T_SecondaryWall, SecondarySidePressure)
+#         
+#         Nu_D = C2 * C1 * (Re_D_max ** m) * ((prandtl(side, T_SecondaryBulkIn, SecondarySidePressure)) ** n) \
+#         * Prandtl_ratio ** 0.25
+#         
+#     else:
+#         None
     
     return Nu_D
 
@@ -533,7 +601,7 @@ def prandtl(side, Temperature, SecondarySidePressure):
     return Pr
 
 
-def inner_area(Section, Oxide):
+def inner_area(Section):
     return [np.pi * x * y for x, y in zip(Section.Diameter, Section.Length.magnitude)]
 #     return [np.pi * (x - z) * y for x, y, z in zip(Section.Diameter, Section.Length.magnitude, Oxide)]
 
@@ -600,40 +668,44 @@ def wall_temperature(
         Section, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation,
         calendar_year, SecondarySidePressure, m_h_leakagecorrection):
     
-    TotalAccumulation = [x + y for x, y in zip (InnerAccumulation, OuterAccumulation)]
+#     TotalAccumulation = [x + y for x, y in zip (InnerAccumulation, OuterAccumulation)]
  
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
-    T_SecondaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
-
+    T_SecondaryWall = T_PrimaryBulkIn - (2 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
+    
+    A_i = inner_area(Section)[i]
+    A_o = outer_area(Section)[i]
+     
     for k in range(50):
         WT_h = T_PrimaryWall
         WT_c = T_SecondaryWall
 
-        PrimaryT_film = (T_PrimaryBulkIn + T_PrimaryWall) / 2
-        SecondaryT_film = (T_SecondaryBulkIn + T_SecondaryWall) / 2
-
-        h_i.magnitude = 1 / (primary_convection_resistance(
-            Section, T_PrimaryBulkIn, T_SecondaryBulkIn, T_PrimaryWall, T_SecondaryWall, SecondarySidePressure, x_pht,
-            i, m_h_leakagecorrection, TotalAccumulation) * inner_area(Section, TotalAccumulation)[i])
+#         PrimaryT_film = (T_PrimaryBulkIn + T_PrimaryWall) / 2
+        T_SecondaryFilm = (T_SecondaryBulkIn + T_SecondaryWall) / 2
+               
+        h_i.magnitude = (1 / (A_i * primary_convection_resistance(
+            Section, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i
+            )))
         
-        h_o.magnitude = 1 / (secondary_convection_resistance(
-            Section, T_PrimaryBulkIn, T_SecondaryBulkIn, T_SecondaryWall, SecondaryT_film, x_in, SecondarySidePressure,
-            i) * outer_area(Section)[i])
+        h_o.magnitude = (
+            1 / (secondary_convection_resistance(
+                Section, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_in, i
+                ) * A_o)
+                         )
         # R = 1/hA --> h=A*1/R
 
-        U_h1 = inner_area(Section, TotalAccumulation)[i] \
-        * conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)
+        U_h1 = A_i * conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)
         
-        U_h2 = inner_area(Section, TotalAccumulation)[i] * secondary_convection_resistance(
-            Section, T_PrimaryBulkIn, T_SecondaryBulkIn, T_SecondaryWall, SecondaryT_film, x_in, SecondarySidePressure,
-            i)
+        U_h2 = (A_i * secondary_convection_resistance(
+            Section, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_in, i
+            ))
         U_h.magnitude = 1 / (U_h1 + U_h2)  # [W/ cm^2 K]
 
-        U_c1 = outer_area(Section)[i] * conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)
-        U_c2 = outer_area(Section)[i] * primary_convection_resistance(
-            Section, T_PrimaryBulkIn, T_SecondaryBulkIn, T_PrimaryWall, T_SecondaryWall, SecondarySidePressure, x_pht,
-            i, m_h_leakagecorrection, TotalAccumulation) 
+        U_c1 = A_o * conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)
+        U_c2 = A_o * primary_convection_resistance(
+            Section, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i) 
+        
         U_c.magnitude = 1 / (U_c1 + U_c2)  # [W/cm^2 K]
 
         T_PrimaryWall = (T_PrimaryBulkIn * h_i.magnitude + T_SecondaryBulkIn * U_h.magnitude)\
@@ -655,11 +727,12 @@ def wall_temperature(
             R_F_secondary.magnitude = sludge_fouling_resistance(Section, i, calendar_year)
                         
             PCR = primary_convection_resistance(
-                Section, T_PrimaryBulkIn, T_SecondaryBulkIn, T_PrimaryWall, T_SecondaryWall, SecondarySidePressure,
-                x_pht, i, m_h_leakagecorrection, TotalAccumulation)
+                Section, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i
+                )
+            
             SCR = secondary_convection_resistance(
-                Section, T_PrimaryBulkIn, T_SecondaryBulkIn, T_SecondaryWall, SecondaryT_film, x_in,
-                SecondarySidePressure, i)
+                Section, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_in, i
+               )
 #             if i ==0:
 #                 print (PCR *100*100, "PCR", conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)*100*100,\
 #                         "cond", SCR*100*100, "SCR", R_F_primary.magnitude*100*100, "primary fouling", \
@@ -667,7 +740,7 @@ def wall_temperature(
             
             # [cm^2 K/W] all resistances (convective, conductive, and fouling)
             inverseU_total = (PCR + conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i) + SCR) \
-            * outer_area(Section)[i] + R_F_primary.magnitude + R_F_secondary.magnitude
+            * A_o + R_F_primary.magnitude + R_F_secondary.magnitude
 
             U_total.magnitude = 1 / inverseU_total  # [W/ cm^2 K]
 
@@ -957,5 +1030,5 @@ UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
 CleanedInner = [i * 0.67 for i in UncleanedInner]
 CleanedOuter = [i * 0.67 for i in UncleanedOuter]
             
-# print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876 * 0, SGFastMode="yes")
-# - 273.15)
+print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876 * 0, SGFastMode="yes")
+- 273.15)

@@ -2,7 +2,7 @@ import csv
 import numpy as np
 
 
-TIME_STEP = 1  # hr
+TIME_STEP = 10  # hr
 TIME_INCREMENT = 3600 * TIME_STEP  # [s] Based on desired time step (e.g., 3600s/h for 1h time step)
 
 
@@ -195,9 +195,9 @@ def enthalpy_vapour(Pressure, Temperature):
         )
     
     H = R_IAPWS * Temperature * ratio_temperatures * (Gibbs_idealgas_T + Gibbs_reduced_T_sum)  # [kJ / kg K]
-    print (Gibbs_reduced_T_sum, H)
     
-
+    return H
+    
 
 def enthalpy_D2O(Temperature):
     T = Temperature - 273.15
@@ -229,9 +229,24 @@ def temperature_from_enthalpy(side, Enthalpy, SecondarySidePressure):
     return ratio_temmperatures * T_ref
 
 
-
 def saturation_pressure(Temperature):
+    n = [
+        0.11670521452767 * 10 ** 4, -0.72421316703206 * 10 ** 6, -0.17073846940092 * 10 ** 2,
+         0.12020824702470 * 10 ** 5, -0.32325550322333 * 10 ** 7, 0.14915108613530 * 10 ** 2,
+         - 0.48232657361591 * 10 ** 4, 0.40511340542057 * 10 ** 6, -0.23855557567849, 0.65017534844798 * 10 ** 3
+         ]
+    T_ref = 1 # K
+    P_ref = 1  # [MPa]
+    T_var = Temperature / T_ref
+    sigma = T_var + (n[8] / (T_var - n[9])) 
     
+    A = (T_var ** 2) + n[0] * T_var + n[1]
+    B = n[2] * (T_var ** 2) + n[3] * T_var + n[4]
+    C = n[5] * (T_var ** 2) + n[6] * T_var + n[7]
+    
+    P_sat = P_ref * (2 * C / (-B + np.sqrt((B ** 2) - 4 * A * C))) ** 4
+    
+    return P_sat
 
 
 def saturation_temperature(Pressure):
@@ -366,7 +381,7 @@ def viscosity(Temperature, SecondarySidePressure):
     ]
         
     T_rel = Temperature / T_ref
-    rho_rel = density(side, Temperature, SecondarySidePressure) / rho_ref
+    rho_rel = density_vapour(SecondarySidePressure, Temperature)/ rho_ref
     
     H_0 = [1.67752, 2.20462, 0.6366564, -0.241605]
     terms = [0, 1, 2, 3]
