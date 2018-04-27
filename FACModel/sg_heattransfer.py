@@ -196,7 +196,7 @@ Cleaned = cleaned_tubes()
 
 def thermal_conductivity(Twall, material, SecondarySidePressure):
     if material == "Alloy-800" or material == "Alloy800" or material == "A800" or material == "Alloy 800":
-        Twall_C = Twall - 273.15  # oC in alloy thermal conductivity equatin 
+        Twall_C = Twall - 273.15  # oC in alloy thermal conductivity equation 
         conductivity = (11.450 + 0.0161 * Twall_C) / 100  # M.K.E thesis for Alloy-800 tubing [W/cm K] 
         return conductivity
     
@@ -330,7 +330,7 @@ def secondary_convection_resistance(
         T_sat_secondary = nc.saturation_temperature(SecondarySidePressure)
         # [W/cm^2 K]
         h_o = outside_bundle_pool_boiling(
-            "None", Section, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
+            "FZ", Section, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
             )
         
         # outside_bundle_pool_boiling(None, T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -543,7 +543,8 @@ def LiuWinterton_outside_bundle(
     h_l = Zukauskas_outside_tube_boiling(
         Section, "SHT", T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
         )
-     
+    
+    h_l = h_l * (100 ** 2) 
     Pressure = SecondarySidePressure
     T_sat_secondary = nc.saturation_temperature(Pressure)
     rho_v = nc.density_vapour(Pressure, T_sat_secondary)  # [g/cm^3]
@@ -557,22 +558,26 @@ def LiuWinterton_outside_bundle(
      
     Re_D = Section.OuterDiameter[i] * MassFlux_liquid / Viscosity_sat
      
-    S = 1 #(1 + 0.055 * (F ** 0.1) * (Re_D) ** 0.16) ** (-1)
+    S = (1 + 0.055 * (F ** 0.1) * (Re_D) ** 0.16) ** (-1)
     
     p_crit = 22.0640  # [MPa]
     P_r = Pressure / p_crit   
    
     q_l = F * h_l * (abs(T_SecondaryWall - T_sat_primary))  # [K W/cm^2]
     
-    A_p = (55 * (P_r ** 0.12) * ((-np.log10(P_r)) ** (-0.55)) * (nc.H2OMolarMass) ** (-0.5)) / (100 ** 2)
+    A_p = 55 * (P_r ** 0.12) * ((-np.log10(P_r)) ** (-0.55)) * (nc.H2OMolarMass) ** (-0.5) 
     
     C = ((A_p * S / (F * h_l)) ** 2) * q_l ** (4 / 3)
     coeff = [1, -C, 0, -1]
     cubic_solution = np.roots(coeff)
-    q = cubic_solution[0]
     
-    h_twophase =  F * (q ** (3 / 2)) * h_l  # [W/cm^2 K]
-#     if side == "SHT": print (HTC, q, i, side)
+    # only real roots usable in correlation
+#     q = []
+#     for x in cubic_solution:
+#         if np.isreal(x):
+#             q = x
+    q = cubic_solution[0]
+    h_twophase =  F * (q ** (3 / 2)) * h_l / (100 ** 2)  # [W/cm^2 K]
     return h_twophase
 
  
@@ -611,7 +616,7 @@ def ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, Secondar
     
     h_nb = h_nb / (100 ** 2) # [W/cm^2 K]
 
-    return h_nb
+    return 0.8#h_nb
 
 
 def outside_bundle_pool_boiling(
@@ -661,7 +666,7 @@ def in_tube_boiling_LiuWinterton(x_pht, MassFlux, Diameter, T_PrimaryWall, h_l, 
     
     coeff = [1, -C, 0, -1]
     cubic_solution = np.roots(coeff)
-    
+
     # only real roots usable in correlation
     q = []
     for x in cubic_solution:
@@ -669,9 +674,6 @@ def in_tube_boiling_LiuWinterton(x_pht, MassFlux, Diameter, T_PrimaryWall, h_l, 
             q = x
 
     h_twophase =  F * (q ** (3 / 2)) * h_l / (100 ** 2)  # [W/cm^2 K]
-    
-    print (q)
-
     return h_twophase
 
 
@@ -683,12 +685,13 @@ def wall_temperature(
  
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
-    T_SecondaryWall = T_SecondaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
+    T_SecondaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
     
     A_i = inner_area(Section)[i]
     A_o = outer_area(Section)[i]
      
-    for k in range(100):
+    for k in range(50):
+        
         WT_h = T_PrimaryWall
         WT_c = T_SecondaryWall
 
@@ -706,6 +709,7 @@ def wall_temperature(
                          )
         # R = 1/hA --> h=A*1/R
 
+        
         U_h1 = A_i * conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)
         
         U_h2 = (A_i * secondary_convection_resistance(
@@ -727,9 +731,10 @@ def wall_temperature(
 
         RE1 = (T_PrimaryWall - WT_h)
         RE2 = (T_SecondaryWall - WT_c)
+#         print (h_i.magnitude, h_o.magnitude, i)
 
         # if converged
-        if abs(RE1) <= 0.01 and abs(RE2) <= 0.01:
+        if abs(RE1) <= .1 and abs(RE2) <= .1:
             # [cm^2 K/W]
             R_F_primary.magnitude = pht_fouling_resistance(
                 Section, i, calendar_year, InnerAccumulation[i], OuterAccumulation[i]
@@ -755,6 +760,7 @@ def wall_temperature(
 
             U_total.magnitude = 1 / inverseU_total  # [W/ cm^2 K]
 
+            
             return T_PrimaryWall, T_SecondaryWall, U_total.magnitude
 
 
