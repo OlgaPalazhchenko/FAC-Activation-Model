@@ -381,7 +381,8 @@ def viscosity(Temperature, SecondarySidePressure):
     ]
         
     T_rel = Temperature / T_ref
-    rho_rel = density_vapour(SecondarySidePressure, Temperature)/ rho_ref
+    rho_rel = density_liquid("SHT", Temperature, SecondarySidePressure) / rho_ref
+    
     
     H_0 = [1.67752, 2.20462, 0.6366564, -0.241605]
     terms = [0, 1, 2, 3]
@@ -393,7 +394,7 @@ def viscosity(Temperature, SecondarySidePressure):
     mu_1 = np.exp(rho_rel * summation1)
     mu_2 = 1
     # [microPa s] --> [g/cm s]
-    return (mu_ref * (mu_0 * mu_1 * mu_2) / 1000000) * 10  # [g/cm s]
+    return 10 * mu_ref * (mu_0 * mu_1 * mu_2) / (10 ** 6)  # [g/cm s]
 
 
 def heatcapacity(side, Temperature, SecondarySidePressure):
@@ -456,5 +457,6 @@ def thermal_conductivityH2O(side, Temperature, SecondarySidePressure):
     lambda_1 = np.exp(
         ratio_densities * sum([(((1 / ratio_temperatures) - 1) ** x) * y for x, y in zip(i_IAPWS, summation1)])
         )
+    # [m W/m K] -- > W/cm K
 
-    return ((lambda_0 * lambda_1 * ReferenceValues.lambda_ref) / 1000) / 100  # [W/m K] 
+    return ((lambda_0 * lambda_1 * ReferenceValues.lambda_ref) / 100) /1000 # [W/ cm K] 
