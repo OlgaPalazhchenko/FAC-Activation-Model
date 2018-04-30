@@ -44,8 +44,8 @@ NiDensity = 8.908
 Alloy800Density = 7.94
 CoDensity = 8.9
 
-Fe3O4Porosity_inner = 0.1
-Fe3O4Porosity_outer = 0.3
+Fe3O4Porosity_inner = 0.05
+Fe3O4Porosity_outer = 0.5
 # FeCr2O4Porosity = 0.15
 Fe3O4Tortuosity = 2
 FeCr2O4Tortuosity = 1.2
@@ -136,12 +136,10 @@ class ThermoDimensionlessInput():
 ReferenceValues = ThermoDimensionlessInput()
 
 
-def enthalpy_liquid(side, Temperature, SecondarySidePressure):
-    if side == "PHT" or side == "PHTS" or side == "phts" or side == "pht":
-        p = PrimarySidePressure  # MPa
-    else:
-        p = SecondarySidePressure  # MPa secondary side
-
+def enthalpyH2O_liquid(Pressure, Temperature):
+   
+    p = Pressure  # MPa
+   
     ratio_pressures = p / ReferenceValues.p_ref  # p/p*, reduced pressure [unitless]
     ratio_temperatures = ReferenceValues.T_ref / Temperature  # T/T*, reduced temperature [unitless]
 
@@ -154,7 +152,7 @@ def enthalpy_liquid(side, Temperature, SecondarySidePressure):
     return E
 
 
-def enthalpy_vapour(Pressure, Temperature):
+def enthalpyH2O_vapour(Pressure, Temperature):
     # Pressure input in MPa, Temperature input in K
     Ii = [
         1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9, 10, 10, 10, 16, 16, 18, 20,
@@ -199,22 +197,21 @@ def enthalpy_vapour(Pressure, Temperature):
     return H
     
 
-def enthalpy_D2O(Temperature):
+def enthalpyD2O_liquid(Temperature):
     T = Temperature - 273.15
     return 4.7307 * T - 546.55  # [kJ/kg]
 
 
-def temperature_from_enthalpy_D2O(Enthalpy):
+def temperature_from_enthalpyD2O_liquid(Enthalpy):
     T = (Enthalpy + 546.55) / 4.7307
     Temperature = T + 273.15
     return Temperature
 
 
-def temperature_from_enthalpy(side, Enthalpy, SecondarySidePressure):
-    if side == "PHT" or side == "PHTS" or side == "phts" or side == "pht":
-        p = PrimarySidePressure
-    else:
-        p = SecondarySidePressure  # MPa secondary side
+def temperature_from_enthalpyH2O_liquid(Enthalpy, SecondarySidePressure):
+    
+    p = SecondarySidePressure  # MPa secondary side
+    
     p_ref = 1  # MPa
     T_ref = 1  # K
     
@@ -229,7 +226,7 @@ def temperature_from_enthalpy(side, Enthalpy, SecondarySidePressure):
     return ratio_temmperatures * T_ref
 
 
-def saturation_pressure(Temperature):
+def saturation_pressureH2O(Temperature):
     n = [
         0.11670521452767 * 10 ** 4, -0.72421316703206 * 10 ** 6, -0.17073846940092 * 10 ** 2,
          0.12020824702470 * 10 ** 5, -0.32325550322333 * 10 ** 7, 0.14915108613530 * 10 ** 2,
@@ -249,7 +246,7 @@ def saturation_pressure(Temperature):
     return P_sat
 
 
-def saturation_temperature(Pressure):
+def saturation_temperatureH2O(Pressure):
     # for H2O, light water
     # Pressure input is in MPa
 
@@ -273,7 +270,7 @@ def saturation_temperature(Pressure):
     return T_s
     
 
-def density_vapour(Pressure, Temperature):
+def densityH2O_vapour(Pressure, Temperature):
     # Pressure input in MPa, Temperature input in K
     Ii = [
         1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9, 10, 10, 10, 16, 16, 18, 20,
@@ -314,17 +311,9 @@ def density_vapour(Pressure, Temperature):
     return rho_vap * 1000 / (100 ** 3) 
 
      
-def density_liquid(side, Temperature, SecondarySidePressure):
-    
-    if side == "phts" or side == "PHTS" or side == "PHT":
-        p = PrimarySidePressure
-    
-    elif side == "shts" or side == "SHTS" or side == "SHT":
-        p = SecondarySidePressure 
-    
-    else:
-        None
-        
+def densityH2O_liquid(Temperature, SecondarySidePressure):
+    p = SecondarySidePressure 
+
     ratio_pressures = p / ReferenceValues.p_ref
     ratio_temperatures = ReferenceValues.T_ref / Temperature  # ratio is reverse here from all other functions 
     
@@ -338,18 +327,18 @@ def density_liquid(side, Temperature, SecondarySidePressure):
     return rho_l 
 
     
-def D2O_density(Temperature):
+def densityD2O_liquid(Temperature):
     T = Temperature - 273
     return -0.0023 * T + 1.4646  # [g/cm^3]
 
 
-def D2O_viscosity(Temperature):
+def viscosityD2O_liquid(Temperature):
     rho_ref = 0.3580  # [g/cm^3]
     T_ref = Temperature / 643.847
     mu_ref = 10 * 55.2651 / 1000000
     
     # D2O is in primary side only, don't need to carry through SHT pressure
-    rho_rel = D2O_density(Temperature) / rho_ref
+    rho_rel = densityD2O_liquid(Temperature) / rho_ref
 
     no = [1.0, 0.940695, 0.578377, -0.202044]
     fi0 = T_ref ** 0.5 / sum([n / T_ref ** i for i, n in enumerate(no)])
@@ -367,7 +356,7 @@ def D2O_viscosity(Temperature):
     return mu_ref * fi0 * fi1  # [g/cm s]
     
   
-def viscosity(Temperature, SecondarySidePressure):
+def viscosityH2O_liquid(Temperature, SecondarySidePressure):
     
     T_ref = 647.096  # K
     rho_ref = ReferenceValues.rho_ref
@@ -381,7 +370,7 @@ def viscosity(Temperature, SecondarySidePressure):
     ]
         
     T_rel = Temperature / T_ref
-    rho_rel = density_liquid("SHT", Temperature, SecondarySidePressure) / rho_ref
+    rho_rel = densityH2O_liquid(Temperature, SecondarySidePressure) / rho_ref
     
     
     H_0 = [1.67752, 2.20462, 0.6366564, -0.241605]
@@ -397,11 +386,9 @@ def viscosity(Temperature, SecondarySidePressure):
     return 10 * mu_ref * (mu_0 * mu_1 * mu_2) / (10 ** 6)  # [g/cm s]
 
 
-def heatcapacity(side, Temperature, SecondarySidePressure):
-    if side == "PHT" or side == "PHTS" or side == "phts" or side == "pht":
-        p = PrimarySidePressure
-    else:
-        p = SecondarySidePressure
+def heatcapacityH2O_liquid(Temperature, SecondarySidePressure):
+    
+    p = SecondarySidePressure
     
     ratio_pressures = p / ReferenceValues.p_ref  # p/p*, reduced pressure [unitless]
     ratio_temperatures = ReferenceValues.T_ref / Temperature  # T/T*, reduced temperature [unitless]
@@ -414,22 +401,19 @@ def heatcapacity(side, Temperature, SecondarySidePressure):
     return (-ratio_temperatures ** 2) * Gibbs_TT * R_IAPWS  # [kJ/kg K] ([J/g K] or *H2OMolarMass for [J/mol K]
 
 
-def heat_capacity_d2O(Temperature):
-    None
-#     T = Temperature - 273.15
-#     
-#     Cp = 
-#     
+def heatcapacityD2O_liquid(Temperature):
+    T = Temperature - 273.15 
+    Cp = 0.0003 * (T ** 2) + 0.14747 * T + 22.88590
+    
+    return Cp # J/g K    
 
-def thermal_conductivityH2O(side, Temperature, SecondarySidePressure):
-#     if side == "PHT" or side == "PHTS" or side == "phts" or side=="pht":
-#         p = PrimarySidePressure
-#     else:
-#         p = SecondarySidePressure
+
+def thermal_conductivityH2O_liquid(Temperature, SecondarySidePressure):
+    
+    p = SecondarySidePressure
     T_ref = 647.096  # [K]
-#     p_ref = 22.064 #[MPa]
 
-    ratio_densities = density_liquid(side, Temperature, SecondarySidePressure) / ReferenceValues.rho_ref
+    ratio_densities = densityH2O_liquid(Temperature, p) / ReferenceValues.rho_ref
     ratio_temperatures = Temperature / T_ref
     # ratio_pressures = p/p_ref
 
@@ -460,3 +444,14 @@ def thermal_conductivityH2O(side, Temperature, SecondarySidePressure):
     # [m W/m K] -- > W/cm K
 
     return ((lambda_0 * lambda_1 * ReferenceValues.lambda_ref) / 100) /1000 # [W/ cm K] 
+
+
+def thermal_conductivityD2O_liquid(Temperature):
+    T = Temperature - 273.15 
+    k = -0.0015 * T + 0.9301
+    
+    k_D2O = k / 100 #[ W/cm K]
+    
+    return k_D2O
+
+

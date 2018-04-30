@@ -52,7 +52,7 @@ def initial_chemistry(Loop):
             nc.density_liquid("PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
             ]
         Section.ViscosityH2O = [
-            nc.viscosity("PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
+            nc.viscosity(x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
             ]
         
         Section.FractionFeInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe")
