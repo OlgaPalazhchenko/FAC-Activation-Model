@@ -527,11 +527,12 @@ def Zukauskas_outside_tube_boiling(
     
     A_Cross = (np.pi / 4) * ((ShellDiameter.magnitude ** 2) - (TotalSGTubeNumber * Section.OuterDiameter[i] ** 2))
 
-    Velocity = MassFlow_c_total.magnitude / (nc.densityH2O_liquid(T_sat_secondary, SecondarySidePressure) * A_Cross)
+    Density_l = nc.densityH2O_liquid(T_sat_secondary, SecondarySidePressure)
+    Velocity = MassFlow_c_total.magnitude / (Density_l * A_Cross)
     
     V_max = (TubePitch.magnitude / (TubePitch.magnitude - Section.Diameter[i])) * Velocity
     
-    Re_D_max = V_max * Section.OuterDiameter[i] * nc.densityH2O_liquid(T_sat_secondary, SecondarySidePressure) \
+    Re_D_max = V_max * Section.OuterDiameter[i] * Density_l \
     / nc.viscosityH2O_liquid(T_sat_secondary, SecondarySidePressure)
     
     C1 = 0.40
@@ -652,7 +653,7 @@ def outside_bundle_pool_boiling(
         Correlation, Section, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
         ):
     
-    F = 1.5 # bundle boiling factor (empirical)
+    F = .13 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)

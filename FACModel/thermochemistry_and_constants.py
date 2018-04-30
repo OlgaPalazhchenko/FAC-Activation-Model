@@ -403,7 +403,7 @@ def heatcapacityH2O_liquid(Temperature, SecondarySidePressure):
 
 def heatcapacityD2O_liquid(Temperature):
     T = Temperature - 273.15 
-    Cp = 0.0003 * (T ** 2) + 0.14747 * T + 22.88590
+    Cp = 0.0003 * (T ** 2) - 0.14747 * T + 22.88590
     
     return Cp # J/g K    
 
