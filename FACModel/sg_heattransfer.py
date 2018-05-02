@@ -8,7 +8,10 @@ TotalSGTubeNumber = 3550 - NumberPluggedTubes
 
 YearStartup = 1983.25
 YearCPP = 1988.25
-YearSHTChemicalClean = 1996
+YearOutageRestart = 1996
+YearRefurbishment = 2008.25
+YearRefurbRestart = 2014
+
 
 YearDerates = [1999.75, 2000, 2000.25, 2000.5, 2000.75, 2001, 2001.25, 2001.5, 2001.75, 2002, 2002.25, 20002.5,
                2002.75, 2003, 2003.25, 2003.5, 2003.75, 2004, 2004.25, 2004.5, 2004.75, 2005, 2005.25, 2005.5, 2005.75,
@@ -114,6 +117,8 @@ TubePitch.magnitude = 2.413
 
 
 def cleaned_tubes():
+    #amount of tubes cleaned per each cleaning will have to be custom, e.g., the "0.6" below
+    
     # chooses tube bundles until 60% of total sg tube number reached, adds all chosen to "cleaned" tube list
     Cleaned = []
     NumberTubes = []
@@ -211,22 +216,36 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.0015  # [g/cm^2] /year = 6.5 um /year
-    ReducedTubeGrowth = 0.0004  # [g/cm^2] /year = 3.25 um/year
-        
+    TubeGrowth = 0.00125  # [g/cm^2] /year = 6.5 um /year
+    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
+    
+    InitialAccumulation = 0#0.00025 #g/cm^2
+      
     # between 1983 and 1986 (included)
     if YearStartup <= calendar_year <= YearCPP:
         # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
-        Accumulation = (calendar_year - YearStartup) * TubeGrowth
+        Accumulation = InitialAccumulation + (calendar_year - YearStartup) * TubeGrowth
      
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
-    elif YearCPP < calendar_year < YearSHTChemicalClean:
-        Accumulation = (calendar_year - YearCPP) * ReducedTubeGrowth
+    elif YearCPP < calendar_year < YearOutageRestart:
+        Accumulation = InitialAccumulation + (calendar_year - YearCPP) * ReducedTubeGrowth
     
-    elif calendar_year >= YearSHTChemicalClean:
-        Accumulation = (calendar_year - YearSHTChemicalClean) * ReducedTubeGrowth
+    elif calendar_year >= YearOutageRestart:
+        Accumulation = (calendar_year - YearOutageRestart) * ReducedTubeGrowth
         
+    elif YearRefurbishment < calendar_year < YearRefurbRestart:
+        #no more SHT fouling growth during refurbishment outage - stays at this while those years are run blank
+        Accumulation = (YearRefurbishment - YearOutageRestart) * ReducedTubeGrowth
+    #
+    #
+    #
+    #
+    #
+    # did all of SHT get cleaned?
+    elif calendar_year >= YearRefurbRestart:
+        Accumulation = (calendar_year - YearRefurbRestart) * ReducedTubeGrowth
+    
     Thickness = Accumulation / nc.Fe3O4Density
     
     Fouling = Thickness / thermal_conductivity(None, "outer magnetite", None)
@@ -288,7 +307,6 @@ def primary_convection_resistance(Section, T_PrimaryBulkIn, T_PrimaryWall, x_pht
 #         h_i = in_tube_boiling_LiuWinterton(x_pht, MassFlux_h.magnitude, Diameter, T_PrimaryWall, h_l, i)
 #     else:
     h_i = h_l
-
     return 1 / (h_i * inner_area(Section)[i])  # [K/W]
 
 
@@ -329,12 +347,13 @@ def secondary_convection_resistance(
         h_o = outside_bundle_pool_boiling(
             "FZ", Section, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
             )
-        h_1 = outside_bundle_pool_boiling(
-            "lol", Section, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
-            )
-        h_2 = outside_bundle_pool_boiling(
-            "None", Section, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
-            )
+#         print (h_o, i)
+#         h_1 = outside_bundle_pool_boiling(
+#             "lol", Section, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
+#             )
+#         h_2 = outside_bundle_pool_boiling(
+#             "None", Section, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
+#             )
         
 #         print (h_o, h_1, h_2, i)
         # outside_bundle_pool_boiling(None, T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -448,15 +467,15 @@ def outer_area(Section):
 def pht_steam_quality(Temperature, j):
     calendar_year = (j * nc.TIME_STEP / 8760) + YearStartup
          
-    CoreMassFlow = (1925000 / 1000) * 4  # [kg /s]
-    Delta_T = T_sat_primary - (259.25 + 273.15)  # [K]
-    C_p_cold = nc.heatcapacityD2O_liquid(259.25)
+    CoreMassFlow =  7700  # [kg /s]
+#     Delta_T = T_sat_primary - (259.5 + 273.15)  # [K]
+    C_p_cold = nc.heatcapacityD2O_liquid(259.5 + 273.15)
     C_p_hot = nc.heatcapacityD2O_liquid(T_sat_primary)
     C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
-    
-    Power = CoreMassFlow * C_p_avg * Delta_T  # [kW]
+
+    Power = 2062000 #CoreMassFlow * C_p_avg * Delta_T  # [kW]
     YearDeratingStarts = 1999.75
-    
+
     difference = []
     
     if YearDeratingStarts <= calendar_year <= 2008.25:
@@ -474,19 +493,19 @@ def pht_steam_quality(Temperature, j):
     # core inlet enthalpy at RIHT + that added from fuel
     # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
     H_pht = P / CoreMassFlow
+
     H_satliq_outlet = nc.enthalpyD2O_liquid(T_sat_primary)
-#     nc.enthalpyH2O_liquid(nc.PrimarySidePressure, T_sat_primary)
+#     H_satliq_outlet = nc.enthalpyH2O_liquid(nc.PrimarySidePressure, T_sat_primary)
+    
     # no quality in return primary flow
     H_current = nc.enthalpyD2O_liquid(Temperature) + H_pht
 #     H_current = nc.enthalpyH2O_liquid(nc.PrimarySidePressure, Temperature) + H_pht
-    
     x = (H_current - H_satliq_outlet) / (EnthalpySaturatedSteam.magnitude - H_satliq_outlet)
-    
+
     if x < 0:
         x = 0
     return x
-# print (pht_steam_quality(262.13 +273.15, 876*0))
-
+# print (pht_steam_quality(261.997399293+273.15, 876*0))
 
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
         
@@ -620,17 +639,17 @@ def Cooper_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySideP
 
 def ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure):
 
-    # W/m K thermal conductivity
-    lambda_l = (nc.thermal_conductivityH2O_liquid(T_sat_secondary, SecondarySidePressure) * 100) ** 0.79 
-    #J / g K --> J / kg K, liquid specific heat
-    cp_l = (nc.heatcapacityH2O_liquid(T_sat_secondary, SecondarySidePressure) * 1000) ** 0.45 
-    rho_l = (nc.densityH2O_liquid(T_sat_secondary, SecondarySidePressure) * (100 ** 3) / 1000) ** 0.49 # g/cm^3 --> kg/m^3
+    # W/cm K / 1000 -- > kW/cm K * 100 --> kW/m K thermal conductivity
+    lambda_l = (nc.thermal_conductivityH2O_liquid(T_sat_secondary, SecondarySidePressure) / 10) ** 0.79 
+    #J / g K --> liquid specific heat
+    cp_l = (nc.heatcapacityH2O_liquid(T_sat_secondary, SecondarySidePressure)) ** 0.45 
+    rho_l = (nc.densityH2O_liquid(T_sat_secondary, SecondarySidePressure) * (100 ** 3) / 1000) ** 0.49 # kg/m^3
     rho_v = (nc.densityH2O_vapour(SecondarySidePressure, T_sat_secondary) * (100 ** 3) / 1000) ** 0.24 # kg/m^3
     sigma = (0.024) ** 0.5 #surface tension N/m
     mu = (nc.viscosityH2O_liquid(T_sat_secondary, SecondarySidePressure) / 10) ** 0.29 # liquid viscosity #kg/m s 
     
-    enthalpy_l = nc.enthalpyH2O_liquid(SecondarySidePressure, T_sat_secondary) * 1000 # J / g --> J /kg
-    enthalpy_v = nc.enthalpyH2O_vapour(SecondarySidePressure, T_sat_secondary) * 1000
+    enthalpy_l = nc.enthalpyH2O_liquid(SecondarySidePressure, T_sat_secondary)  # J / g (kJ/kg)
+    enthalpy_v = nc.enthalpyH2O_vapour(SecondarySidePressure, T_sat_secondary) 
     h_lg = (enthalpy_v - enthalpy_l) ** 0.24 
     
     if T_SecondaryWall <= T_sat_secondary:
@@ -643,9 +662,8 @@ def ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, Secondar
     deltaP_sat = (P_w - P_s) ** 0.75 # MPa
         
     h = 0.00122 * lambda_l * cp_l * rho_l * deltaT_sat * deltaP_sat / (sigma * mu * h_lg * rho_v) 
-    
-    h_nb = h / (100 ** 2) # [W/cm^2 K]
-    
+    h_nb = 1000 * h / (100 ** 2) # [kW/cm^2 K]
+
     return h_nb
 
 
@@ -653,11 +671,10 @@ def outside_bundle_pool_boiling(
         Correlation, Section, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
         ):
     
-    F = .13 # bundle boiling factor (empirical)
+    F = .18 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
-        
         #h_nb = Cooper_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
     elif Correlation == "lol":
         h_nb = Cooper_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -672,7 +689,7 @@ def outside_bundle_pool_boiling(
         # outside_tube_boiling_Mostinski(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
 
     h_twophase = F * h_nb
-    
+#     print (h_twophase, h_nb)
     return h_twophase
     
 
@@ -722,11 +739,11 @@ def wall_temperature(
      
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
-    T_SecondaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
+    T_SecondaryWall = T_PrimaryBulkIn - (2 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
     
     A_i = inner_area(Section)[i]
     A_o = outer_area(Section)[i]
-     
+    
     for k in range(100):
         
         WT_h = T_PrimaryWall
@@ -739,13 +756,11 @@ def wall_temperature(
             Section, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i
             )))
         
-        h_o.magnitude = (
-            1 / (secondary_convection_resistance(
+        h_o.magnitude = (1 / (A_o * secondary_convection_resistance(
                 Section, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_in, i
-                ) * A_o)
-                         )
+            )))
         # R = 1/hA --> h=A*1/R
-        
+#         print (A_i, h_i.magnitude, h_o.magnitude, A_o, i) 
         U_h1 = A_i * conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)
         
         U_h2 = (A_i * secondary_convection_resistance(
@@ -785,11 +800,12 @@ def wall_temperature(
             SCR = secondary_convection_resistance(
                 Section, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_in, i
                )
+            
 #             if i ==0:
 #                 print (PCR *100*100, "PCR", conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i)*100*100,\
 #                         "cond", SCR*100*100, "SCR", R_F_primary.magnitude*100*100, "primary fouling", \
 #                         R_F_secondary.magnitude*100*100, "secondary fouling", i)
-            
+              
             # [cm^2 K/W] all resistances (convective, conductive, and fouling)
             inverseU_total = (PCR + conduction_resistance(Section, T_PrimaryWall, SecondarySidePressure, i) + SCR) \
             * A_o + R_F_primary.magnitude + R_F_secondary.magnitude
@@ -889,8 +905,8 @@ def temperature_profile(
             SecondaryWall.append(T_wc)
             HeatFlux.append(q_Flux)
             
-#             if i > 11:
-#                 x_in = (x_in * MassFlow_downcomer.magnitude) / MassFlow_c_total.magnitude
+            if i > 11:
+                x_in = (x_in * MassFlow_downcomer.magnitude) / MassFlow_c_total.magnitude
            
         # preheater sections 
         else:
@@ -961,16 +977,16 @@ def temperature_profile(
 #     print ([j - 273.15 for j in PrimaryBulk])
 #     print ([j-273.15 for j in PrimaryWall])
 #     print ()
-#     print ([j-273.15 for j in SecondaryBulk])
 #     print ([j-273.15 for j in SecondaryWall])
+#     print ([j-273.15 for j in SecondaryBulk])
 #     print()
     return PrimaryBulk, HeatFlux
 
 
 def station_events(calendar_year, x_pht):
-    # Divider plate leakage, mechanical cleaning, and pressure changes 
 
     # Pressure changes only:
+    
     if calendar_year < 1993:
         SecondarySidePressure = 4.593  # MPa
     
@@ -988,30 +1004,46 @@ def station_events(calendar_year, x_pht):
     else:
         None
         
-    # divider plate raplacement in 1995, assumed to stop increase in leak (2% constant going forward)
-    if calendar_year < 1996:
-        # divider plate leakage rates estimated based on AECL work
+    # divider plate raplacement only:
+    
+    if calendar_year < YearOutageRestart: # (1983.25 - 1996)
+        # divider plate leakage rates estimated based on AECL work (2-3.5 % range estimated)
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
         InitialLeakage = 0.025
         YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
+        InitialYear = YearStartup
          
-    elif calendar_year == 1996:
-        InitialLeakage = 0.02  # controls where first post-outage point is
+    elif calendar_year == YearOutageRestart: #1996
+        InitialLeakage = 0.02  # controls where first post-outage point is (underpredicted w/o this)
         YearlyRateLeakage = 0
+        InitialYear = YearOutageRestart
     
-    elif calendar_year > 1996:
-        InitialLeakage = 0.04  # helps second post-outage point rise
+    elif calendar_year > YearOutageRestart: # after 1996
+        InitialLeakage = 0.04  # helps second post-outage point rise (second leak of 2% magnitude initialized)
         YearlyRateLeakage = 0.00035  # either this or some SHT deposits help out Phase 4 from dipping so much
+        InitialYear = YearOutageRestart    
+    
+    elif calendar_year >= YearRefurbRestart: # after and incl. 2014
+        None
     
     else:
-        None 
-    
-    if calendar_year < 1996:
-        Leakage = InitialLeakage + (calendar_year - YearStartup) * YearlyRateLeakage
-    else:
-        Leakage = InitialLeakage + (calendar_year - YearSHTChemicalClean) * YearlyRateLeakage
+        None
         
+    
+    Leakage = InitialLeakage + (calendar_year - InitialYear) * YearlyRateLeakage
+#     if calendar_year < YearOutageRestart:
+#         Leakage = InitialLeakage + (calendar_year - YearStartup) * YearlyRateLeakage
+#     
+#     elif YearOutageRestart <= calendar_year <= YearRefurbishment: # 1996 - 2008.25
+#         Leakage = InitialLeakage + (calendar_year - YearOutageRestart) * YearlyRateLeakage
+    
+    # plateau during outage 
+    
+    if YearRefurbishment < calendar_year < YearRefurbRestart: # (2008.25 - 2014)
+        Leakage = InitialLeakage + (YearRefurbishment - YearOutageRestart) * YearlyRateLeakage
+    
+    
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
     # decreases as divider (bypass) flow increases
     m_h_leakagecorrection = MassFlow_h.magnitude - DividerPlateMassFlow
@@ -1080,5 +1112,5 @@ UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
 CleanedInner = [i * 0.67 for i in UncleanedInner]
 CleanedOuter = [i * 0.67 for i in UncleanedOuter]
              
-print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.002, 876 * 0, SGFastMode="yes")
+print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.0374, 876 * 0, SGFastMode="yes")
 - 273.15)

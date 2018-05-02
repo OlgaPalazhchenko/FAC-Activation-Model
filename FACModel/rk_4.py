@@ -196,6 +196,8 @@ def oxide_growth(
 
 def pht_cleaning(Section, InnerOxide, OuterOxide):
     
+    #need to change cleaning efficiency for each individual clean 
+    
     Inner = []
     Outer = []
     for i in range(Section.NodeNumber):
@@ -223,7 +225,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
         Section.NiThickness = Section.NiThickness
         Section.CoThickness = Section.CoThickness
     
-    elif CurrentYear == 1996:
+    elif CurrentYear == 1996 or CurrentYear == 2014:
         if SGHX.SGFastMode == "yes":
             if Section == SGHX.selected_tubes[0]:
                 [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
@@ -240,6 +242,13 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
             else:
                Section.InnerIronOxThickness = Section.InnerIronOxThickness
                Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness 
+    
+    elif 2008.25 < CurrentYear < 2014:
+        # no oxide growth
+        Section.InnerIronOxThickness = Section.InnerIronOxThickness
+        Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness
+        Section.NiThickness = Section.NiThickness
+        Section.CoThickness = Section.CoThickness
     
     else:
 
@@ -452,8 +461,8 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
     # Ni at each node of current section 
 
     # Silences spalling for desired sections
-#     if Section not in ld.OutletSections:
-    Section.Particle = [0] * Section.NodeNumber 
+    if Section not in ld.OutletSections:
+        Section.Particle = [0] * Section.NodeNumber 
 
     ConvertedConcentrations = []
     Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.SolutionOxide.FeTotal]

@@ -27,7 +27,7 @@ ElementTracking = "no"
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
 
-SimulationYears = 1 # years
+SimulationYears = 13 # years
 SimulationHours = SimulationYears * 876 # 851
 
 
@@ -119,7 +119,7 @@ for j in range(SimulationHours):
     if j % (219) == 0:  # 2190 h * 10 = 4x a year  
         
         if j ==0:
-            x_pht = 0.002 # PHT steam fraction for "clean" boiler
+            x_pht = 0.037 # PHT steam fraction for "clean" boiler
 
         if SGHX.SGFastMode == "yes":
             #pass cleaned and uncleaned tubes into heat transfer function

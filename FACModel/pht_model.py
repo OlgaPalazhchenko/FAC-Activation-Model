@@ -49,10 +49,10 @@ def initial_chemistry(Loop):
         Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
         
         Section.DensityH2O = [
-            nc.density_liquid("PHT", x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
+            nc.densityH2O_liquid(x, nc.PrimarySidePressure) for x in Section.PrimaryBulkTemperature
             ]
         Section.ViscosityH2O = [
-            nc.viscosity(x, SecondarySidePressure) for x in Section.PrimaryBulkTemperature
+            nc.viscosityH2O_liquid(x, nc.PrimarySidePressure) for x in Section.PrimaryBulkTemperature
             ]
         
         Section.FractionFeInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe")
