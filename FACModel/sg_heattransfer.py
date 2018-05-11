@@ -59,24 +59,9 @@ MassFlow_h.magnitude = 1900 * 1000
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
 # 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
 MassFlow_preheater.magnitude = 240 * 1000
-MassFlow_ReheaterDrains = 72 * 1000 / 4
+MassFlow_ReheaterDrains = 0#72 * 1000 / 4
 MassFlow_downcomer.magnitude = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
 MassFlow_c_total.magnitude = MassFlow_downcomer.magnitude + MassFlow_preheater.magnitude + MassFlow_ReheaterDrains
-
-
-# def thermalplate_temp():
-#     LeakageRate = 0.1
-#     MassFlow_recirculation = (1 - LeakageRate) * \
-#     (MassFlow_preheater.magnitude * RecirculationRatio - MassFlow_preheater.magnitude)
-#     Enthalpy_recirculation = nc.enthalpyH2O_liquid(258.66 + 273.15, 4.593)
-#     Enthalpy_preheater = nc.enthalpyH2O_liquid(T_PreheaterIn, 4.593)
-#     
-#     TotalMass = MassFlow_preheater.magnitude * LeakageRate + MassFlow_recirculation
-#     Enthalpy_under_thermalplate = ((Enthalpy_preheater * (MassFlow_preheater.magnitude * LeakageRate)
-#                                    + MassFlow_recirculation * Enthalpy_recirculation) / TotalMass)
-#     
-#     T_under_thermalplate = nc.temperature_from_enthalpyH2O_preheater(Enthalpy_under_thermalplate, 4.593)
-#     return T_under_thermalplate                               
 
 
 ShellDiameter.magnitude = 2.28 * 100
@@ -86,26 +71,6 @@ for i in [MassFlow_c_total, MassFlow_h, MasssFlow_dividerplate, MassFlow_preheat
 
 for i in [ShellDiameter, EquivalentDiameter, TubePitch]:
     i.unit = "cm"
-
-
-def MassFlux_c(Section, i):
-    if Section.Length.label[i] == "opposite preheater":
-        PreheaterDiameter = 1.3 * 100  # [cm]
-        MassFlow = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
-        TotalTubes = TotalSGTubeNumber
-    else:
-        PreheaterDiameter = 0
-        MassFlow = MassFlow_c_total.magnitude
-        TotalTubes = TotalSGTubeNumber  # * 2
-        
-    ShellCrossSectionalArea = (np.pi / 4) * (
-    (ShellDiameter.magnitude ** 2)
-    - (ld.SteamGenerator[0].OuterDiameter[0] ** 2) * TotalTubes
-    - PreheaterDiameter ** 2
-    )
-    Flux = MassFlow / ShellCrossSectionalArea
-    return Flux
-
 
 for i in [MassFlux_c, MassFlux_h]:
     i.unit = "g/cm^2 s"
@@ -154,16 +119,9 @@ def closest_ubend(UbendLength):
     return difference.index(min(difference))
 
 
-SGFastMode = "yes"
-# select all the SG tubes to be run (by arc length)
-UBends = [1.52, 0.685, 2.31, 3.09]
-UBends = [i * 100 for i in UBends]
-TubeLengths = [1887, 1807, 1970, 2046]
-
-
 def tube_picker(method):
     tubes = []
-    tube_number = []
+    tube_number = [] #number (from 0 to 86) of the tube bundle
     
     # selects class initializations based on desired u-bend tube arc lengths
     if method == "arc length": 
@@ -187,8 +145,16 @@ def tube_picker(method):
         
     return tubes, tube_number
 
-    
-if SGFastMode == "yes":
+
+SGFastMode = "yes"
+# select desired SG tubes to be run by arc length
+UBends = [1.52, 0.685, 2.31, 3.09]
+UBends = [i * 100 for i in UBends]
+# select desired tubes to be run by total tube length
+TubeLengths = [1887, 1807, 1970, 2046]
+  
+
+if SGFastMode == "yes": #not all tubes run (only those selected)
     selected_tubes = tube_picker("tube length")[0]
 else:
     #omitting "default" tube so it does not pass through growth function twice
@@ -197,6 +163,25 @@ else:
 tube_number = tube_picker("tube length")[1] 
 
 Cleaned = cleaned_tubes()
+
+
+def MassFlux_c(Section, i):
+    if Section.Length.label[i] == "opposite preheater":
+        PreheaterDiameter = 1.3 * 100  # [cm]
+        MassFlow = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
+        TotalTubes = TotalSGTubeNumber
+    else:
+        PreheaterDiameter = 0
+        MassFlow = MassFlow_c_total.magnitude
+        TotalTubes = TotalSGTubeNumber  # * 2
+        
+    ShellCrossSectionalArea = (np.pi / 4) * (
+    (ShellDiameter.magnitude ** 2)
+    - (ld.SteamGenerator[0].OuterDiameter[0] ** 2) * TotalTubes
+    - PreheaterDiameter ** 2
+    )
+    Flux = MassFlow / ShellCrossSectionalArea
+    return Flux
 
 
 def thermal_conductivity(Twall, material, SecondarySidePressure):
@@ -216,7 +201,7 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Section, i, calendar_year):
     
-    TubeGrowth = 0.00125  # [g/cm^2] /year = 6.5 um /year
+    TubeGrowth = 0.00135  # [g/cm^2] /year = 6.5 um /year
     ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
     
     InitialAccumulation = 0#0.00025 #g/cm^2
@@ -254,14 +239,11 @@ def sludge_fouling_resistance(Section, i, calendar_year):
     
 
 def pht_fouling_resistance(Section, i, calendar_year, InnerAccumulation, OuterAccumulation):
-    if i == 21:
-        ThermalPlateReduction = 0.6
-    else:
-        ThermalPlateReduction = 1
+    
     # [g/cm^2]/[g/cm^3] = [cm]
     # thickness/thermal conductivity [cm]/[W/cm K] = [cm^2 K/W]
     InnerThickness = InnerAccumulation / nc.Fe3O4Density
-    OuterThickness = ThermalPlateReduction * OuterAccumulation / nc.Fe3O4Density 
+    OuterThickness = OuterAccumulation / nc.Fe3O4Density 
 
     # [cm]/ [W/cm K] =[cm^2 K/W]
     # inner deposit is consolidated, predicted to have different thermal resistance than unconsolidated outer ox.
@@ -467,9 +449,9 @@ def outer_area(Section):
 def pht_steam_quality(Temperature, j):
     calendar_year = (j * nc.TIME_STEP / 8760) + YearStartup
          
-    CoreMassFlow =  7700  # [kg /s]
-#     Delta_T = T_sat_primary - (259.5 + 273.15)  # [K]
-    C_p_cold = nc.heatcapacityD2O_liquid(259.5 + 273.15)
+    CoreMassFlow =  7600  # [kg /s]
+    Delta_T = T_sat_primary - (265 + 273.15)  # [K]
+    C_p_cold = nc.heatcapacityD2O_liquid(265 + 273.15)
     C_p_hot = nc.heatcapacityD2O_liquid(T_sat_primary)
     C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
 
@@ -494,7 +476,8 @@ def pht_steam_quality(Temperature, j):
     # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
     H_pht = P / CoreMassFlow
 
-    H_satliq_outlet = nc.enthalpyD2O_liquid(T_sat_primary)
+    H_satliq_outlet = 934.6#nc.enthalpyD2O_liquid(T_sat_primary)
+    
 #     H_satliq_outlet = nc.enthalpyH2O_liquid(nc.PrimarySidePressure, T_sat_primary)
     
     # no quality in return primary flow
@@ -505,8 +488,8 @@ def pht_steam_quality(Temperature, j):
     if x < 0:
         x = 0
     return x
-# print (pht_steam_quality(261.997399293+273.15, 876*0))
 
+# print (pht_steam_quality(261.9+273.15, 876*0))
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
         
     # [J/s] / [g/s] = [J /g]
@@ -671,7 +654,7 @@ def outside_bundle_pool_boiling(
         Correlation, Section, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
         ):
     
-    F = .18 # bundle boiling factor (empirical)
+    F = .185 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -983,7 +966,7 @@ def temperature_profile(
     return PrimaryBulk, HeatFlux
 
 
-def station_events(calendar_year, x_pht):
+def station_events(calendar_year):
 
     # Pressure changes only:
     
@@ -1004,9 +987,10 @@ def station_events(calendar_year, x_pht):
     else:
         None
         
-    # divider plate raplacement only:
     
-    if calendar_year < YearOutageRestart: # (1983.25 - 1996)
+    # Divider plate raplacement only:
+    
+    if calendar_year < YearOutageRestart: # (1983.25 - 1996, not including)
         # divider plate leakage rates estimated based on AECL work (2-3.5 % range estimated)
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
@@ -1015,34 +999,31 @@ def station_events(calendar_year, x_pht):
         InitialYear = YearStartup
          
     elif calendar_year == YearOutageRestart: #1996
-        InitialLeakage = 0.02  # controls where first post-outage point is (underpredicted w/o this)
+        InitialLeakage = 0.03  # controls where first post-outage point is (underpredicted w/o this)
         YearlyRateLeakage = 0
         InitialYear = YearOutageRestart
     
     elif calendar_year > YearOutageRestart: # after 1996
-        InitialLeakage = 0.04  # helps second post-outage point rise (second leak of 2% magnitude initialized)
+        InitialLeakage = 0.05  # helps second post-outage point rise (second leak of 2% magnitude initialized)
         YearlyRateLeakage = 0.00035  # either this or some SHT deposits help out Phase 4 from dipping so much
         InitialYear = YearOutageRestart    
     
-    elif calendar_year >= YearRefurbRestart: # after and incl. 2014
-        None
+    elif YearRefurbishment < calendar_year < YearRefurbRestart: # (2008.25 - 2014)
+        InitialLeakage = (YearRefurbishment - YearOutageRestart) * 0.00035 + 0.05
+        # plateau during outage 
+        YearlyRateLeakage = 0
+        InitialYear = YearRefurbishment #doesn't matter, growth rate is zero throughout refurb outage
     
+    elif calendar_year >= YearRefurbRestart: # after and incl. 2014
+        InitialLeakage = (YearRefurbishment - YearOutageRestart) * 0.0035 + 0.05
+        YearlyRateLeakage = 0.00035
+        InitialYear = YearRefurbRestart
+        
     else:
         None
         
     
     Leakage = InitialLeakage + (calendar_year - InitialYear) * YearlyRateLeakage
-#     if calendar_year < YearOutageRestart:
-#         Leakage = InitialLeakage + (calendar_year - YearStartup) * YearlyRateLeakage
-#     
-#     elif YearOutageRestart <= calendar_year <= YearRefurbishment: # 1996 - 2008.25
-#         Leakage = InitialLeakage + (calendar_year - YearOutageRestart) * YearlyRateLeakage
-    
-    # plateau during outage 
-    
-    if YearRefurbishment < calendar_year < YearRefurbRestart: # (2008.25 - 2014)
-        Leakage = InitialLeakage + (YearRefurbishment - YearOutageRestart) * YearlyRateLeakage
-    
     
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
     # decreases as divider (bypass) flow increases
@@ -1058,9 +1039,7 @@ def energy_balance(
     calendar_year = year + YearStartup
     Energy = []
     
-    [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(
-        calendar_year, x_pht
-        )
+    [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(calendar_year)
     
     for Zone in ld.SteamGenerator:
         if SGFastMode == "yes":
@@ -1112,5 +1091,5 @@ UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
 CleanedInner = [i * 0.67 for i in UncleanedInner]
 CleanedOuter = [i * 0.67 for i in UncleanedOuter]
              
-print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.0374, 876 * 0, SGFastMode="yes")
-- 273.15)
+# print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.0245, 876 * 0, SGFastMode="yes")
+# - 273.15)

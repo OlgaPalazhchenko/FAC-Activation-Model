@@ -149,11 +149,7 @@ def oxide_growth(
                     Dissolution = Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
                     
                     q = OxideGrowth + Dissolution
-                    
-#                     if Section == ld.OutletFeeder:
-#                         if j % (25) == 0:
-#                             print(OxideGrowth - Dissolution, i)
-                
+
                 x = 0  # nothing to dissolve (no outer layer and dissolution conditions)
             
         GrowthOuterMagnetite.append(x)
@@ -194,15 +190,19 @@ def oxide_growth(
     return GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt
     
 
-def pht_cleaning(Section, InnerOxide, OuterOxide):
+def pht_cleaning(Section, InnerOxide, OuterOxide, calendar_year):
     
     #need to change cleaning efficiency for each individual clean 
-    
+    if calendar_year == SGHX.YearOutageRestart:
+        CleaningEfficiency = 0.67
+    elif calendar_year == SGHX.YearRefurbRestart:
+        CleaningEfficiency == 0.4
+        
     Inner = []
     Outer = []
     for i in range(Section.NodeNumber):
         if OuterOxide[i] > 0:
-            OuterOxide[i] = OuterOxide[i] * (1 - 0.67)
+            OuterOxide[i] = OuterOxide[i] * (1 - CleaningEfficiency)
             InnerOxide[i] = InnerOxide[i]
         else:
             InnerOxide[i] = InnerOxide[i]#* (1- 0.67)
@@ -229,7 +229,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
         if SGHX.SGFastMode == "yes":
             if Section == SGHX.selected_tubes[0]:
                 [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
-                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness)
+                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, CurrentYear)
             else:
                 Section.InnerIronOxThickness = Section.InnerIronOxThickness
                 Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness 
@@ -238,7 +238,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
             
             if Section in SGHX.Cleaned:
                 [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
-                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness)
+                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, CurrentYear)
             else:
                Section.InnerIronOxThickness = Section.InnerIronOxThickness
                Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness 

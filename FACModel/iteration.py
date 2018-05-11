@@ -3,19 +3,13 @@ import numpy as np
 import thermochemistry_and_constants as nc
 import composition as c
 import electrochemistry as e
+import sg_heattransfer as SGHX
 
 # Activation Energies [J/mol]
 
 #High FAC (80-100 um/a):
 # Fe: 264860.0725
 # H2: 262286.4165
-
-#Mid FAC (25-40 um/a):
-# Fe: 270812.6057
-# H2: 268238.9496
-
-ACTIVATION_ENERGY_Fe = 264860.0725
-ACTIVATION_ENERGY_H2onFe = 262286.4165
 
 ACTIVATION_ENERGY_ALLOY800 = 321276.4779
 ACTIVATION_ENERGYH2onALLOY800 = 310324.6997
@@ -232,8 +226,21 @@ def EmpiricalFAC_solver(Section):
 
 
 
-def FAC_solver(Section, ConstantRate):
+def FAC_solver(Section, ConstantRate, j):
     
+    year = (j * nc.TIME_STEP / 8760) 
+    calendar_year = year +  SGHX.YearStartup
+    
+    if calendar_year < SGHX.YearRefurbRestart:
+        ACTIVATION_ENERGY_Fe = 264860.0725
+        ACTIVATION_ENERGY_H2onFe = 262286.4165
+    
+    #higher Cr-content CS feeder replacement
+    else:
+        #Mid FAC (25-40 um/a):
+        ACTIVATION_ENERGY_Fe = 270812.6057
+        ACTIVATION_ENERGY_H2onFe = 268238.9496        
+        
     # updates hydrolysis distribution of Fe species. Even if FAC rate kept constant, oxide thickness changes
     # M/O Fe total concentration changes w.r.t. thickness, so species cncentrations change too
     [ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2] = c.hydrolysis(
@@ -354,7 +361,7 @@ def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturati
             Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
             Section.CorrRate
             )
-        Section.CorrRate, Section.MetalOxide.MixedPotential = FAC_solver(Section, ConstantRate)
+        Section.CorrRate, Section.MetalOxide.MixedPotential = FAC_solver(Section, ConstantRate, j)
 
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
         Section.MetalOxide.NiTotal = MetalOxideInterfaceConcentration(

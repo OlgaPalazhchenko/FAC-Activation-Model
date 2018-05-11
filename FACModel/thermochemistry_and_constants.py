@@ -44,8 +44,8 @@ NiDensity = 8.908
 Alloy800Density = 7.94
 CoDensity = 8.9
 
-Fe3O4Porosity_inner = 0.05
-Fe3O4Porosity_outer = 0.5
+Fe3O4Porosity_inner = 0.1
+Fe3O4Porosity_outer = 0.3
 # FeCr2O4Porosity = 0.15
 Fe3O4Tortuosity = 2
 FeCr2O4Tortuosity = 1.2
@@ -57,7 +57,7 @@ CoDiffusivity = 0.00041
 
 # Kinetic precipitation/dissolution constants [cm/s]
 KpFe3O4 = .07
-KdFe3O4 = .2
+KdFe3O4 = .08
 # KpFe_Ferrite = 0.014 #same as magnetite precipitation
 # KdFe_Ferrite  = 0.044 'same as magnetite dissolution
 

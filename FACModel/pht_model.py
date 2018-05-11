@@ -11,9 +11,7 @@ from operator import itemgetter
 
 def initial_chemistry(Loop):
     
-    [SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(
-        SGHX.YearStartup, x_pht= 0.002
-        )
+    [SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(SGHX.YearStartup)
     # initial temperatures in steam generator(s)
     
     if Loop == "full":
@@ -105,7 +103,7 @@ def initial_chemistry(Loop):
         if Section in ld.FuelSections:
             Section.CorrRate == [0] * Section.NodeNumber
         else:
-            Section.CorrRate, Section.MetalOxide.MixedPotential = it.FAC_solver(Section, "yes")
+            Section.CorrRate, Section.MetalOxide.MixedPotential = it.FAC_solver(Section, "yes", j=0)
             
         
         Section.KpFe3O4electrochem = [nc.KpFe3O4] * Section.NodeNumber
@@ -119,6 +117,8 @@ def initial_chemistry(Loop):
 #             Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
 #             Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
 #             )
+
+
 
 Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
 
