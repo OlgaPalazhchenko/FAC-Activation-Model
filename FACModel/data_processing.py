@@ -27,8 +27,7 @@ ElementTracking = "no"
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
 
-SimulationYears = 1 # years
-SimulationHours = SimulationYears * 876 # 851
+
 
 
 if OutputLogging == "yes":
@@ -57,28 +56,7 @@ if OutputLogging == "yes":
         Years.append((i / 4) + SGHX.YearStartup)
 
 
-def sg_heat_transfer(Outlet, InletInput, j):
-    Tubes = []
-    # Set input concentrations for all SG zones to be same as output of outlet feeder
-    BulkOutletActivityOutput = [
-        Outlet.Bulk.Co60, Outlet.Bulk.Co58, Outlet.Bulk.Fe59, Outlet.Bulk.Fe55, Outlet.Bulk.Cr51, Outlet.Bulk.Mn54,
-        Outlet.Bulk.Ni63
-        ]
-    
-    BulkOutletOutput = [Outlet.Bulk.FeTotal, Outlet.Bulk.NiTotal, Outlet.Bulk.CoTotal, Outlet.Bulk.CrTotal]
-    
-    for Tube in SGHX.selected_tubes:
-        BulkSGInput = [Tube.Bulk.FeTotal, Tube.Bulk.NiTotal, Tube.Bulk.CoTotal, Tube.Bulk.CrTotal]
-        BulkSGActivityInput = [
-        Tube.Bulk.Co60, Tube.Bulk.Co58, Tube.Bulk.Fe59, Tube.Bulk.Fe55, Tube.Bulk.Cr51, Tube.Bulk.Mn54, Tube.Bulk.Ni63
-        ]
-        for x, y, z, q in zip(BulkSGInput, BulkOutletOutput, BulkSGActivityInput, BulkOutletActivityOutput):
-            x[0] = y[Outlet.NodeNumber - 1]
-            z[0] = q[Outlet.NodeNumber - 1]
-        
-        w = pht_model.PHT_FAC(Tube, InletInput, ElementTracking, Activation, ConstantRate, j)   
-        Tubes.append(w)
-    return Tubes
+
 
 
 import time
@@ -89,94 +67,94 @@ pht_model.initial_chemistry(Loop)
 
 # def CANDU_loop_chooser(SimulationHours, ConstantRate, Purification, Activation, OutputLogging, ElementTracking, Loop):
     
-for j in range(SimulationHours):
-    In = pht_model.PHT_FAC(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j)
-    Co = pht_model.PHT_FAC(ld.FuelChannel, ld.OutletFeeder, ElementTracking, Activation, ConstantRate, j)
-    Ou = pht_model.PHT_FAC(
-        ld.OutletFeeder, ld.SteamGenerator[Default_Tube], ElementTracking, Activation, ConstantRate, j
-        ) 
-    if Loop == "full":
-        InletInput = ld.InletFeeder_2
-    else:
-        InletInput = ld.InletFeeder
-    
-    Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j)
-    SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput, j)
-    
-    if Loop == "full":
-        In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, ElementTracking, Activation, ConstantRate, j)
-        Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, ElementTracking, Activation, ConstantRate, j)
-        Ou_2 = pht_model.PHT_FAC(
-            ld.OutletFeeder_2, ld.SteamGenerator_2[SGHX.tube_number[0]], ElementTracking, Activation, ConstantRate,
-            j
-            )
-        Sg_2 = pht_model.PHT_FAC(
-            ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
-            )
-        SteamGeneratorTubes_2 = sg_heat_transfer(Ou_2.Section1, ld.InletFeeder, j)   
-    
-    if j % (219) == 0:  # 2190 h * 10 = 4x a year  
-        
-        if j ==0:
-            x_pht = 0.0245 # PHT steam fraction for "clean" boiler
-
-        if SGHX.SGFastMode == "yes":
-            #pass cleaned and uncleaned tubes into heat transfer function
-            CleanedInnerOxide = SteamGeneratorTubes[0].Section1.InnerOxThickness
-            CleanedOuterOxide = SteamGeneratorTubes[0].Section1.OuterOxThickness
-             
-            UncleanedInnerOxide = Sg.Section1.InnerOxThickness
-            UncleanedOuterOxide = Sg.Section1.OuterOxThickness
-        else:
-            CleanedInnerOxide = None
-            CleanedOuterOxide = None
-
-            UncleanedInnerOxide = None
-            UncleanedOuterOxide = None
-            
-        # parameters tracked with time 
-        T_RIH = (SGHX.energy_balance(
-            ld.SteamGenerator[Default_Tube].NodeNumber - 1, UncleanedInnerOxide, UncleanedOuterOxide,
-            CleanedInnerOxide, CleanedOuterOxide, x_pht, j, SGHX.SGFastMode) - 273.15)
-
-
-        print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, T_RIH)
-        x_pht = SGHX.pht_steam_quality(T_RIH + 273.15, j)
-        
-        InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
-        for Section in ld.HalfLoop:
-            Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)
-            
-        if OutputLogging == "yes":
-#             Time.append(j)
-            # S/O concentrations are updated individually in code, e.g., self.Section1.FeTotal
-            # Bulk concentrations are not, so same location is pointed to, so all places self.Section1.Bulk.FeTotal
-            # was used change to updated values, even previously appended values
-            # new list needs to be created for bulk concentrations only
-#             x = list(In.Section1.Bulk.FeTotal)
-            
-#             SGOxide.append(Sg.Section1.OuterFe3O4Thickness)
-#             OutletOxide.append(Ou.Section1.InnerIronOxThickness)
-#             InletBulkConcentration.append(x)
-#             OutletSOConcentration.append(Ou.Section1.SolutionOxide.FeTotal)
-            OutletCorrosionRate.append(Ou.Section1.CorrRate)
-            
-            RIHT.append(T_RIH)
-            pht_SteamFraction.append(x_pht)
-            Temperature1 = (
-                ld.SteamGenerator[SGHX.tube_number[0]].PrimaryBulkTemperature[21] - 273.15
-                           )
-            OutletTemperatures1.append(Temperature1)
-            
-            # if multiple tubes arc/total lengths are run
-            if len(SGHX.selected_tubes) > 1:
-                Temperature2 = (
-                    ld.SteamGenerator[SGHX.tube_number[1]].PrimaryBulkTemperature[21] - 273.15
-                               )
-                OutletTemperatures2.append(Temperature2)
-            
-    else:
-        None
+# for j in range(SimulationHours):
+#     In = pht_model.PHT_FAC(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j)
+#     Co = pht_model.PHT_FAC(ld.FuelChannel, ld.OutletFeeder, ElementTracking, Activation, ConstantRate, j)
+#     Ou = pht_model.PHT_FAC(
+#         ld.OutletFeeder, ld.SteamGenerator[Default_Tube], ElementTracking, Activation, ConstantRate, j
+#         ) 
+#     if Loop == "full":
+#         InletInput = ld.InletFeeder_2
+#     else:
+#         InletInput = ld.InletFeeder
+#     
+#     Sg = pht_model.PHT_FAC(ld.SteamGenerator[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j)
+#     SteamGeneratorTubes = sg_heat_transfer(Ou.Section1, InletInput, j)
+#     
+#     if Loop == "full":
+#         In_2 = pht_model.PHT_FAC(ld.InletFeeder_2, ld.FuelChannel_2, ElementTracking, Activation, ConstantRate, j)
+#         Co_2 = pht_model.PHT_FAC(ld.FuelChannel_2, ld.OutletFeeder_2, ElementTracking, Activation, ConstantRate, j)
+#         Ou_2 = pht_model.PHT_FAC(
+#             ld.OutletFeeder_2, ld.SteamGenerator_2[SGHX.tube_number[0]], ElementTracking, Activation, ConstantRate,
+#             j
+#             )
+#         Sg_2 = pht_model.PHT_FAC(
+#             ld.SteamGenerator_2[SGHX.tube_number[0]], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
+#             )
+#         SteamGeneratorTubes_2 = sg_heat_transfer(Ou_2.Section1, ld.InletFeeder, j)   
+#     
+#     if j % (219) == 0:  # 2190 h * 10 = 4x a year  
+#         
+#         if j ==0:
+#             x_pht = 0.0245 # PHT steam fraction for "clean" boiler
+# 
+#         if SGHX.SGFastMode == "yes":
+#             #pass cleaned and uncleaned tubes into heat transfer function
+#             CleanedInnerOxide = SteamGeneratorTubes[0].Section1.InnerOxThickness
+#             CleanedOuterOxide = SteamGeneratorTubes[0].Section1.OuterOxThickness
+#              
+#             UncleanedInnerOxide = Sg.Section1.InnerOxThickness
+#             UncleanedOuterOxide = Sg.Section1.OuterOxThickness
+#         else:
+#             CleanedInnerOxide = None
+#             CleanedOuterOxide = None
+# 
+#             UncleanedInnerOxide = None
+#             UncleanedOuterOxide = None
+#             
+#         # parameters tracked with time 
+#         T_RIH = (SGHX.energy_balance(
+#             ld.SteamGenerator[Default_Tube].NodeNumber - 1, UncleanedInnerOxide, UncleanedOuterOxide,
+#             CleanedInnerOxide, CleanedOuterOxide, x_pht, j, SGHX.SGFastMode) - 273.15)
+# 
+# 
+#         print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, T_RIH)
+#         x_pht = SGHX.pht_steam_quality(T_RIH + 273.15, j)
+#         
+#         InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
+#         for Section in ld.HalfLoop:
+#             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)
+#             
+#         if OutputLogging == "yes":
+# #             Time.append(j)
+#             # S/O concentrations are updated individually in code, e.g., self.Section1.FeTotal
+#             # Bulk concentrations are not, so same location is pointed to, so all places self.Section1.Bulk.FeTotal
+#             # was used change to updated values, even previously appended values
+#             # new list needs to be created for bulk concentrations only
+# #             x = list(In.Section1.Bulk.FeTotal)
+#             
+# #             SGOxide.append(Sg.Section1.OuterFe3O4Thickness)
+# #             OutletOxide.append(Ou.Section1.InnerIronOxThickness)
+# #             InletBulkConcentration.append(x)
+# #             OutletSOConcentration.append(Ou.Section1.SolutionOxide.FeTotal)
+#             OutletCorrosionRate.append(Ou.Section1.CorrRate)
+#             
+#             RIHT.append(T_RIH)
+#             pht_SteamFraction.append(x_pht)
+#             Temperature1 = (
+#                 ld.SteamGenerator[SGHX.tube_number[0]].PrimaryBulkTemperature[21] - 273.15
+#                            )
+#             OutletTemperatures1.append(Temperature1)
+#             
+#             # if multiple tubes arc/total lengths are run
+#             if len(SGHX.selected_tubes) > 1:
+#                 Temperature2 = (
+#                     ld.SteamGenerator[SGHX.tube_number[1]].PrimaryBulkTemperature[21] - 273.15
+#                                )
+#                 OutletTemperatures2.append(Temperature2)
+#             
+#     else:
+#         None
 
 
 

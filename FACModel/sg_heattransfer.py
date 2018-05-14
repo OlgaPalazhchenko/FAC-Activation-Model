@@ -119,26 +119,26 @@ def closest_ubend(UbendLength):
     return difference.index(min(difference))
 
 
-def tube_picker(method):
+def tube_picker(Method, SteamGenerator):
     tubes = []
     tube_number = [] #number (from 0 to 86) of the tube bundle
     
     # selects class initializations based on desired u-bend tube arc lengths
-    if method == "arc length": 
+    if Method == "arc length": 
         for k in UBends:  # want multiple u-bends
             x = closest_ubend(k)
             tube_number.append(x)
 
         for i in tube_number:
-            tubes.append(ld.SteamGenerator[i])
+            tubes.append(SteamGenerator[i])
     # selects class initializations based on desired overall tube lengths        
-    elif method == "tube length":
+    elif Method == "tube length":
         for k in TubeLengths:
             x = closest_tubelength(k)
             tube_number.append(x)
         
         for i in tube_number:
-            tubes.append(ld.SteamGenerator[i])
+            tubes.append(SteamGenerator[i])
     
     else:
         None
@@ -155,10 +155,12 @@ TubeLengths = [1887, 1807, 1970, 2046]
   
 
 if SGFastMode == "yes": #not all tubes run (only those selected)
-    selected_tubes = tube_picker("tube length")[0]
+    selected_tubes_1 = tube_picker("tube length", ld.SteamGenerator)[0]
+    selected_tubes_2 = tube_picker("tube length", ld.SteamGenerator_2[0])
 else:
     #omitting "default" tube so it does not pass through growth function twice
-    selected_tubes = ld.SteamGenerator[0:57] + ld.SteamGenerator[58:87]
+    selected_tubes_1 = ld.SteamGenerator[0:57] + ld.SteamGenerator[58:87]
+    selected_tubes_2 = ld.SteamGenerator_2[0:57] + ld.SteamGenerator_2[58:87]
 
 tube_number = tube_picker("tube length")[1] 
 
@@ -1032,31 +1034,39 @@ def station_events(calendar_year):
     return SecondarySidePressure, m_h_leakagecorrection, DividerPlateMassFlow
 
 
-def energy_balance(
-        SteamGeneratorOutputNode, InnerOxide, OuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j, SGFastMode
-        ):
+def energy_balance(SteamGenerator, InnerOxide, OuterOxide, x_pht, j, SGFastMode):
+# def energy_balance(SteamGenerator, InnerOxide, OuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j, SGFastMode):
+    
     year = (j * nc.TIME_STEP / 8760) 
     calendar_year = year + YearStartup
     Energy = []
     
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(calendar_year)
     
-    for Zone in ld.SteamGenerator:
+    if SteamGenerator == ld.SteamGenerator:
+            selected_tubes = selected_tubes_1
+    elif SteamGenerator == ld.SteamGenerator_2:
+        selected_tubes = selected_tubes_2
+    
+    for Zone in SteamGenerator:
         if SGFastMode == "yes":
-            if Zone in selected_tubes:
+            if Zone in selected_tubes or Zone in Cleaned:
                 # tracks oxide growth for these tubes specifically
                 InnerOx = Zone.InnerOxThickness
                 OuterOx = Zone.OuterOxThickness
   
             else:  # assumes same growth as in default passed tube for remaining tubes
+                InnerOx = InnerOxide
+                OuterOx = OuterOxide
+                
                 # pass through default cleaned and not cleaned tubes
-                if Zone in Cleaned:   
-                    InnerOx = CleanedInnerOxide
-                    OuterOx = CleanedOuterOxide
-                  
-                else:
-                    InnerOx = InnerOxide
-                    OuterOx = OuterOxide
+#                 if Zone in Cleaned:   
+#                     InnerOx = CleanedInnerOxide
+#                     OuterOx = CleanedOuterOxide
+#                   
+#                 else:
+#                     InnerOx = InnerOxide
+#                     OuterOx = OuterOxide
         else:
             InnerOx = Zone.InnerOxThickness
             OuterOx = Zone.OuterOxThickness
