@@ -3,6 +3,9 @@ import numpy as np
 import thermochemistry_and_constants as nc
 import random
 
+SGFastMode = "yes"
+Method = "tube length"
+
 NumberPluggedTubes = 8
 TotalSGTubeNumber = 3550 - NumberPluggedTubes
 
@@ -12,15 +15,9 @@ YearOutageRestart = 1996
 YearRefurbishment = 2008.25
 YearRefurbRestart = 2014
 
-
-YearDerates = [1999.75, 2000, 2000.25, 2000.5, 2000.75, 2001, 2001.25, 2001.5, 2001.75, 2002, 2002.25, 20002.5,
-               2002.75, 2003, 2003.25, 2003.5, 2003.75, 2004, 2004.25, 2004.5, 2004.75, 2005, 2005.25, 2005.5, 2005.75,
-               2006, 2006.25, 2006.5, 2006.75, 2007, 2007.25, 2007.5, 2007.75, 2008.25]
-
-PercentDerates = [3, 4, 4.8, 5, 5.5, 4.07, 3.23, 3.43, 3.77, 4.27, 4.61, 4.74, 3.33, 3.64, 3.15, 4.08, 4, 3.88, 3.74,
-                  4.18, 4.97, 5.17, 5.24, 6.30, 6.97, 7.41, 7.89, 8.29, 8.5, 8.75, 8.87, 9.39, 9, 9, 9]
-
-PercentDerates = [i - 1 for i in PercentDerates]
+T_sat_primary = 309.24 + 273.15
+T_PreheaterIn = 186.5 + 273.15
+RecirculationRatio = 5.3
 
 
 h_i = nc.SGParameters()
@@ -51,10 +48,6 @@ for i in [U_h, U_c, U_total]:
 for i in [R_F_primary, R_F_secondary]:
     i.unit = "cm^2 K/W"
 
-T_sat_primary = 309.24 + 273.15
-T_PreheaterIn = 186.5 + 273.15
-RecirculationRatio = 5.3
-
 MassFlow_h.magnitude = 1900 * 1000
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
 # 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
@@ -81,7 +74,7 @@ EnthalpySaturatedSteam.unit = "J/g"
 TubePitch.magnitude = 2.413
 
 
-def cleaned_tubes():
+def primaryside_cleaned_tubes():
     #amount of tubes cleaned per each cleaning will have to be custom, e.g., the "0.6" below
     
     # chooses tube bundles until 60% of total sg tube number reached, adds all chosen to "cleaned" tube list
@@ -92,7 +85,7 @@ def cleaned_tubes():
         x = random.randint(0, 86)
         NumberTubes.append(ld.SteamGenerator[x].TubeNumber)
         
-        # siva blast used on only 60% of tubes due to time/spacial constraints
+        # siva blast in 1995 used on only 60% of tubes due to time/spacial constraints
         if sum(NumberTubes) <= (0.6 * TotalSGTubeNumber):
             Cleaned.append(ld.SteamGenerator[x])
         else:
@@ -102,14 +95,19 @@ def cleaned_tubes():
 
 
 def closest_tubelength(TubeLength):
+    # input = desired tube length
+    # function scans through all available 87 lengths and outputs the number of the tube that has the closest length
+    
     difference = []
     for Zone in ld.SteamGenerator:
         difference.append(abs(TubeLength - Zone.Distance[Zone.NodeNumber - 1]))
+    
     return difference.index(min(difference))
 
 
-# searches through all u-bend arc lengths and chooses the one closest to input
 def closest_ubend(UbendLength):
+    # searches through all 87 u-bend arc lengths and chooses the one closest to input
+    
     difference = []
     for i in ld.u_bend_total:
         # calculates differences between input Number and all others in given list
@@ -123,7 +121,7 @@ def tube_picker(Method, SteamGenerator):
     tubes = []
     tube_number = [] #number (from 0 to 86) of the tube bundle
     
-    # selects class initializations based on desired u-bend tube arc lengths
+    # selects class initializations (for desired steam generator) based on desired u-bend tube arc lengths
     if Method == "arc length": 
         for k in UBends:  # want multiple u-bends
             x = closest_ubend(k)
@@ -146,25 +144,17 @@ def tube_picker(Method, SteamGenerator):
     return tubes, tube_number
 
 
-SGFastMode = "yes"
+Default_Tube = closest_ubend(1.52 * 100)
+
+
 # select desired SG tubes to be run by arc length
-UBends = [1.52, 0.685, 2.31, 3.09]
+UBends = [1.49, 0.685, 2.31, 3.09]
 UBends = [i * 100 for i in UBends]
 # select desired tubes to be run by total tube length
 TubeLengths = [1887, 1807, 1970, 2046]
-  
 
-if SGFastMode == "yes": #not all tubes run (only those selected)
-    selected_tubes_1 = tube_picker("tube length", ld.SteamGenerator)[0]
-    selected_tubes_2 = tube_picker("tube length", ld.SteamGenerator_2[0])
-else:
-    #omitting "default" tube so it does not pass through growth function twice
-    selected_tubes_1 = ld.SteamGenerator[0:57] + ld.SteamGenerator[58:87]
-    selected_tubes_2 = ld.SteamGenerator_2[0:57] + ld.SteamGenerator_2[58:87]
 
-tube_number = tube_picker("tube length")[1] 
-
-Cleaned = cleaned_tubes()
+Cleaned = primaryside_cleaned_tubes()
 
 
 def MassFlux_c(Section, i):
@@ -449,6 +439,16 @@ def outer_area(Section):
 
 
 def pht_steam_quality(Temperature, j):
+    
+    YearDerates = [1999.75, 2000, 2000.25, 2000.5, 2000.75, 2001, 2001.25, 2001.5, 2001.75, 2002, 2002.25, 20002.5,
+               2002.75, 2003, 2003.25, 2003.5, 2003.75, 2004, 2004.25, 2004.5, 2004.75, 2005, 2005.25, 2005.5, 2005.75,
+               2006, 2006.25, 2006.5, 2006.75, 2007, 2007.25, 2007.5, 2007.75, 2008.25]
+    
+    PercentDerates = [3, 4, 4.8, 5, 5.5, 4.07, 3.23, 3.43, 3.77, 4.27, 4.61, 4.74, 3.33, 3.64, 3.15, 4.08, 4, 3.88,
+                      3.74, 4.18, 4.97, 5.17, 5.24, 6.30, 6.97, 7.41, 7.89, 8.29, 8.5, 8.75, 8.87, 9.39, 9, 9, 9]
+    
+    PercentDerates = [i - 1 for i in PercentDerates]
+    
     calendar_year = (j * nc.TIME_STEP / 8760) + YearStartup
          
     CoreMassFlow =  7600  # [kg /s]
@@ -656,7 +656,7 @@ def outside_bundle_pool_boiling(
         Correlation, Section, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
         ):
     
-    F = .185 # bundle boiling factor (empirical)
+    F = .18 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -1034,7 +1034,7 @@ def station_events(calendar_year):
     return SecondarySidePressure, m_h_leakagecorrection, DividerPlateMassFlow
 
 
-def energy_balance(SteamGenerator, InnerOxide, OuterOxide, x_pht, j, SGFastMode):
+def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
 # def energy_balance(SteamGenerator, InnerOxide, OuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j, SGFastMode):
     
     year = (j * nc.TIME_STEP / 8760) 
@@ -1043,39 +1043,55 @@ def energy_balance(SteamGenerator, InnerOxide, OuterOxide, x_pht, j, SGFastMode)
     
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(calendar_year)
     
-    if SteamGenerator == ld.SteamGenerator:
-            selected_tubes = selected_tubes_1
-    elif SteamGenerator == ld.SteamGenerator_2:
-        selected_tubes = selected_tubes_2
-    
     for Zone in SteamGenerator:
+        
         if SGFastMode == "yes":
-            if Zone in selected_tubes or Zone in Cleaned:
+            
+            #not all tubes run (only those selected)
+            selected_tubes = tube_picker(Method, SteamGenerator)[0]
+            
+            if Zone in selected_tubes:
                 # tracks oxide growth for these tubes specifically
                 InnerOx = Zone.InnerOxThickness
                 OuterOx = Zone.OuterOxThickness
+            
+            elif Zone in Cleaned:
+                # first tube in selected tube list (for that steam generator) simulates all cleaned tubes in "fast mode"
+                CleanedTubeNumber = tube_picker(Method, SteamGenerator)[1][0]
+                CleanedInnerOxide = SteamGenerator[CleanedTubeNumber].InnerOxThickness
+                CleanedOuterOxide = SteamGenerator[CleanedTubeNumber].OuterOxThickness
+                
+                InnerOx = CleanedInnerOxide
+                OuterOx = CleanedOuterOxide
   
             else:  # assumes same growth as in default passed tube for remaining tubes
-                InnerOx = InnerOxide
-                OuterOx = OuterOxide
                 
-                # pass through default cleaned and not cleaned tubes
-#                 if Zone in Cleaned:   
-#                     InnerOx = CleanedInnerOxide
-#                     OuterOx = CleanedOuterOxide
-#                   
-#                 else:
-#                     InnerOx = InnerOxide
-#                     OuterOx = OuterOxide
+                DefaultUncleanedInnerOxide = SteamGenerator[Default_Tube].InnerOxThickness
+                DefaultUncleanedOuterOxide = SteamGenerator[Default_Tube].OuterOxThickness
+                
+                InnerOx = DefaultUncleanedInnerOxide
+                OuterOx = DefaultUncleanedOuterOxide
+                
+        # in non-fast-mode all tubes are passed through (all cleaned/uncleaned) through oxide growth functions
         else:
-            InnerOx = Zone.InnerOxThickness
-            OuterOx = Zone.OuterOxThickness
+            
+            # prevents default (1.52 m, 57th index number) tube from being run twice through PHTS/oxide growth functions
+            selected_tubes= SteamGenerator[0:57] + SteamGenerator[58:87]
+            # if want to select all tubes as selected tubes
+            
+            if Zone in selected_tubes:
+                # tracks oxide growth for all tubes
+                InnerOx = Zone.InnerOxThickness
+                OuterOx = Zone.OuterOxThickness
+            else:
+                None
                        
         
         [Zone.PrimaryBulkTemperature, Zone.HeatFlux] = temperature_profile(
             Zone, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, calendar_year
             )
         
+        SteamGeneratorOutputNode = SteamGenerator[Default_Tube].NodeNumber - 1
         
         m_timesH = (Zone.TubeNumber / TotalSGTubeNumber) * RemainingPHTMassFlow \
         * nc.enthalpyD2O_liquid(Zone.PrimaryBulkTemperature[SteamGeneratorOutputNode])
@@ -1095,11 +1111,5 @@ def energy_balance(SteamGenerator, InnerOxide, OuterOxide, x_pht, j, SGFastMode)
 
     return RIHT
 
- 
-UncleanedInner = ld.SteamGenerator[12].InnerOxThickness
-UncleanedOuter = ld.SteamGenerator[12].InnerOxThickness
-CleanedInner = [i * 0.67 for i in UncleanedInner]
-CleanedOuter = [i * 0.67 for i in UncleanedOuter]
              
-# print (energy_balance(21, UncleanedInner, UncleanedOuter, CleanedInner, CleanedOuter, 0.0245, 876 * 0, SGFastMode="yes")
-# - 273.15)
+print (energy_balance(ld.SteamGenerator, 0.0245, 876 * 0, SGFastMode="yes")- 273.15)

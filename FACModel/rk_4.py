@@ -8,6 +8,7 @@ import random
 import sg_heattransfer as SGHX
 from lepreau_data import SteamGeneratorSections
 
+
 # Spalling thermochemistry_and_constants depend heavily on particle size distribution
 OUTLET_OUTER_SPALL_CONSTANT = 5
 OUTLET_INNER_SPALL_CONSTANT = 5
@@ -226,13 +227,20 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
         Section.CoThickness = Section.CoThickness
     
     elif CurrentYear == 1996 or CurrentYear == 2014:
+        
         if SGHX.SGFastMode == "yes":
-            if Section == SGHX.selected_tubes[0]:
-                [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
-                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, CurrentYear)
+            if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
+            
+                SelectedTubes = SGHX.tube_picker(SGHX.Method, Section)[0]
+                
+                if Section == SelectedTubes[0]: #first tube from list of desired tubes per each SG
+                    [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
+                    Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, CurrentYear)
+                else:
+                    Section.InnerIronOxThickness = Section.InnerIronOxThickness
+                    Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness
             else:
-                Section.InnerIronOxThickness = Section.InnerIronOxThickness
-                Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness 
+                None 
         
         else: #all sg tubes run    
             

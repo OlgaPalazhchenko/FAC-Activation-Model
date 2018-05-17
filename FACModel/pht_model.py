@@ -7,42 +7,59 @@ import electrochemistry as e
 import iteration as it
 import sg_heattransfer as SGHX
 
-from operator import itemgetter
+# from operator import itemgetter
 
-def initial_chemistry(Loop):
+Loop = "half"
+OutputLogging = "yes"
+ConstantRate = "yes" # preset corrosion rate instead of calculated from FAC model
+Purification = "yes"
+Activation = "no"
+OutputLogging = "yes"
+ElementTracking = "no"
+
+if Loop == "half":
+    Sections = ld.HalfLoop
+elif Loop == "full":
+    Sections = ld.FullLoop
+else:
+    None
+
+
+def initial_chemistry():
     
     [SecondarySidePressure, RemainingPHTMassFlow, DividerPlateMassFlow] = SGHX.station_events(SGHX.YearStartup)
     # initial temperatures in steam generator(s)
-    
-    if Loop == "full":
-        # if full loop selected, both steam generators iterated through for initial temperatures (87 bundles each)
-        Sections = ld.FullLoop
-#         for Zone in ld.SteamGenerator_2:
-#             Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
-#             Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure, 1983
-#             )       
-    elif Loop == "half":
-        Sections = ld.HalfLoop
-    
-    elif Loop == "single tube":
-        Sections = ld.SingleTubeLoop
-    else:
-        None
    
-    if Loop == "full" or Loop == "half":
-        for Zone in ld.SteamGenerator:
-            Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
-            Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure,
-            x_pht=0.002, calendar_year=SGHX.YearStartup
-            )
-    else:
-        ld.SteamGenerator[57].PrimaryBulkTemperature = SGHX.temperature_profile(
-            ld.SteamGenerator[57], ld.SteamGenerator[57].InnerOxThickness, ld.SteamGenerator[57].OuterOxThickness,
-            RemainingPHTMassFlow, SecondarySidePressure, x_pht=0.2, calendar_year=SGHX.YearStartup
-            )
+#     if Loop == "full" or Loop == "half":
+#         for Zone in ld.SteamGenerator:
+#             Zone.PrimaryBulkTemperature = SGHX.temperature_profile(
+#             Zone, Zone.InnerOxThickness, Zone.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure,
+#             x_pht=0.002, calendar_year=SGHX.YearStartup
+#             )
+#     else:
+#         ld.SteamGenerator[57].PrimaryBulkTemperature = SGHX.temperature_profile(
+#             ld.SteamGenerator[57], ld.SteamGenerator[57].InnerOxThickness, ld.SteamGenerator[57].OuterOxThickness,
+#             RemainingPHTMassFlow, SecondarySidePressure, x_pht=0.2, calendar_year=SGHX.YearStartup
+#             )
         
     # initial concentrations
     for Section in Sections:
+        if Sections == ld.HalfLoop:
+            if Section in ld.SteamGenerator:
+                Section.PrimaryBulkTemperature = SGHX.temperature_profile(
+                Section, Section.InnerOxThickness, Section.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure,
+                x_pht=0.2, calendar_year=SGHX.YearStartup
+                )
+            else:
+                None
+        else:
+            
+           if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
+            Section.PrimaryBulkTemperature = SGHX.temperature_profile(
+            Section, Section.InnerOxThickness, Section.OuterOxThickness, RemainingPHTMassFlow, SecondarySidePressure,
+            x_pht=0.2, calendar_year=SGHX.YearStartup
+            )
+        
         # temperature-dependent parameters            
         Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
         
@@ -117,7 +134,6 @@ def initial_chemistry(Loop):
 #             Section.MetalOxide.MixedPotential, Section.SolutionOxide.FeTotal, Section.SolutionOxide.FeSatFe3O4,
 #             Section.Bulk.FeSatFe3O4, Section.SolutionOxide.ConcentrationH
 #             )
-
 
 
 Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
@@ -265,6 +281,34 @@ class PHTS():
             )
 
 
+def output_time_logging(FACRate, RIHT_average, RIHT_InletFeeder):
+    
+    FACRate_OutletFeeder = []
+    RIHT_average = []
+    RIHT_InletFeeder = []
+    
+#     TotalInnerLoading = []
+#     TotalOuterLoading = []
+#     TotalOxide = []
+#     RIHT = [] # monitored with time 
+    OutletTemperatures1_SteamGeneratorTubes = [] 
+    OutletTemperatures2_SteamGeneratorTubes = []
+    pht_SteamFraction = []
+    kp_Tdependent = []
+    # StreamOutletTemperatures = [] # monitored with time 
+    TemperatureProfile = []
+    TotalDistance = []
+#     Time = []
+    Years = []
+    for i in range((SimulationYears + 1) * 4):
+        Years.append((i / 4) + SGHX.YearStartup)
+        
+    
+    FACRate_OutletFeeder.append(FACRate)
+    
+    return 
+
+
 def sg_heat_transfer(Outlet, InletInput, SelectedTubes, j):
     Tubes = []
     # Set input concentrations for all SG zones to be same as output of outlet feeder
@@ -294,19 +338,17 @@ Default_Tube = SGHX.closest_ubend(1.52 * 100)
 SimulationYears = 1 # years
 SimulationHours = SimulationYears * 876 # 851
 
+# load initial chemistry for full/half loop
+initial_chemistry()
 
 for j in range(SimulationHours):
    
     if Loop == "full":
         InletInput = ld.InletFeeder_2
-        SelectedTubes_1 = SGHX.selected_tubes_1
-        SelectedTubes_2 = SGHX.selected_tubes_2
-    
     # for 1/2 of single figure-of-eight loop, SG flow returned to same inlet header as that at start of loop
     else:
         InletInput = ld.InletFeeder
-        SelectedTubes_2 = SGHX.selected_tubes_2
-        
+            
     
     InletFeeder_1_Loop1 = PHTS(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j)
     
@@ -320,7 +362,11 @@ for j in range(SimulationHours):
         ld.SteamGenerator_2[Default_Tube], ld.InletFeeder_2, ElementTracking, Activation, ConstantRate, j
         )
     
-    SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, InletInput, SelectedTubes_2, j)
+    SelectedTubes = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)
+    SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, InletInput, SelectedTubes, j)
+    
+    
+    output_2 = output_logging(OutletFeeder_2_Loop1.Section1.CorrRate, RIHT_average, RIHT_InletFeeder)
     
     if Loop == "full":
     
@@ -335,55 +381,42 @@ for j in range(SimulationHours):
         SteamGeneratorTube_1_Loop1 = PHTS(
             ld.SteamGenerator[Default_Tube], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )
-        SteamGeneratorTubes_1 = sg_heat_transfer(ld.OutletFeeder, ld.InletFeeder, SelectedTubes_1, j)
+        
+        SelectedTubes = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator)
+        SteamGeneratorTubes_1 = sg_heat_transfer(ld.OutletFeeder, ld.InletFeeder, SelectedTubes, j)
     # loop ends with only 4 parts (inlet feeder 1, fuel channel 1, outlet feeder 2, sg tube 2, back to inlet feeder 1)
     else:
         None
 
-    
-    # parameters tracked with time
+    # parameters tracked/updated with time
     if j % (219) == 0:  # 2190 h * 10 = 4x a year  
         
         if j ==0:
             x_pht = 0.0245 # PHT steam fraction for "clean" boiler
 
-        if SGHX.SGFastMode == "yes":
-            #pass cleaned and uncleaned tubes into heat transfer function
-
-            if Loop == "full":
-                
-                UncleanedInnerOxide = SteamGeneratorTube_1_Loop1.Section1.InnerIronOxThickness
-                UncleanedOuterOxide = SteamGeneratorTube_1_Loop1.Section1.OuterOxThickness
-                    
-            else:
-                UncleanedInnerOxide = SteamGeneratorTube_2_Loop1.Section1.InnerIronOxThickness
-                UncleanedOuterOxide = SteamGeneratorTube_2_Loop1.Section1.OuterOxThickness
-                    
-        else:
-            UncleanedInnerOxide = None
-            UncleanedOuterOxide = None
-            
         if Loop == "full":
-            T_RIH_1 = (
-            SGHX.energy_balance(ld.SteamGenerator, UncleanedInnerOxide, UncleanedOuterOxide, x_pht, j, SGHX.SGFastMode)
-            - 273.15
-            )
+            T_RIH_1 = SGHX.energy_balance(ld.SteamGenerator, x_pht, j, SGHX.SGFastMode) - 273.15
+            T_RIH_2 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, j, SGHX.SGFastMode) - 273.15
+            
         else:
-            T_RIH_2 = (
-                SGHX.energy_balance(ld.SteamGenerator_2, UncleanedInnerOxide, UncleanedOuterOxide, x_pht, j,
-                                    SGHX.SGFastMode) - 273.15
-                       )
+            T_RIH_2 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, j, SGHX.SGFastMode) - 273.15
             T_RIH_1 = T_RIH_2   
 
+        ld.InletFeeder.PrimaryBulkTemperature  = [T_RIH_1 + 273.15] * ld.InletFeeder.NodeNumber
+        ld.InletFeeder_2.PrimaryBulkTemperature = [T_RIH_2 + 273.15] * ld.InletFeeder_2.NodeNumber
+        
+        T_RIH_average = (T_RIH_1 + T_RIH_2) / 2
+        
+        x_pht = SGHX.pht_steam_quality(T_RIH_average + 273.15, j)
+
+        for Section in Sections:
+            # new temperatures in steam generators and inlet feeders
+            Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)
         
         print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, T_RIH_1, T_RIH_2)
-        x_pht = SGHX.pht_steam_quality(T_RIH + 273.15, j)
         
-        InletInput.PrimaryBulkTemperature = [T_RIH + 273.15] * InletInput.NodeNumber
-        for Section in ld.HalfLoop:
-            Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)
-            
-        if OutputLogging == "yes":
+        
+        
 #             Time.append(j)
             # S/O concentrations are updated individually in code, e.g., self.Section1.FeTotal
             # Bulk concentrations are not, so same location is pointed to, so all places self.Section1.Bulk.FeTotal
@@ -391,14 +424,19 @@ for j in range(SimulationHours):
             # new list needs to be created for bulk concentrations only
 #             x = list(In.Section1.Bulk.FeTotal)
             
-#             SGOxide.append(Sg.Section1.OuterFe3O4Thickness)
-#             OutletOxide.append(Ou.Section1.InnerIronOxThickness)
-#             InletBulkConcentration.append(x)
-#             OutletSOConcentration.append(Ou.Section1.SolutionOxide.FeTotal)
-            OutletCorrosionRate.append(Ou.Section1.CorrRate)
+            FACRate_OutletFeeder_1_Loop1.append(OutletFeeder_1_Loop1.Section1.CorrRate)
             
-            RIHT.append(T_RIH)
+            RIHT_average.append(T_RIH_average)
+            RIHT_InletFeeder_1_Loop1.append(T_RIH_1)
             pht_SteamFraction.append(x_pht)
+            
+            if Loop == "full":
+                FACRate_OutletFeeder_2_Loop1.append(OutletFeeder_2_Loop1.Section1.CorrRate)
+                RIHT_InletFeeder_2_Loop1.append(T_RIH_2)
+                
+            
+            
+            
             Temperature1 = (
                 ld.SteamGenerator[SGHX.tube_number[0]].PrimaryBulkTemperature[21] - 273.15
                            )

@@ -2,7 +2,7 @@
 Created on Oct 22, 2017
 @author: opalazhc
 '''
-import pht_model
+
 import lepreau_data as ld
 import sg_heattransfer as SGHX
 import composition as c
@@ -15,57 +15,15 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('mathtext', default='regular')
 
-
-ConstantRate = "yes" # preset corrosion rate instead of calculated from FAC model
-Purification = "no"
-Activation = "no"
 PlotOutput = "yes"
-OutputLogging = "yes"
-Loop = "half"
-ElementTracking = "no"
-# 1.52 m is the u-bend arc length of an average SG tube
-Default_Tube = SGHX.closest_ubend(1.52 * 100)
-
-
-
-
-
-if OutputLogging == "yes":
-    SGOxide =[]
-    OutletOxide = []
-    OutletSOConcentration = []
-    InletBulkConcentration = []
-    OutletCorrosionRate = []
-    
-#     Solubility = []
-#     IronConcentration = []
-    TotalInnerLoading = []
-    TotalOuterLoading = []
-    TotalOxide = []
-    RIHT = [] # monitored with time 
-    OutletTemperatures1 = [] 
-    OutletTemperatures2 = []
-    pht_SteamFraction = []
-    kp_Tdependent = []
-    # StreamOutletTemperatures = [] # monitored with time 
-    TemperatureProfile = []
-    TotalDistance = []
-#     Time = []
-    Years = []
-    for i in range((SimulationYears + 1) * 4):
-        Years.append((i / 4) + SGHX.YearStartup)
-
-
-
-
 
 import time
 start_time = time.time()
 
-# load initial chemistry for full/half loop
-pht_model.initial_chemistry(Loop)
+import pht_model
 
-# def CANDU_loop_chooser(SimulationHours, ConstantRate, Purification, Activation, OutputLogging, ElementTracking, Loop):
+end_time = time.time()
+delta_time = end_time - start_time
     
 # for j in range(SimulationHours):
 #     In = pht_model.PHT_FAC(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j)
@@ -249,10 +207,23 @@ def purification_csv():
     #     writer.writerow([''])
     
 
-def RIHT_csv():
+def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
     #would have to select tubes from SG2 as well (in SG module)
+    InnerOxide_SteamGeneratorTubes = []
+    OuterOxide_SteamGeneratorTubes = []
+    TotalOxide_SteamGeneratorTubes = []
+    TotalDistance = []
+    TemperatureProfile = []
+    kp_Tdependent = []
     
-    for Zone in SGHX.selected_tubes:
+    if OutletFeeder == ld.OutletFeeder_2:
+        OutletCorrosionRate = pht_model.output_2
+    elif OutletFeeder == ld.OutletFeeder:
+        OutletCorrosionRate = pht_model.output_1 
+    
+    SelectedTubes = SGHX.tube_picker(SGHX.Method, SteamGenerator)[0]
+    
+    for Zone in SelectedTubes:
         x = ld.UnitConverter(
         Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerIronOxThickness, None, None, None
         )
@@ -268,9 +239,9 @@ def RIHT_csv():
         f = Zone.KpFe3O4electrochem
             
         TotalDistance.append(z)
-        TotalInnerLoading.append(x)
-        TotalOuterLoading.append(y)
-        TotalOxide.append(q)
+        InnerOxide_SteamGeneratorTubes.append(x)
+        OuterOxide_SteamGeneratorTubes.append(y)
+        TotalOxide_SteamGeneratorTubes.append(q)
         
     #     Solubility.append(d) # Zone.SolutionOxide.FeSatFe3O4
     #     IronConcentration.append(e) # Zone.SolutionOxide.FeTotal
@@ -278,12 +249,10 @@ def RIHT_csv():
         TemperatureProfile.append(Temperature_C)
         kp_Tdependent.append(f)
 
-    OutletCorrosionRate_uma = []
     for Rate in OutletCorrosionRate:
-        x = ld.UnitConverter(
+        OutletCorrosionRate = ld.UnitConverter(
         Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None
         )
-        OutletCorrosionRate_uma.append(x)
      
     Data = [SGHX.TubeLengths, TotalDistance, TotalInnerLoading, TotalOuterLoading, TotalOxide, OutletCorrosionRate_uma,
             TemperatureProfile, kp_Tdependent]
@@ -293,7 +262,7 @@ def RIHT_csv():
      
     RIHT_delta = [x-y for x, y in zip (RIHT[1:], RIHT)]   
      
-    csvfile = "RIHTOutput.csv"
+    csvfile = FileName
     with open(csvfile, "w") as output:
         writer = csv.writer(output, lineterminator='\n')
         writer.writerow(['RIHT (oC) and year'])
@@ -317,11 +286,14 @@ def RIHT_csv():
         writer.writerow(OutletTemperatures1)
         writer.writerow(OutletTemperatures2)
 
-RIHT_csv()  
+RIHT_csv(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, "RIHTOutputSG2.csv")
+
+if pht_model.Loop == "full":
+    RIHT_csv(ld.InletFeeder_2, ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator, "RIHTOutputSG1.csv")  
+else:
+    None
 
 
-end_time = time.time()
-delta_time = end_time - start_time
  
 hours = delta_time // 3600
 temp = delta_time - 3600 * hours
@@ -330,15 +302,7 @@ seconds = delta_time - 60 * minutes
 print('%d:%d:%d' % (hours, minutes, seconds))
 
 
-
-if Loop == "half":
-    Sections = [In.Section1, Co.Section1, Ou.Section1, Sg.Section1]
-elif Loop == "full":
-    Sections = [
-        In.Section1, Co.Section1, Ou.Section1, Sg.Section1, In_2.Section1, Co_2.Section1, Ou_2.Section1, Sg_2.Section1
-        ]
-else:
-    Sections = [In.Section1, Co.Section1, Ou.Section1, Sg.Section1]
+#     Sections = [In.Section1, Co.Section1, Ou.Section1, Sg.Section1]
     
     
 def property_log10(Element, Interface):
@@ -347,7 +311,7 @@ def property_log10(Element, Interface):
     SolutionOxide = []  # z
     
     # only in main 4 PHTS sections, not counting SG Zones, can be changed to include all, if needed 
-    for Section in Sections:
+    for Section in pht_model.Sections:
         if Element == "Fe":
             Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.Bulk.FeTotal, Section.SolutionOxide.FeTotal]
         elif Element == "Ni":
@@ -386,7 +350,7 @@ def property_log10(Element, Interface):
 def oxide_loading(Layer):
     Oxide = []
     
-    for Section in Sections:
+    for Section in pht_model.Sections:
         if Layer == "Inner":
             x = Section.InnerOxThickness
         elif Layer == "Outer":
@@ -409,7 +373,7 @@ def oxide_loading(Layer):
 def activity_volumetric(Isotope):
     VolumetricActivity = []
     
-    for Section in Sections:
+    for Section in pht_model.Sections:
         if Isotope == "Co60":
             x = Section.Bulk.Co60
         elif Isotope == "Co58":
@@ -436,7 +400,7 @@ def activity_volumetric(Isotope):
 def plot_output():
     LoopDistance = []
     
-    for Section in Sections:
+    for Section in pht_model.Sections:
         x = Section.Length.magnitude
         LoopDistance.append(x)
     LoopDistance = [j for i in LoopDistance for j in i]
