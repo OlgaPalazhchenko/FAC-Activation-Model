@@ -281,32 +281,29 @@ class PHTS():
             )
 
 
-def output_time_logging(FACRate, RIHT_average, RIHT_InletFeeder):
+def output_time_logging(FACRate, RIHT_avg, RIHT, x):
     
     FACRate_OutletFeeder = []
     RIHT_average = []
     RIHT_InletFeeder = []
     
-#     TotalInnerLoading = []
-#     TotalOuterLoading = []
-#     TotalOxide = []
-#     RIHT = [] # monitored with time 
+    # S/O concentrations are updated individually in code, e.g., self.Section1.FeTotal
+    # Bulk concentrations are not, so same location is pointed to, so all places self.Section1.Bulk.FeTotal
+    # was used change to updated values, even previously appended values
+    # new list needs to be created for bulk concentrations only
+    # x = list(In.Section1.Bulk.FeTotal)
+    
     OutletTemperatures1_SteamGeneratorTubes = [] 
     OutletTemperatures2_SteamGeneratorTubes = []
     pht_SteamFraction = []
-    kp_Tdependent = []
-    # StreamOutletTemperatures = [] # monitored with time 
-    TemperatureProfile = []
-    TotalDistance = []
-#     Time = []
-    Years = []
-    for i in range((SimulationYears + 1) * 4):
-        Years.append((i / 4) + SGHX.YearStartup)
-        
     
     FACRate_OutletFeeder.append(FACRate)
+    RIHT_InletFeeder.append(RIHT)
+    RIHT_average.append(RIHT_avg)
+    pht_SteamFraction.append(x)
     
-    return 
+    
+    return FACRate_OutletFeeder, RIHT_InletFeeder, RIHT_average, pht_SteamFraction
 
 
 def sg_heat_transfer(Outlet, InletInput, SelectedTubes, j):
@@ -366,8 +363,6 @@ for j in range(SimulationHours):
     SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, InletInput, SelectedTubes, j)
     
     
-    output_2 = output_logging(OutletFeeder_2_Loop1.Section1.CorrRate, RIHT_average, RIHT_InletFeeder)
-    
     if Loop == "full":
     
         InletFeeder_2_Loop1 = PHTS(ld.InletFeeder_2, ld.FuelChannel_2, ElementTracking, Activation, ConstantRate, j)
@@ -407,6 +402,9 @@ for j in range(SimulationHours):
         
         T_RIH_average = (T_RIH_1 + T_RIH_2) / 2
         
+        output_2 = output_logging(OutletFeeder_2_Loop1.Section1.CorrRate, RIHT_average, T_RIH_2)
+        output_1 = output_logging(OutletFeeder_1_Loop1.Section1.CorrRate, RIHT_average, T_RIH_1)
+        
         x_pht = SGHX.pht_steam_quality(T_RIH_average + 273.15, j)
 
         for Section in Sections:
@@ -415,39 +413,21 @@ for j in range(SimulationHours):
         
         print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, T_RIH_1, T_RIH_2)
         
+      
+      
+      
+      
+        Temperature1 = (
+            ld.SteamGenerator[SGHX.tube_number[0]].PrimaryBulkTemperature[21] - 273.15
+                       )
+        OutletTemperatures1.append(Temperature1)
         
-        
-#             Time.append(j)
-            # S/O concentrations are updated individually in code, e.g., self.Section1.FeTotal
-            # Bulk concentrations are not, so same location is pointed to, so all places self.Section1.Bulk.FeTotal
-            # was used change to updated values, even previously appended values
-            # new list needs to be created for bulk concentrations only
-#             x = list(In.Section1.Bulk.FeTotal)
-            
-            FACRate_OutletFeeder_1_Loop1.append(OutletFeeder_1_Loop1.Section1.CorrRate)
-            
-            RIHT_average.append(T_RIH_average)
-            RIHT_InletFeeder_1_Loop1.append(T_RIH_1)
-            pht_SteamFraction.append(x_pht)
-            
-            if Loop == "full":
-                FACRate_OutletFeeder_2_Loop1.append(OutletFeeder_2_Loop1.Section1.CorrRate)
-                RIHT_InletFeeder_2_Loop1.append(T_RIH_2)
-                
-            
-            
-            
-            Temperature1 = (
-                ld.SteamGenerator[SGHX.tube_number[0]].PrimaryBulkTemperature[21] - 273.15
+        # if multiple tubes arc/total lengths are run
+        if len(SGHX.selected_tubes) > 1:
+            Temperature2 = (
+                ld.SteamGenerator[SGHX.tube_number[1]].PrimaryBulkTemperature[21] - 273.15
                            )
-            OutletTemperatures1.append(Temperature1)
-            
-            # if multiple tubes arc/total lengths are run
-            if len(SGHX.selected_tubes) > 1:
-                Temperature2 = (
-                    ld.SteamGenerator[SGHX.tube_number[1]].PrimaryBulkTemperature[21] - 273.15
-                               )
-                OutletTemperatures2.append(Temperature2)
+            OutletTemperatures2.append(Temperature2)
             
     else:
         None

@@ -115,7 +115,6 @@ delta_time = end_time - start_time
 #         None
 
 
-
 def purification_csv():
     
     OutletCorrosionRate_uma = []
@@ -215,7 +214,11 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
     TotalDistance = []
     TemperatureProfile = []
     kp_Tdependent = []
+    OutletCorrosionRate_um = [] 
     
+#     FeSolubility_SteamGeneratorTubes = []
+#     FeConcentration_SteamGeneratorTubes = []
+
     if OutletFeeder == ld.OutletFeeder_2:
         OutletCorrosionRate = pht_model.output_2
     elif OutletFeeder == ld.OutletFeeder:
@@ -243,19 +246,28 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
         OuterOxide_SteamGeneratorTubes.append(y)
         TotalOxide_SteamGeneratorTubes.append(q)
         
-    #     Solubility.append(d) # Zone.SolutionOxide.FeSatFe3O4
-    #     IronConcentration.append(e) # Zone.SolutionOxide.FeTotal
+    #     FeSolubility_SteamGeneratorTubes.append(d) # Zone.SolutionOxide.FeSatFe3O4
+    #     FeConcentration_SteamGeneratorTubes.append(e) # Zone.SolutionOxide.FeTotal
         Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
         TemperatureProfile.append(Temperature_C)
         kp_Tdependent.append(f)
 
+    # for outlet feeder that connects to current steam generator
     for Rate in OutletCorrosionRate:
-        OutletCorrosionRate = ld.UnitConverter(
-        Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None
+        x = ld.UnitConverter(
+        OutletFeeder, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None
         )
-     
-    Data = [SGHX.TubeLengths, TotalDistance, TotalInnerLoading, TotalOuterLoading, TotalOxide, OutletCorrosionRate_uma,
-            TemperatureProfile, kp_Tdependent]
+        OutletCorrosionRate_um.append(x)
+    
+    Years = []
+    for i in range((pht_model.SimulationYears + 1) * 4):
+        Years.append((i / 4) + SGHX.YearStartup)
+    
+       
+    Data = [
+        SGHX.TubeLengths, TotalDistance, InnerOxide_SteamGeneratorTubes, OuterOxide_SteamGeneratorTubes,
+            TotalOxide_SteamGeneratorTubes, OutletCorrosionRate_uma, TemperatureProfile, kp_Tdependent
+            ]
     Labels = [
         "U-bend length (cm)", "Distance (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Total Oxide (g/m^2)",
         "Outlet Corrosion Rate (um/a)", "Temperature Profile (oC)", "kp (cm/s"]
