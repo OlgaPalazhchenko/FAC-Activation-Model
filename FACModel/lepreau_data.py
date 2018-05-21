@@ -219,7 +219,7 @@ for OutletPiping in OutletSections:
     OutletPiping.SolubilityCo = [1.44E-09] * OutletPiping.NodeNumber
     OutletPiping.SolubilityCr = [4.84E-11] * OutletPiping.NodeNumber
     OutletPiping.PrimaryBulkTemperature = UnitConverter(
-    OutletPiping, "Celsius", "Kelvin", None, None, None, None, None, [310] * OutletPiping.NodeNumber
+    OutletPiping, "Celsius", "Kelvin", None, None, None, None, None, [309.24] * OutletPiping.NodeNumber
     )
 
 # assumed that these u-bends/straight leg lengths are = for all steam generators 
@@ -280,11 +280,11 @@ def steam_generator_properties(SteamGenerator):
             9.15E-11, 8.70E-11
                              ]
         
-        Zone.PrimaryBulkTemperature = UnitConverter(
-            Zone, "Celsius", "Kelvin", None, None, None, None, None,
-            [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27,
-             279.43, 277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03]
-            )
+#         Zone.PrimaryBulkTemperature = UnitConverter(
+#             Zone, "Celsius", "Kelvin", None, None, None, None, None,
+#             [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27,
+#              279.43, 277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03]
+#             )
         
         Zone.Length.label = [None] \
         + ["opposite preheater"] * 2 \

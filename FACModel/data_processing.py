@@ -24,7 +24,14 @@ import pht_model
 
 end_time = time.time()
 delta_time = end_time - start_time
-    
+
+ 
+hours = delta_time // 3600
+temp = delta_time - 3600 * hours
+minutes = delta_time // 60
+seconds = delta_time - 60 * minutes
+print('%d:%d:%d' % (hours, minutes, seconds))
+
 # for j in range(SimulationHours):
 #     In = pht_model.PHT_FAC(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j)
 #     Co = pht_model.PHT_FAC(ld.FuelChannel, ld.OutletFeeder, ElementTracking, Activation, ConstantRate, j)
@@ -220,38 +227,43 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
 #     FeConcentration_SteamGeneratorTubes = []
 
     if OutletFeeder == ld.OutletFeeder_2:
-        OutletCorrosionRate = pht_model.output_2
+        Output = pht_model.output_2
     elif OutletFeeder == ld.OutletFeeder:
-        OutletCorrosionRate = pht_model.output_1 
+        Output = pht_model.output_1 
     
     SelectedTubes = SGHX.tube_picker(SGHX.Method, SteamGenerator)[0]
     
-    for Zone in SelectedTubes:
+    for Tube in SelectedTubes:
         x = ld.UnitConverter(
-        Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.InnerIronOxThickness, None, None, None
+        Tube, "Grams per Cm Squared", "Grams per M Squared", None, None, Tube.InnerIronOxThickness, None, None, None
         )
         y = ld.UnitConverter(
-        Zone, "Grams per Cm Squared", "Grams per M Squared", None, None, Zone.OuterFe3O4Thickness, None, None, None
+        Tube, "Grams per Cm Squared", "Grams per M Squared", None, None, Tube.OuterFe3O4Thickness, None, None, None
         )
-        z = [i / 100 for i in Zone.Distance]
+        z = [i / 100 for i in Tube.Distance]
         q = [i + j for i, j in zip(x, y)]
-#         d = ld.UnitConverter(Zone, "Mol per Kg", "Grams per Cm Cubed", Zone.SolutionOxide.FeSatFe3O4, None, None, None,
+#         d = ld.UnitConverter(Tube, "Mol per Kg", "Grams per Cm Cubed", Tube.SolutionOxide.FeSatFe3O4, None, None, None,
 #                              nc.FeMolarMass, None)
-#         e = ld.UnitConverter(Zone, "Mol per Kg", "Grams per Cm Cubed", Zone.SolutionOxide.FeTotal, None, None, None,
+#         e = ld.UnitConverter(Tube, "Mol per Kg", "Grams per Cm Cubed", Tube.SolutionOxide.FeTotal, None, None, None,
 #                              nc.FeMolarMass, None)
-        f = Zone.KpFe3O4electrochem
+        f = Tube.KpFe3O4electrochem
             
         TotalDistance.append(z)
         InnerOxide_SteamGeneratorTubes.append(x)
         OuterOxide_SteamGeneratorTubes.append(y)
         TotalOxide_SteamGeneratorTubes.append(q)
         
-    #     FeSolubility_SteamGeneratorTubes.append(d) # Zone.SolutionOxide.FeSatFe3O4
-    #     FeConcentration_SteamGeneratorTubes.append(e) # Zone.SolutionOxide.FeTotal
-        Temperature_C = [i - 273.15 for i in Zone.PrimaryBulkTemperature]
+    #     FeSolubility_SteamGeneratorTubes.append(d) # Tube.SolutionOxide.FeSatFe3O4
+    #     FeConcentration_SteamGeneratorTubes.append(e) # Tube.SolutionOxide.FeTotal
+        Temperature_C = [i - 273.15 for i in Tube.PrimaryBulkTemperature]
         TemperatureProfile.append(Temperature_C)
         kp_Tdependent.append(f)
 
+    
+    OutletCorrosionRate = Output[0]
+    RIHT = Output[2]
+    pht_SteamFraction = Output[3]
+    
     # for outlet feeder that connects to current steam generator
     for Rate in OutletCorrosionRate:
         x = ld.UnitConverter(
@@ -263,7 +275,7 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
     for i in range((pht_model.SimulationYears + 1) * 4):
         Years.append((i / 4) + SGHX.YearStartup)
     
-       
+
     Data = [
         SGHX.TubeLengths, TotalDistance, InnerOxide_SteamGeneratorTubes, OuterOxide_SteamGeneratorTubes,
             TotalOxide_SteamGeneratorTubes, OutletCorrosionRate_uma, TemperatureProfile, kp_Tdependent
@@ -305,17 +317,6 @@ if pht_model.Loop == "full":
 else:
     None
 
-
- 
-hours = delta_time // 3600
-temp = delta_time - 3600 * hours
-minutes = delta_time // 60
-seconds = delta_time - 60 * minutes
-print('%d:%d:%d' % (hours, minutes, seconds))
-
-
-#     Sections = [In.Section1, Co.Section1, Ou.Section1, Sg.Section1]
-    
     
 def property_log10(Element, Interface):
     Sat = []  # x
