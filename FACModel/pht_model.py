@@ -30,10 +30,10 @@ def initial_chemistry():
     # initial temperatures in steam generator(s)
     if Loop == "full":
         RIHT2 = SGHX.energy_balance(ld.SteamGenerator, x_pht = 0.02, j = 0, SGFastMode = SGHX.SGFastMode)
-        ld.InletFeeder_2.PrimaryBulkTemperature = [RIHT2] * Section.NodeNumber
+        ld.InletFeeder_2.PrimaryBulkTemperature = [RIHT2] * ld.InletFeeder_2.NodeNumber
     else:
         RIHT1 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht = 0.02, j = 0, SGFastMode = SGHX.SGFastMode)
-        ld.InletFeeder.PrimaryBulkTemperature = [RIHT1] * Section.NodeNumber
+        ld.InletFeeder.PrimaryBulkTemperature = [RIHT1] * ld.InletFeeder.NodeNumber
         
 
     for Section in Sections:
@@ -281,7 +281,7 @@ def output_time_logging(FACRate, RIHT_avg, RIHT, x, Temperature1, Temperature2):
         ) 
 
 
-def sg_heat_transfer(Outlet, InletInput, SelectedTubes, j):
+def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
     Tubes = []
     # Set input concentrations for all SG zones to be same as output of outlet feeder
     BulkOutletActivityOutput = [
@@ -300,7 +300,7 @@ def sg_heat_transfer(Outlet, InletInput, SelectedTubes, j):
             x[0] = y[Outlet.NodeNumber - 1]
             z[0] = q[Outlet.NodeNumber - 1]
         
-        w = pht_model.PHT_FAC(Tube, InletInput, ElementTracking, Activation, ConstantRate, j)   
+        w = PHTS(Tube, Inlet, ElementTracking, Activation, ConstantRate, j)   
         Tubes.append(w)
     return Tubes
 
@@ -309,6 +309,10 @@ def sg_heat_transfer(Outlet, InletInput, SelectedTubes, j):
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 SimulationYears = 1 # years
 SimulationHours = SimulationYears * 876 # 851
+
+
+import time
+start_time = time.time()
 
 # load initial chemistry for full/half loop
 initial_chemistry()
@@ -331,10 +335,10 @@ for j in range(SimulationHours):
     )
     
     SteamGeneratorTube_2_Loop1 = PHTS(
-        ld.SteamGenerator_2[Default_Tube], ld.InletFeeder_2, ElementTracking, Activation, ConstantRate, j
+        ld.SteamGenerator_2[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j
         )
     
-    SelectedTubes = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)
+    SelectedTubes, SelectedTubeNumbers = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)
     SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, InletInput, SelectedTubes, j)
     
     if Loop == "full":
@@ -348,10 +352,10 @@ for j in range(SimulationHours):
         )
         
         SteamGeneratorTube_1_Loop1 = PHTS(
-            ld.SteamGenerator[Default_Tube], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
+            ld.SteamGenerator[Default_Tube], ld.InletFeeder_2, ElementTracking, Activation, ConstantRate, j
             )
         
-        SelectedTubes = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator)
+        SelectedTubes, SelectedTubeNumbers = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator)
         SteamGeneratorTubes_1 = sg_heat_transfer(ld.OutletFeeder, ld.InletFeeder, SelectedTubes, j)
     # loop ends with only 4 parts (inlet feeder 1, fuel channel 1, outlet feeder 2, sg tube 2, back to inlet feeder 1)
     else:
@@ -384,29 +388,36 @@ for j in range(SimulationHours):
         
         print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, T_RIH_1, T_RIH_2)
         
-    
-        BundleNumber_1_from_SelectedTubes = SelectedTubes[0]
-        
+
         Temperature1 = (
-            ld.SteamGenerator[BundleNumber_1_from_SelectedTubes].PrimaryBulkTemperature[21] - 273.15
+            ld.SteamGenerator_2[SelectedTubeNumbers[0]].PrimaryBulkTemperature[21] - 273.15
                        )
-     
+
         if len(SelectedTubes) > 1:
-            BundleNumber_2_from_SelectedTubes = SelectedTubes[1]
             Temperature2 = (
-                ld.SteamGenerator[BundleNumber_2_from_SelectedTubes].PrimaryBulkTemperature[21] - 273.15
+                ld.SteamGenerator_2[SelectedTubeNumbers[1]].PrimaryBulkTemperature[21] - 273.15
                            )
         else:
             Temperature2 = None
         
         
-        output_2 = output_logging(
-            OutletFeeder_2_Loop1.Section1.CorrRate, RIHT_average, T_RIH_1, x_pht, Temperature1, Temperature2
+        if Loop == "full":
+            output_1 = output_time_logging(
+            OutletFeeder_1_Loop1.Section1.CorrRate, T_RIH_average, T_RIH_2, x_pht, Temperature1, Temperature2
             )
-        
-        output_1 = output_logging(
-            OutletFeeder_1_Loop1.Section1.CorrRate, RIHT_average, T_RIH_2, x_pht, Temperature1, Temperature2
-            )
-            
+        else:
+            output_2 = output_time_logging(
+            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, T_RIH_1, x_pht, Temperature1, Temperature2
+            )     
     else:
         None
+
+end_time = time.time()
+delta_time = end_time - start_time
+
+ 
+hours = delta_time // 3600
+temp = delta_time - 3600 * hours
+minutes = delta_time // 60
+seconds = delta_time - 60 * minutes
+print('%d:%d:%d' % (hours, minutes, seconds))

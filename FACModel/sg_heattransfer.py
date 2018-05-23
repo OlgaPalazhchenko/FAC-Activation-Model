@@ -73,6 +73,12 @@ EnthalpySaturatedSteam.unit = "J/g"
 
 TubePitch.magnitude = 2.413
 
+# select desired SG tubes to be run by arc length
+UBends = [1.49, 0.685, 2.31, 3.09]
+UBends = [i * 100 for i in UBends]
+# select desired tubes to be run by total tube length
+TubeLengths = [1887, 1807, 1970, 2046]
+
 
 def primaryside_cleaned_tubes():
     #amount of tubes cleaned per each cleaning will have to be custom, e.g., the "0.6" below
@@ -145,13 +151,6 @@ def tube_picker(Method, SteamGenerator):
 
 
 Default_Tube = closest_ubend(1.52 * 100)
-
-
-# select desired SG tubes to be run by arc length
-UBends = [1.49, 0.685, 2.31, 3.09]
-UBends = [i * 100 for i in UBends]
-# select desired tubes to be run by total tube length
-TubeLengths = [1887, 1807, 1970, 2046]
 
 
 Cleaned = primaryside_cleaned_tubes()
@@ -495,12 +494,12 @@ def pht_steam_quality(Temperature, j):
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
         
     # [J/s] / [g/s] = [J /g]
-    H_pht = Q / (MassFlow_c)  # [kJ/kg]
+    H_sht = Q / (MassFlow_c)  # [kJ/kg]
     H_satliq = nc.enthalpyH2O_liquid(SecondarySidePressure, T_sat_secondary)
     H_SaturatedSteam = nc.enthalpyH2O_vapour(SecondarySidePressure, T_sat_secondary)  # [kJ/kg]
 
     H_prev = H_satliq + x * (H_SaturatedSteam - H_satliq)
-    H_current = H_pht + H_prev
+    H_current = H_sht + H_prev
 
     x = (H_current - H_satliq) / (H_SaturatedSteam - H_satliq)
     return x
@@ -1112,4 +1111,4 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     return RIHT
 
              
-print (energy_balance(ld.SteamGenerator, 0.0245, 876 * 0, SGFastMode="yes")- 273.15)
+# print (energy_balance(ld.SteamGenerator, 0.0245, 876 * 0, SGFastMode="yes")- 273.15)

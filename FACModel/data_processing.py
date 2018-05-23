@@ -10,27 +10,13 @@ import numpy as np
 import thermochemistry_and_constants as nc
 import csv
 import iteration as it
+import pht_model
 
 import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('mathtext', default='regular')
 
 PlotOutput = "yes"
-
-import time
-start_time = time.time()
-
-import pht_model
-
-end_time = time.time()
-delta_time = end_time - start_time
-
- 
-hours = delta_time // 3600
-temp = delta_time - 3600 * hours
-minutes = delta_time // 60
-seconds = delta_time - 60 * minutes
-print('%d:%d:%d' % (hours, minutes, seconds))
 
 # for j in range(SimulationHours):
 #     In = pht_model.PHT_FAC(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j)
@@ -263,6 +249,8 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
     OutletCorrosionRate = Output[0]
     RIHT = Output[2]
     pht_SteamFraction = Output[3]
+    OutletTemperatures1 = Output[4]
+    OutletTemperatures2 = Output[5]
     
     # for outlet feeder that connects to current steam generator
     for Rate in OutletCorrosionRate:
@@ -278,7 +266,7 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
 
     Data = [
         SGHX.TubeLengths, TotalDistance, InnerOxide_SteamGeneratorTubes, OuterOxide_SteamGeneratorTubes,
-            TotalOxide_SteamGeneratorTubes, OutletCorrosionRate_uma, TemperatureProfile, kp_Tdependent
+            TotalOxide_SteamGeneratorTubes, OutletCorrosionRate_um, TemperatureProfile, kp_Tdependent
             ]
     Labels = [
         "U-bend length (cm)", "Distance (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Total Oxide (g/m^2)",
