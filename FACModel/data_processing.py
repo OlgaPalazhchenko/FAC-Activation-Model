@@ -280,7 +280,7 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
         writer.writerow(['RIHT (oC) and year'])
         writer.writerow(RIHT)
         writer.writerow(Years)
-        writer.writerow(['Delta RIHT (oC'])
+        writer.writerow(['Delta RIHT (oC)'])
         writer.writerow(RIHT_delta)
         writer.writerow(['Steam fraction'])
         writer.writerow(pht_SteamFraction)
