@@ -6,10 +6,10 @@ import activities as a
 import electrochemistry as e
 import iteration as it
 import sg_heattransfer as SGHX
-
+import numpy as np
 # from operator import itemgetter
 
-Loop = "half"
+Loop = "full"
 # OutputLogging = "yes"
 ConstantRate = "yes" # preset corrosion rate instead of calculated from FAC model
 Purification = "yes"
@@ -24,18 +24,17 @@ elif Loop == "full":
 else:
     None
 
-
 def initial_chemistry():
-
+    
+    RIHT1 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht = 0.02, j = 0, SGFastMode = SGHX.SGFastMode)
+    ld.InletFeeder.PrimaryBulkTemperature = [RIHT1] * ld.InletFeeder.NodeNumber
+    
     # initial temperatures in steam generator(s)
     if Loop == "full":
         RIHT2 = SGHX.energy_balance(ld.SteamGenerator, x_pht = 0.02, j = 0, SGFastMode = SGHX.SGFastMode)
         ld.InletFeeder_2.PrimaryBulkTemperature = [RIHT2] * ld.InletFeeder_2.NodeNumber
-    else:
-        RIHT1 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht = 0.02, j = 0, SGFastMode = SGHX.SGFastMode)
-        ld.InletFeeder.PrimaryBulkTemperature = [RIHT1] * ld.InletFeeder.NodeNumber
+  
         
-
     for Section in Sections:
         Section.KpFe3O4electrochem = [nc.KpFe3O4] * Section.NodeNumber
         Section.KdFe3O4electrochem = [nc.KdFe3O4] * Section.NodeNumber   
@@ -311,6 +310,25 @@ SimulationYears = 1 # years
 SimulationHours = SimulationYears * 876 # 851
 
 
+# LoopDistance = []
+# SectionsHalfLoop = [ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2[Default_Tube]] 
+# 
+# if Loop == "half":
+#     Sections = SectionsHalfLoop
+# else:
+#     Sections = (
+#         SectionsHalfLoop + [ld.InletFeeder_2, ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator[Default_Tube]]
+#                 )
+#            
+# for Section in Sections:
+#     x = Section.Length.magnitude
+#     LoopDistance.append(x)
+# print (LoopDistance)
+# LoopDistance = [j for i in LoopDistance for j in i]
+# TotalLoopDistance = [i / 100 for i in np.cumsum(LoopDistance)]  # Distance down length of PHTS [m]
+# print (TotalLoopDistance)
+
+
 import time
 start_time = time.time()
 
@@ -352,7 +370,7 @@ for j in range(SimulationHours):
         )
         
         SteamGeneratorTube_1_Loop1 = PHTS(
-            ld.SteamGenerator[Default_Tube], ld.InletFeeder_2, ElementTracking, Activation, ConstantRate, j
+            ld.SteamGenerator[Default_Tube], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )
         
         SelectedTubes, SelectedTubeNumbers = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator)
@@ -400,14 +418,13 @@ for j in range(SimulationHours):
         else:
             Temperature2 = None
         
+        output_1 = output_time_logging(
+            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, T_RIH_2, x_pht, Temperature1, Temperature2
+            )     
         
         if Loop == "full":
-            output_1 = output_time_logging(
-            OutletFeeder_1_Loop1.Section1.CorrRate, T_RIH_average, T_RIH_2, x_pht, Temperature1, Temperature2
-            )
-        else:
             output_2 = output_time_logging(
-            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, T_RIH_1, x_pht, Temperature1, Temperature2
+            OutletFeeder_1_Loop1.Section1.CorrRate, T_RIH_average, T_RIH_1, x_pht, Temperature1, Temperature2
             )     
     else:
         None

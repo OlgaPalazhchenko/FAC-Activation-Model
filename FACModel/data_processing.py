@@ -305,14 +305,38 @@ if pht_model.Loop == "full":
 else:
     None
 
-    
+
+LoopDistance = []
+SectionsHalfLoop = [
+    pht_model.InletFeeder_1_Loop1.Section1, pht_model.FuelChannel_1_Loop1.Section1,
+    pht_model.OutletFeeder_2_Loop1.Section1, pht_model.SteamGeneratorTube_2_Loop1.Section1
+    ] 
+
+if pht_model.Loop == "half":
+    Sections = SectionsHalfLoop
+else:
+    Sections = (
+        SectionsHalfLoop + [
+            pht_model.InletFeeder_2_Loop1.Section1, pht_model.FuelChannel_2_Loop1.Section1,
+            pht_model.OutletFeeder_1_Loop1.Section1, pht_model.SteamGeneratorTube_1_Loop1.Section1
+            ]
+                )
+           
+for Section in Sections:
+    x = Section.Length.magnitude
+    LoopDistance.append(x)
+
+LoopDistance = [j for i in LoopDistance for j in i]
+TotalLoopDistance = [i / 100 for i in np.cumsum(LoopDistance)]  # Distance down length of PHTS [m]
+
+ 
 def property_log10(Element, Interface):
     Sat = []  # x
     Bulk = []  # y
     SolutionOxide = []  # z
     
     # only in main 4 PHTS sections, not counting SG Zones, can be changed to include all, if needed 
-    for Section in pht_model.Sections:
+    for Section in Sections:
         if Element == "Fe":
             Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.Bulk.FeTotal, Section.SolutionOxide.FeTotal]
         elif Element == "Ni":
@@ -351,7 +375,7 @@ def property_log10(Element, Interface):
 def oxide_loading(Layer):
     Oxide = []
     
-    for Section in pht_model.Sections:
+    for Section in Sections:
         if Layer == "Inner":
             x = Section.InnerOxThickness
         elif Layer == "Outer":
@@ -374,7 +398,7 @@ def oxide_loading(Layer):
 def activity_volumetric(Isotope):
     VolumetricActivity = []
     
-    for Section in pht_model.Sections:
+    for Section in Sections:
         if Isotope == "Co60":
             x = Section.Bulk.Co60
         elif Isotope == "Co58":
@@ -399,13 +423,6 @@ def activity_volumetric(Isotope):
 
    
 def plot_output():
-    LoopDistance = []
-    
-    for Section in pht_model.Sections:
-        x = Section.Length.magnitude
-        LoopDistance.append(x)
-    LoopDistance = [j for i in LoopDistance for j in i]
-    TotalLoopDistance = [i / 100 for i in np.cumsum(LoopDistance)]  # Distance down length of PHTS [m]
     
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(221)

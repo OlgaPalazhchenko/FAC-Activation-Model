@@ -1146,4 +1146,4 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     return RIHT
 
              
-print (energy_balance(ld.SteamGenerator_2, 0.0245, 876 * 0, SGFastMode="yes")- 273.15)
+# print (energy_balance(ld.SteamGenerator_2, 0.0245, 876 * 0, SGFastMode="yes")- 273.15)
