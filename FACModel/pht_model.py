@@ -9,8 +9,7 @@ import sg_heattransfer as SGHX
 import numpy as np
 # from operator import itemgetter
 
-Loop = "full"
-# OutputLogging = "yes"
+Loop = "half"
 ConstantRate = "yes" # preset corrosion rate instead of calculated from FAC model
 Purification = "yes"
 Activation = "no"
@@ -310,25 +309,6 @@ SimulationYears = 1 # years
 SimulationHours = SimulationYears * 876 # 851
 
 
-# LoopDistance = []
-# SectionsHalfLoop = [ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2[Default_Tube]] 
-# 
-# if Loop == "half":
-#     Sections = SectionsHalfLoop
-# else:
-#     Sections = (
-#         SectionsHalfLoop + [ld.InletFeeder_2, ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator[Default_Tube]]
-#                 )
-#            
-# for Section in Sections:
-#     x = Section.Length.magnitude
-#     LoopDistance.append(x)
-# print (LoopDistance)
-# LoopDistance = [j for i in LoopDistance for j in i]
-# TotalLoopDistance = [i / 100 for i in np.cumsum(LoopDistance)]  # Distance down length of PHTS [m]
-# print (TotalLoopDistance)
-
-
 import time
 start_time = time.time()
 
@@ -386,15 +366,15 @@ for j in range(SimulationHours):
             x_pht = 0.0245 # PHT steam fraction for "clean" boiler
 
         if Loop == "full":
-            T_RIH_1 = SGHX.energy_balance(ld.SteamGenerator, x_pht, j, SGHX.SGFastMode) - 273.15
-            T_RIH_2 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, j, SGHX.SGFastMode) - 273.15
+            T_RIH_1 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, j, SGHX.SGFastMode) - 273.15
+            T_RIH_2 = SGHX.energy_balance(ld.SteamGenerator_1, x_pht, j, SGHX.SGFastMode) - 273.15
             
         else:
-            T_RIH_2 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, j, SGHX.SGFastMode) - 273.15
-            T_RIH_1 = T_RIH_2   
+            T_RIH_1 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, j, SGHX.SGFastMode) - 273.15
+            T_RIH_2 = T_RIH_1 * 1   
 
-        ld.InletFeeder.PrimaryBulkTemperature  = [T_RIH_1 + 273.15] * ld.InletFeeder.NodeNumber
-        ld.InletFeeder_2.PrimaryBulkTemperature = [T_RIH_2 + 273.15] * ld.InletFeeder_2.NodeNumber
+        ld.InletFeeder.PrimaryBulkTemperature  = [T_RIH_2 + 273.15] * ld.InletFeeder.NodeNumber
+        ld.InletFeeder_2.PrimaryBulkTemperature = [T_RIH_1 + 273.15] * ld.InletFeeder_2.NodeNumber
         
         T_RIH_average = (T_RIH_1 + T_RIH_2) / 2
         

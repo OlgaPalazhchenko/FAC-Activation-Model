@@ -80,6 +80,7 @@ TubeLengths = [1887, 1807, 1970, 2046]
 
 
 def total_tubes_plugged(Bundle, CalendarYear):
+    #total tubes called sometimes by bundle inside an SG or for a specific boiler itself
     
     if Bundle in ld.SteamGenerator or Bundle == ld.SteamGenerator:
 
@@ -103,10 +104,18 @@ def total_tubes_plugged(Bundle, CalendarYear):
     
 
 def primaryside_cleaned_tubes(Bundle, CalendarYear):
-    #amount of tubes cleaned per each cleaning will have to be custom, e.g., the "0.6" below
+    #amount of tubes cleaned per each cleaning will have to be custom
+    if CalendarYear == YearOutageRestart:
+        # siva blast in 1995 used on only 60% of tubes due to time/spacial constraints
+        PercentTubesCleaned = 0.6
+    elif CalendarYear == YearRefurbRestart:
+        PercentTubesCleaned = 1
+    else:
+        PercentTubesCleaned = 0
+    
     TotalSGTubeNumber = total_tubes_plugged(Bundle, CalendarYear)
     
-    # chooses tube bundles until 60% of total sg tube number reached, adds all chosen to "cleaned" tube list
+    # chooses tube bundles until % of total sg tube number reached, adds all chosen to "cleaned" tube list
     Cleaned = []
     NumberTubes = []
     
@@ -114,8 +123,7 @@ def primaryside_cleaned_tubes(Bundle, CalendarYear):
         x = random.randint(0, 86)
         NumberTubes.append(ld.SteamGenerator[x].TubeNumber)
         
-        # siva blast in 1995 used on only 60% of tubes due to time/spacial constraints
-        if sum(NumberTubes) <= (0.6 * TotalSGTubeNumber):
+        if sum(NumberTubes) <= (PercentTubesCleaned * TotalSGTubeNumber):
             Cleaned.append(ld.SteamGenerator[x])
         else:
             break
@@ -691,7 +699,7 @@ def outside_bundle_pool_boiling(
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
         #h_nb = Cooper_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
-    elif Correlation == "lol":
+    elif Correlation == "other":
         h_nb = Cooper_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
 
     else:
@@ -999,6 +1007,8 @@ def temperature_profile(
 #     print()
     return PrimaryBulk, HeatFlux
 
+
+# separate function for divider plate leakage
 
 def station_events(calendar_year):
 

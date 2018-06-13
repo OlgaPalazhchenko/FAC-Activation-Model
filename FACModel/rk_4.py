@@ -197,7 +197,7 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, calendar_year):
     if calendar_year == SGHX.YearOutageRestart:
         CleaningEfficiency = 0.67
     elif calendar_year == SGHX.YearRefurbRestart:
-        CleaningEfficiency == 0.4
+        CleaningEfficiency == 0.22 #(IR-33110-0039-001-A
         
     Inner = []
     Outer = []

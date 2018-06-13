@@ -213,9 +213,9 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
 #     FeConcentration_SteamGeneratorTubes = []
 
     if OutletFeeder == ld.OutletFeeder_2:
-        Output = pht_model.output_2
+        Output = pht_model.output_1
     elif OutletFeeder == ld.OutletFeeder:
-        Output = pht_model.output_1 
+        Output = pht_model.output_2 
     
     SelectedTubes = SGHX.tube_picker(SGHX.Method, SteamGenerator)[0]
     
