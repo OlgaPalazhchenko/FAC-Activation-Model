@@ -85,7 +85,7 @@ def reactor_power(CalendarYear):
     import pandas as pd
     
     if CalendarYear == YearOutage:
-        FileName = 'RefurbPower'
+        FileName = 'OutagePower'
     else:
         FileName = "RefurbPower"
     
