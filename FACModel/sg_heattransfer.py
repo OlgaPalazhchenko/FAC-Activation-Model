@@ -48,7 +48,7 @@ for i in [U_h, U_c, U_total]:
 for i in [R_F_primary, R_F_secondary]:
     i.unit = "cm^2 K/W"
 
-MassFlow_h.magnitude = 1900 * 1000
+MassFlow_h.magnitude = 1925 * 1000
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
 # 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
 MassFlow_preheater.magnitude = 240 * 1000
@@ -78,49 +78,6 @@ UBends = [1.49, 0.685, 2.31, 3.09]
 UBends = [i * 100 for i in UBends]
 # select desired tubes to be run by total tube length
 TubeLengths = [1887, 1807, 1970, 2046]
-
-
-def reactor_power(CalendarYear):
-    from matplotlib import pyplot as plt
-    import pandas as pd
-    
-    if CalendarYear == YearOutage:
-        FileName = 'OutagePower'
-    else:
-        FileName = "RefurbPower"
-    
-    df = pd.read_csv(FileName, header=None)
-    df.columns = ['date','power']
-
-    # converts from string object to time series  
-    df.date = pd.to_datetime(df.date)
-    df.set_index('date', inplace=True)
-
-    # plt.plot(df)
-    # plt.xlabel('Year')
-    # plt.ylabel('Power')
-    # plt.show()
-    # # prints first 5 rows to check everything is assigned properly
-    # print (df.head())
-
-    df['year'] = [df.index[i].year for i in range(len(df))]
-    df['quarter'] = [df.index[i].quarter for i in range(len(df))]
-    # df['day'] = [df.index[i].day for i in range(len(df))]
-    
-    quarterly_grouping = df.groupby(["year","quarter"])
-    
-    # For each group, calculate the average of only the Power column
-    quarterly_average = quarterly_grouping.aggregate({"power":np.mean})
-    
-    power_output = quarterly_average.as_matrix(['power'])
-    
-    return power_output # fraction
-
-
-OutagePower = reactor_power(YearOutage)
-RefurbPower = reactor_power(RefurbPower)
-
-print (OutagePower)
 
 
 def total_tubes_plugged(Bundle, CalendarYear):
@@ -522,61 +479,127 @@ def outer_area(SteamGenerator):
     return [np.pi * x * y for x, y in zip(SteamGenerator.OuterDiameter, SteamGenerator.Length.magnitude)]
 
 
-def power_derates(CalendarYear, YearDerateEnds):
-    YearDerateStarts = CalendarYear
+def reactor_power(CalendarYear):
+    from matplotlib import pyplot as plt
+    import pandas as pd
     
-    YearDerates = np.arange(YearDerateStarts, YearDerateEnds, 0.25)
     
     if CalendarYear == YearOutage:
-        PercentDerates = OutagePower
-    elif CalendarYear == YearRefurbishment:
-        PercentDerates = RefurbPower
+        Filename = 'C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\OutagePower.csv'
+    else:
+        FileName = Filename = 'C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\RefurbPower.csv'
     
-    return YearDerates
+    df = pd.read_csv(Filename, header=None)
+    df.columns = ['date','power']
+
+    # converts from string object to time series  
+    df.date = pd.to_datetime(df.date)
+    df.set_index('date', inplace=True)
+
+#     plt.plot(df)
+#     plt.xlabel('Year')
+#     plt.ylabel('Power')
+#     plt.show()
+##     prints first 5 rows to check everything is assigned properly
+#     print (df.head())
+
+    df['year'] = [df.index[i].year for i in range(len(df))]
+    df['quarter'] = [df.index[i].quarter for i in range(len(df))]
+    # df['day'] = [df.index[i].day for i in range(len(df))]
+    
+    quarterly_grouping = df.groupby(["year","quarter"])
+    
+    year_output = df.as_matrix(['year'])
+    quarter_output = df.as_matrix(['quarter'])
+    
+    #first and last year and quarter of averaged power data
+    initial_quart = quarter_output[0]
+    initial_yr = year_output[0]
+  
+    final_quart = quarter_output[len(quarter_output) - 1]
+    final_yr = year_output[len(year_output) - 1]
+   
+    # year/mo converted to year.quarter (i.e., 1999.75) based on which quarter first data point is in
+    if initial_quart == 1:
+        year_start = initial_yr
+    elif initial_quart == 2:
+        year_start = initial_yr + 0.25
+    elif initial_quart == 3:
+        year_start = initial_yr + 0.5
+    else:
+        year_start = initial_yr + 0.75
+    
+    
+    if final_quart == 1:
+        year_end = final_yr
+       
+    elif final_quart == 2:
+        year_end = final_yr + 0.25
+    elif final_quart == 3:
+        year_end = final_yr + 0.5
+    else:
+        year_end = final_yr + 0.75
+    
+    year_end = year_end + 0.25 # arange function does not include last element
+    YearDerates = np.arange(year_start, year_end, 0.25)
+     
+    # For each group, calculate the average of only the Power column
+    quarterly_average = quarterly_grouping.aggregate({"power":np.mean})
+    
+    power_output = quarterly_average.as_matrix(['power'])
+    # converts matrix notation to 1D array
+    power_output = power_output.flatten()
+
+    return power_output, YearDerates
+
+
+OutagePower, OutageYearDerate = reactor_power(YearOutage)
+RefurbPower, RefurbYearDerate = reactor_power(YearRefurbishment)
 
 
 def pht_steam_quality(Temperature, j):
     
-    YearDerates = [1999.75, 2000, 2000.25, 2000.5, 2000.75, 2001, 2001.25, 2001.5, 2001.75, 2002, 2002.25, 20002.5,
-               2002.75, 2003, 2003.25, 2003.5, 2003.75, 2004, 2004.25, 2004.5, 2004.75, 2005, 2005.25, 2005.5, 2005.75,
-               2006, 2006.25, 2006.5, 2006.75, 2007, 2007.25, 2007.5, 2007.75, 2008]
+    CalendarYear = (j * nc.TIME_STEP / 8760) + YearStartup
     
-    PercentDerates = [3, 4, 4.8, 5, 5.5, 4.07, 3.23, 3.43, 3.77, 4.27, 4.61, 4.74, 3.33, 3.64, 3.15, 4.08, 4, 3.88,
-                      3.74, 4.18, 4.97, 5.17, 5.24, 6.30, 6.97, 7.41, 7.89, 8.29, 8.5, 8.75, 8.87, 9.39, 9, 9, 9]
+    if CalendarYear in OutageYearDerate:
+        PercentDerates = OutagePower
+        YearDerates = OutageYearDerate
     
-    PercentDerates = [i - 1 for i in PercentDerates]
+    elif CalendarYear in RefurbYearDerate:
+        PercentDerates = RefurbPower
+        YearDerates = RefurbYearDerate
     
-    calendar_year = (j * nc.TIME_STEP / 8760) + YearStartup
+    else:
+        PercentDerates = [0]
+        YearDerates = [0]
+    
+    PercentDerates = [i + (1 / 100) for i in PercentDerates]
          
     CoreMassFlow =  7600  # [kg /s]
-    Delta_T = T_sat_primary - (265 + 273.15)  # [K]
-    C_p_cold = nc.heatcapacityD2O_liquid(265 + 273.15)
-    C_p_hot = nc.heatcapacityD2O_liquid(T_sat_primary)
-    C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
+#     Delta_T = T_sat_primary - (262 + 273.15)  # [K]
+#     C_p_cold = nc.heatcapacityD2O_liquid(262 + 273.15)
+#     C_p_hot = nc.heatcapacityD2O_liquid(T_sat_primary)
+#     C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
 
     Power = 2062000 #CoreMassFlow * C_p_avg * Delta_T  # [kW]
-    YearDeratingStarts = 1999.75
 
     difference = []
-    
-    if YearDeratingStarts <= calendar_year <= 2008.25:
+    if CalendarYear in YearDerates:
         for Yr in YearDerates:
-            difference.append(abs(calendar_year - Yr))
-        ClosestYear = difference.index(min(difference))
-        
-        Percent_derating = PercentDerates[ClosestYear]
-   
+            difference.append(abs(CalendarYear - Yr))
+            ClosestYear = difference.index(min(difference))
+            Percent_derating = PercentDerates[ClosestYear]
     else:
         Percent_derating = 0
         
     P = Power - Power * (Percent_derating / 100)
-#     print (Power/1000)
+
     # core inlet enthalpy at RIHT + that added from fuel
     # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
     H_pht = P / CoreMassFlow
 
     H_satliq_outlet = 934.6#nc.enthalpyD2O_liquid(T_sat_primary)
-    
+
 #     H_satliq_outlet = nc.enthalpyH2O_liquid(nc.PrimarySidePressure, T_sat_primary)
     
     # no quality in return primary flow
@@ -588,7 +611,9 @@ def pht_steam_quality(Temperature, j):
         x = 0
     return x
 
-# print (pht_steam_quality(261.9+273.15, 876*0))
+# print (pht_steam_quality(261.9+273.15, 876*20))
+
+
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
         
     # [J/s] / [g/s] = [J /g]
@@ -1217,4 +1242,4 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     return RIHT
 
              
-print (energy_balance(ld.SteamGenerator_2, 0.0245, 876 * 0, SGFastMode="yes")- 273.15)
+# print (energy_balance(ld.SteamGenerator_2, 0.0245, 876 * 0, SGFastMode="yes")- 273.15)
