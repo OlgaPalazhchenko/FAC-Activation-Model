@@ -453,5 +453,3 @@ def thermal_conductivityD2O_liquid(Temperature):
     k_D2O = k / 100 #[ W/cm K]
     
     return k_D2O
-
-

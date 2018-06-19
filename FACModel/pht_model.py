@@ -248,22 +248,16 @@ class PHTS():
             )
 
 
+FACRate_OutletFeeder = []
+RIHT_average = []
+RIHT_InletFeeder = []
+
+OutletTemperature_Bundle_1 = [] 
+OutletTemperature_Bundle_2 = []
+pht_SteamFraction = []
+
 def output_time_logging(FACRate, RIHT_avg, RIHT, x, Temperature1, Temperature2):
-    
-    FACRate_OutletFeeder = []
-    RIHT_average = []
-    RIHT_InletFeeder = []
-    
-    # S/O concentrations are updated individually in code, e.g., self.Section1.FeTotal
-    # Bulk concentrations are not, so same location is pointed to, so all places self.Section1.Bulk.FeTotal
-    # was used change to updated values, even previously appended values
-    # new list needs to be created for bulk concentrations only
-    # x = list(In.Section1.Bulk.FeTotal)
-    
-    OutletTemperature_Bundle_1 = [] 
-    OutletTemperature_Bundle_2 = []
-    pht_SteamFraction = []
-    
+        
     FACRate_OutletFeeder.append(FACRate)
     RIHT_InletFeeder.append(RIHT)
     RIHT_average.append(RIHT_avg)
@@ -271,7 +265,6 @@ def output_time_logging(FACRate, RIHT_avg, RIHT, x, Temperature1, Temperature2):
     
     OutletTemperature_Bundle_1.append(Temperature1)
     OutletTemperature_Bundle_2.append(Temperature2)
-    
     
     return (
         FACRate_OutletFeeder, RIHT_InletFeeder, RIHT_average, pht_SteamFraction, OutletTemperature_Bundle_1,
@@ -305,7 +298,7 @@ def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
 
 # just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
-SimulationYears = 1 # years
+SimulationYears = 20 # years
 SimulationHours = SimulationYears * 876 # 851
 
 
@@ -398,17 +391,19 @@ for j in range(SimulationHours):
         else:
             Temperature2 = None
         
+    
         output_1 = output_time_logging(
-            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, T_RIH_2, x_pht, Temperature1, Temperature2
+            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, T_RIH_1, x_pht, Temperature1, Temperature2
             )     
         
         if Loop == "full":
             output_2 = output_time_logging(
-            OutletFeeder_1_Loop1.Section1.CorrRate, T_RIH_average, T_RIH_1, x_pht, Temperature1, Temperature2
+            OutletFeeder_1_Loop1.Section1.CorrRate, T_RIH_average, T_RIH_2, x_pht, Temperature1, Temperature2
             )     
     else:
         None
-
+    
+    
 end_time = time.time()
 delta_time = end_time - start_time
 

@@ -197,7 +197,9 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, calendar_year):
     if calendar_year == SGHX.YearOutageRestart:
         CleaningEfficiency = 0.67
     elif calendar_year == SGHX.YearRefurbRestart:
-        CleaningEfficiency == 0.22 #(IR-33110-0039-001-A
+        CleaningEfficiency = 0.22 #(IR-33110-0039-001-A)
+    else:
+        CleaningEfficiency = 0 # no cleaning, oxide layers returned without reduction in thickness
         
     Inner = []
     Outer = []
@@ -206,8 +208,8 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, calendar_year):
             OuterOxide[i] = OuterOxide[i] * (1 - CleaningEfficiency)
             InnerOxide[i] = InnerOxide[i]
         else:
-            InnerOxide[i] = InnerOxide[i]#* (1- 0.67)
-            OuterOxide[i] = OuterOxide[i]
+            InnerOxide[i] = InnerOxide[i] * (1 - CleaningEfficiency) #inner layer reduced in thickness instead
+            OuterOxide[i] = OuterOxide[i] # remains zero
             
     Inner.append(InnerOxide)
     Outer.append(OuterOxide)
@@ -217,49 +219,49 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, calendar_year):
 
 def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, SGFastMode):
     
-    CurrentYear = (j * nc.TIME_STEP / 8760) + SGHX.YearStartup
-        
-    if 1995.25 < CurrentYear < 1996:
-        # no oxide growth
-        Section.InnerIronOxThickness = Section.InnerIronOxThickness
-        Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness
-        Section.NiThickness = Section.NiThickness
-        Section.CoThickness = Section.CoThickness
+    CalendarYear = (j * nc.TIME_STEP / 8760) + SGHX.YearStartup   
     
-    elif CurrentYear == 1996 or CurrentYear == 2014:
-        
-        if SGHX.SGFastMode == "yes":
-            if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
-            
-                SelectedTubes = SGHX.tube_picker(SGHX.Method, Section)[0]
-                
-                if Section == SelectedTubes[0]: #first tube from list of desired tubes per each SG
-                    [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
-                    Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, CurrentYear)
-                else:
-                    Section.InnerIronOxThickness = Section.InnerIronOxThickness
-                    Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness
-            else:
-                None 
-        
-        else: #all sg tubes run    
-            
-            if Section in SGHX.Cleaned:
-                [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
-                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, CurrentYear)
-            else:
-               Section.InnerIronOxThickness = Section.InnerIronOxThickness
-               Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness 
-    
-    elif 2008.25 < CurrentYear < 2014:
-        # no oxide growth
-        Section.InnerIronOxThickness = Section.InnerIronOxThickness
-        Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness
-        Section.NiThickness = Section.NiThickness
-        Section.CoThickness = Section.CoThickness
-    
-    else:
+    if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
+        # here Section = a bundle from the SG, but tube picker needs entire SG to be passed through
+        if Section in ld.SteamGenerator: 
+            SteamGenerator = ld.SteamGenerator
+        else:
+            SteamGenerator = ld.SteamGenerator_2
 
+        if SGHX.SGFastMode == "yes":
+            
+            SelectedTubes = SGHX.tube_picker(SGHX.Method, SteamGenerator)[0]
+    
+            if Section == SelectedTubes[0]: #first tube from list of desired tubes per each SG
+                [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
+                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, CalendarYear)
+            else:
+                Section.InnerIronOxThickness = Section.InnerIronOxThickness
+                Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness
+        
+        else: #all sg tubes run (each bundle passed through, not entire SG) 
+            Cleaned = primaryside_cleaned_tubes(Section, CalendarYear)
+            
+            if Section in Cleaned:
+                [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
+                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, CalendarYear)
+            else:
+               None 
+    else:
+        None
+        
+    
+    if SGHX.YearOutage < CalendarYear < SGHX.YearOutageRestart or (
+        SGHX.YearRefurbishment < CalendarYear < SGHX.YearRefurbRestart):
+         # no oxide growth anywhere in the PHT system
+        Section.InnerIronOxThickness = Section.InnerIronOxThickness
+        Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness
+        Section.NiThickness = Section.NiThickness
+        Section.CoThickness = Section.CoThickness
+        
+    else:
+       #regular oxide growth
+   
         if ConstantRate == "yes":
             # updates M/O and S/O concentrations based on oxide thickness
             it.interface_concentrations(
@@ -286,7 +288,8 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
             
             else:
                 None
-          
+        
+        # layers continue to grow  
         else:
         # FAC solver for rate   
             RK4_InnerIronOxThickness = Section.InnerIronOxThickness
@@ -361,10 +364,8 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
             for x in range(Section.NodeNumber):
                 if Layers[i][x] < 0:
                     Layers[i][x] = 0
-        
-    #     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
-    #         print (Layers[1], ConstantRate)
     
+
     return None
     
 

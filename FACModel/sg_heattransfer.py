@@ -10,12 +10,13 @@ FullTubeComplement = 3542
 
 YearStartup = 1983.25
 YearCPP = 1988.25
+YearOutage = 1995.25
 YearOutageRestart = 1996
 YearRefurbishment = 2008.25
 YearRefurbRestart = 2014
 
 T_sat_primary = 309.24 + 273.15
-T_PreheaterIn = 186.5 + 273.15
+T_PreheaterIn = 186 + 273.15
 RecirculationRatio = 5.3
 
 
@@ -79,6 +80,49 @@ UBends = [i * 100 for i in UBends]
 TubeLengths = [1887, 1807, 1970, 2046]
 
 
+def reactor_power(CalendarYear):
+    from matplotlib import pyplot as plt
+    import pandas as pd
+    
+    if CalendarYear == YearOutage:
+        FileName = 'OutagePower'
+    else:
+        FileName = "RefurbPower"
+    
+    df = pd.read_csv(FileName, header=None)
+    df.columns = ['date','power']
+
+    # converts from string object to time series  
+    df.date = pd.to_datetime(df.date)
+    df.set_index('date', inplace=True)
+
+    # plt.plot(df)
+    # plt.xlabel('Year')
+    # plt.ylabel('Power')
+    # plt.show()
+    # # prints first 5 rows to check everything is assigned properly
+    # print (df.head())
+
+    df['year'] = [df.index[i].year for i in range(len(df))]
+    df['quarter'] = [df.index[i].quarter for i in range(len(df))]
+    # df['day'] = [df.index[i].day for i in range(len(df))]
+    
+    quarterly_grouping = df.groupby(["year","quarter"])
+    
+    # For each group, calculate the average of only the Power column
+    quarterly_average = quarterly_grouping.aggregate({"power":np.mean})
+    
+    power_output = quarterly_average.as_matrix(['power'])
+    
+    return power_output # fraction
+
+
+OutagePower = reactor_power(YearOutage)
+RefurbPower = reactor_power(RefurbPower)
+
+print (OutagePower)
+
+
 def total_tubes_plugged(Bundle, CalendarYear):
     #total tubes called sometimes by bundle inside an SG or for a specific boiler itself
     
@@ -111,6 +155,7 @@ def primaryside_cleaned_tubes(Bundle, CalendarYear):
     elif CalendarYear == YearRefurbRestart:
         PercentTubesCleaned = 1
     else:
+        # none cleaned outside of outages, cleaned tubes list below has no appended bundles
         PercentTubesCleaned = 0
     
     TotalSGTubeNumber = total_tubes_plugged(Bundle, CalendarYear)
@@ -168,7 +213,11 @@ def tube_picker(Method, SteamGenerator):
             tubes.append(SteamGenerator[i])
     # selects class initializations based on desired overall tube lengths        
     elif Method == "tube length":
-        for k in TubeLengths:
+        #if different tubes needed to be run in each steam generator, customize line below
+        if SteamGenerator == ld.SteamGenerator or SteamGenerator == ld.SteamGenerator_2:
+            Lengths = TubeLengths
+
+        for k in Lengths:
             x = closest_tubelength(k)
             tube_number.append(x)
         
@@ -473,11 +522,24 @@ def outer_area(SteamGenerator):
     return [np.pi * x * y for x, y in zip(SteamGenerator.OuterDiameter, SteamGenerator.Length.magnitude)]
 
 
+def power_derates(CalendarYear, YearDerateEnds):
+    YearDerateStarts = CalendarYear
+    
+    YearDerates = np.arange(YearDerateStarts, YearDerateEnds, 0.25)
+    
+    if CalendarYear == YearOutage:
+        PercentDerates = OutagePower
+    elif CalendarYear == YearRefurbishment:
+        PercentDerates = RefurbPower
+    
+    return YearDerates
+
+
 def pht_steam_quality(Temperature, j):
     
     YearDerates = [1999.75, 2000, 2000.25, 2000.5, 2000.75, 2001, 2001.25, 2001.5, 2001.75, 2002, 2002.25, 20002.5,
                2002.75, 2003, 2003.25, 2003.5, 2003.75, 2004, 2004.25, 2004.5, 2004.75, 2005, 2005.25, 2005.5, 2005.75,
-               2006, 2006.25, 2006.5, 2006.75, 2007, 2007.25, 2007.5, 2007.75, 2008.25]
+               2006, 2006.25, 2006.5, 2006.75, 2007, 2007.25, 2007.5, 2007.75, 2008]
     
     PercentDerates = [3, 4, 4.8, 5, 5.5, 4.07, 3.23, 3.43, 3.77, 4.27, 4.61, 4.74, 3.33, 3.64, 3.15, 4.08, 4, 3.88,
                       3.74, 4.18, 4.97, 5.17, 5.24, 6.30, 6.97, 7.41, 7.89, 8.29, 8.5, 8.75, 8.87, 9.39, 9, 9, 9]
@@ -1038,7 +1100,7 @@ def station_events(calendar_year):
         # divider plate leakage rates estimated based on AECL work (2-3.5 % range estimated)
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-        InitialLeakage = 0.025
+        InitialLeakage = 0.0275
         YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
         InitialYear = YearStartup
          
@@ -1077,7 +1139,6 @@ def station_events(calendar_year):
 
 
 def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
-# def energy_balance(SteamGenerator, InnerOxide, OuterOxide, CleanedInnerOxide, CleanedOuterOxide, x_pht, j, SGFastMode):
     
     year = (j * nc.TIME_STEP / 8760) 
     CalendarYear = year + YearStartup
@@ -1092,9 +1153,9 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
         if SGFastMode == "yes":
             
             #not all tubes run (only those selected)
-            selected_tubes = tube_picker(Method, SteamGenerator)[0]
+            Selected_Tubes = tube_picker(Method, SteamGenerator)[0]
             
-            if Bundle in selected_tubes:
+            if Bundle in Selected_Tubes:
                 # tracks oxide growth for these tubes specifically
                 InnerOx = Bundle.InnerOxThickness
                 OuterOx = Bundle.OuterOxThickness
@@ -1120,10 +1181,10 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
         else:
             
             # prevents default (1.52 m, 57th index number) tube from being run twice through PHTS/oxide growth functions
-            selected_tubes= SteamGenerator[0:57] + SteamGenerator[58:87]
+            Selected_Tubes= SteamGenerator[0:57] + SteamGenerator[58:87]
             # if want to select all tubes as selected tubes
             
-            if Bundle in selected_tubes:
+            if Bundle in Selected_Tubes:
                 # tracks oxide growth for all tubes
                 InnerOx = Bundle.InnerOxThickness
                 OuterOx = Bundle.OuterOxThickness
@@ -1156,4 +1217,4 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     return RIHT
 
              
-# print (energy_balance(ld.SteamGenerator_2, 0.0245, 876 * 0, SGFastMode="yes")- 273.15)
+print (energy_balance(ld.SteamGenerator_2, 0.0245, 876 * 0, SGFastMode="yes")- 273.15)
