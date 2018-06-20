@@ -199,6 +199,8 @@ def enthalpyH2O_vapour(Pressure, Temperature):
 
 def enthalpyD2O_liquid(Temperature):
     T = Temperature - 273.15
+    
+#     return 5.30856 * T - 708.94715  # [kJ/kg]
     return 4.7307 * T - 546.55  # [kJ/kg]
 
 

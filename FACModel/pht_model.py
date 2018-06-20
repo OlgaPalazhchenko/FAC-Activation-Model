@@ -23,15 +23,14 @@ elif Loop == "full":
 else:
     None
 
-def initial_chemistry():
-    
-    RIHT1 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht = 0.02, j = 0, SGFastMode = SGHX.SGFastMode)
-    ld.InletFeeder.PrimaryBulkTemperature = [RIHT1] * ld.InletFeeder.NodeNumber
+def initial_conditions():
     
     # initial temperatures in steam generator(s)
-    if Loop == "full":
-        RIHT2 = SGHX.energy_balance(ld.SteamGenerator, x_pht = 0.02, j = 0, SGFastMode = SGHX.SGFastMode)
-        ld.InletFeeder_2.PrimaryBulkTemperature = [RIHT2] * ld.InletFeeder_2.NodeNumber
+    RIHT1 = SGHX.energy_balance(ld.SteamGenerator, x_pht = 0.01, j = 0, SGFastMode = SGHX.SGFastMode)
+    ld.InletFeeder.PrimaryBulkTemperature = [RIHT1] * ld.InletFeeder.NodeNumber
+        
+    RIHT2 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht = 0.01, j = 0, SGFastMode = SGHX.SGFastMode)
+    ld.InletFeeder_2.PrimaryBulkTemperature = [RIHT2] * ld.InletFeeder_2.NodeNumber
   
         
     for Section in Sections:
@@ -298,7 +297,7 @@ def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
 
 # just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
-SimulationYears = 20 # years
+SimulationYears = 31 # years
 SimulationHours = SimulationYears * 876 # 851
 
 
@@ -306,7 +305,7 @@ import time
 start_time = time.time()
 
 # load initial chemistry for full/half loop
-initial_chemistry()
+initial_conditions()
 
 for j in range(SimulationHours):
    
@@ -356,20 +355,21 @@ for j in range(SimulationHours):
     if j % (219) == 0:  # 2190 h * 10 = 4x a year  
         
         if j ==0:
-            x_pht = 0.0245 # PHT steam fraction for "clean" boiler
+            x_pht = 0.01 # PHT steam fraction for "clean" boiler
 
         if Loop == "full":
-            T_RIH_1 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, j, SGHX.SGFastMode) - 273.15
-            T_RIH_2 = SGHX.energy_balance(ld.SteamGenerator_1, x_pht, j, SGHX.SGFastMode) - 273.15
-            
-        else:
-            T_RIH_1 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, j, SGHX.SGFastMode) - 273.15
-            T_RIH_2 = T_RIH_1 * 1   
-
-        ld.InletFeeder.PrimaryBulkTemperature  = [T_RIH_2 + 273.15] * ld.InletFeeder.NodeNumber
-        ld.InletFeeder_2.PrimaryBulkTemperature = [T_RIH_1 + 273.15] * ld.InletFeeder_2.NodeNumber
+            RIHT_1 = SGHX.energy_balance(ld.SteamGenerator, x_pht, j, SGHX.SGFastMode) - 273.15
+            RIHT_2 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, j, SGHX.SGFastMode) - 273.15
+            ld.InletFeeder_2.PrimaryBulkTemperature = [RIHT_2 + 273.15] * ld.InletFeeder_2.NodeNumber
         
-        T_RIH_average = (T_RIH_1 + T_RIH_2) / 2
+        else:
+            RIHT_2 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, j, SGHX.SGFastMode) - 273.15
+            RIHT_1 = RIHT_2 * 1   
+
+        ld.InletFeeder.PrimaryBulkTemperature  = [RIHT_1 + 273.15] * ld.InletFeeder.NodeNumber
+        
+        
+        T_RIH_average = (RIHT_1 + RIHT_2) / 2
         
         x_pht = SGHX.pht_steam_quality(T_RIH_average + 273.15, j)
 
@@ -377,7 +377,7 @@ for j in range(SimulationHours):
             # new temperatures in steam generators and inlet feeders
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)
         
-        print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, T_RIH_1, T_RIH_2)
+        print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, RIHT_1, RIHT_2)
         
 
         Temperature1 = (
@@ -393,12 +393,12 @@ for j in range(SimulationHours):
         
     
         output_1 = output_time_logging(
-            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, T_RIH_1, x_pht, Temperature1, Temperature2
+            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_2, x_pht, Temperature1, Temperature2
             )     
         
         if Loop == "full":
             output_2 = output_time_logging(
-            OutletFeeder_1_Loop1.Section1.CorrRate, T_RIH_average, T_RIH_2, x_pht, Temperature1, Temperature2
+            OutletFeeder_1_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, x_pht, Temperature1, Temperature2
             )     
     else:
         None

@@ -15,9 +15,9 @@ YearOutageRestart = 1996
 YearRefurbishment = 2008.25
 YearRefurbRestart = 2014
 
-T_sat_primary = 309.24 + 273.15
-T_PreheaterIn = 186 + 273.15
-RecirculationRatio = 5.3
+T_sat_primary = 311 + 273.15
+T_PreheaterIn = 189 + 273.15
+RecirculationRatio = 5.1
 
 
 h_i = nc.SGParameters()
@@ -51,7 +51,7 @@ for i in [R_F_primary, R_F_secondary]:
 MassFlow_h.magnitude = 1925 * 1000
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
 # 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
-MassFlow_preheater.magnitude = 240 * 1000
+MassFlow_preheater.magnitude = 239 * 1000
 MassFlow_ReheaterDrains = 0#72 * 1000 / 4
 MassFlow_downcomer.magnitude = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
 MassFlow_c_total.magnitude = MassFlow_downcomer.magnitude + MassFlow_preheater.magnitude + MassFlow_ReheaterDrains
@@ -68,7 +68,7 @@ for i in [ShellDiameter, EquivalentDiameter, TubePitch]:
 for i in [MassFlux_c, MassFlux_h]:
     i.unit = "g/cm^2 s"
     
-EnthalpySaturatedSteam.magnitude = 2119.7  # 9.89 MPa
+EnthalpySaturatedSteam.magnitude = 2116.3  # 9.89 MPa
 EnthalpySaturatedSteam.unit = "J/g"
 
 TubePitch.magnitude = 2.413
@@ -88,7 +88,7 @@ def total_tubes_plugged(Bundle, CalendarYear):
         if CalendarYear >= 2009:
             NumberPluggedTubes = 8
         else:
-            NumberPluggedTubes = 0
+            NumberPluggedTubes = 5
             
         
     elif Bundle in ld.SteamGenerator_2 or Bundle == ld.SteamGenerator_2:
@@ -96,7 +96,7 @@ def total_tubes_plugged(Bundle, CalendarYear):
         if CalendarYear >= 2009:
             NumberPluggedTubes = 21
         else:
-            NumberPluggedTubes = 0
+            NumberPluggedTubes = 10
             
  
     TotalSGTubeNumber = 3542 - NumberPluggedTubes
@@ -598,8 +598,8 @@ def pht_steam_quality(Temperature, j):
     # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
     H_pht = P / CoreMassFlow
 
-    H_satliq_outlet = 934.6#nc.enthalpyD2O_liquid(T_sat_primary)
-
+    H_satliq_outlet = 940.79#nc.enthalpyD2O_liquid(T_sat_primary)
+    print (H_satliq_outlet)
 #     H_satliq_outlet = nc.enthalpyH2O_liquid(nc.PrimarySidePressure, T_sat_primary)
     
     # no quality in return primary flow
@@ -611,7 +611,7 @@ def pht_steam_quality(Temperature, j):
         x = 0
     return x
 
-# print (pht_steam_quality(261.9+273.15, 876*20))
+# print (pht_steam_quality(261.9+273.15, 876*0))
 
 
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
@@ -854,7 +854,7 @@ def wall_temperature(
     A_i = inner_area(Bundle)[i]
     A_o = outer_area(Bundle)[i]
     
-    for k in range(100):
+    for k in range(50):
         
         WT_h = T_PrimaryWall
         WT_c = T_SecondaryWall
@@ -1125,29 +1125,29 @@ def station_events(calendar_year):
         # divider plate leakage rates estimated based on AECL work (2-3.5 % range estimated)
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-        InitialLeakage = 0.0275
+        InitialLeakage = 0.025
         YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
         InitialYear = YearStartup
          
     elif calendar_year == YearOutageRestart: #1996
-        InitialLeakage = 0.03  # controls where first post-outage point is (underpredicted w/o this)
+        InitialLeakage = 0.01  # controls where first post-outage point is (underpredicted w/o this)
         YearlyRateLeakage = 0
         InitialYear = YearOutageRestart
     
     elif calendar_year > YearOutageRestart: # after 1996
-        InitialLeakage = 0.05  # helps second post-outage point rise (second leak of 2% magnitude initialized)
-        YearlyRateLeakage = 0.00035  # either this or some SHT deposits help out Phase 4 from dipping so much
+        InitialLeakage = 0.03  # helps second post-outage point rise (second leak of 2% magnitude initialized)
+        YearlyRateLeakage = 0.00015  # either this or some SHT deposits help out Phase 4 from dipping so much
         InitialYear = YearOutageRestart    
     
     elif YearRefurbishment < calendar_year < YearRefurbRestart: # (2008.25 - 2014)
-        InitialLeakage = (YearRefurbishment - YearOutageRestart) * 0.00035 + 0.05
+        InitialLeakage = (YearRefurbishment - YearOutageRestart) * 0.00015 + 0.03
         # plateau during outage 
         YearlyRateLeakage = 0
         InitialYear = YearRefurbishment #doesn't matter, growth rate is zero throughout refurb outage
     
     elif calendar_year >= YearRefurbRestart: # after and incl. 2014
-        InitialLeakage = (YearRefurbishment - YearOutageRestart) * 0.0035 + 0.05
-        YearlyRateLeakage = 0.00035
+        InitialLeakage = (YearRefurbishment - YearOutageRestart) * 0.0015 + 0.03
+        YearlyRateLeakage = 0.00015
         InitialYear = YearRefurbRestart
         
     else:
@@ -1163,10 +1163,14 @@ def station_events(calendar_year):
     return SecondarySidePressure, m_h_leakagecorrection, DividerPlateMassFlow
 
 
-def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
+def energy_balance(SteamGenerator, j, x_pht, SGFastMode):
     
     year = (j * nc.TIME_STEP / 8760) 
     CalendarYear = year + YearStartup
+    
+    if j == 0:
+        x_pht = 0.01
+    
     Energy = []
     
     Cleaned, TotalSGTubeNumber = primaryside_cleaned_tubes(SteamGenerator, CalendarYear)
@@ -1230,16 +1234,18 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
 
         Energy.append(m_timesH)
         
-        Enthalpy_dp_sat_liq = nc.enthalpyD2O_liquid(T_sat_primary) 
+        Enthalpy_dp_sat_liq = nc.enthalpyD2O_liquid(T_sat_primary)
+
         #nc.enthalpyH2O_liquid(nc.PrimarySidePressure, T_sat_primary)
         Enthalpy_dividerplate = Enthalpy_dp_sat_liq + x_pht * (EnthalpySaturatedSteam.magnitude - Enthalpy_dp_sat_liq)
-        
+
         Enthalpy = (sum(Energy) + MasssFlow_dividerplate.magnitude * Enthalpy_dividerplate) / MassFlow_h.magnitude 
 
 #     RIHT = nc.temperature_from_enthalpyH2O_liquid("PHT", Enthalpy, None)
+   
     RIHT = nc.temperature_from_enthalpyD2O_liquid(Enthalpy)
 
     return RIHT
 
              
-# print (energy_balance(ld.SteamGenerator_2, 0.0245, 876 * 0, SGFastMode="yes")- 273.15)
+# print (energy_balance(ld.SteamGenerator_2, 0.01, 876 * 0, SGFastMode="yes")- 273.15)

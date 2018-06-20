@@ -3,7 +3,6 @@ Created on Oct 22, 2017
 @author: opalazhc
 '''
 
-
 import lepreau_data as ld
 import sg_heattransfer as SGHX
 import composition as c
@@ -125,9 +124,9 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
 #     FeConcentration_SteamGeneratorTubes = []
 
     if OutletFeeder == ld.OutletFeeder_2:
-        Output = pht_model.output_1
+        Output = pht_model.output_2
     elif OutletFeeder == ld.OutletFeeder:
-        Output = pht_model.output_2 
+        Output = pht_model.output_1 
     
     SelectedTubes = SGHX.tube_picker(SGHX.Method, SteamGenerator)[0]
     
