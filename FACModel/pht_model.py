@@ -297,7 +297,7 @@ def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
 
 # just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
-SimulationYears = 31 # years
+SimulationYears = 34 # years
 SimulationHours = SimulationYears * 876 # 851
 
 
@@ -382,7 +382,7 @@ for j in range(SimulationHours):
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)
         
         # optional preview of RIHT and primary-side steam quality
-        print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, RIHT_1, RIHT_2)
+#         print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, RIHT_1, RIHT_2)
         
 
         #final node temperature of first 2 of selected bundles (first two bundles from all 87 if not run in "fast mode")

@@ -86,15 +86,15 @@ def total_tubes_plugged(Bundle, CalendarYear):
     if Bundle in ld.SteamGenerator or Bundle == ld.SteamGenerator:
 
         if CalendarYear >= 2009:
-            NumberPluggedTubes = 8
+            NumberPluggedTubes = 0
         else:
-            NumberPluggedTubes = 5
+            NumberPluggedTubes = 0
             
         
     elif Bundle in ld.SteamGenerator_2 or Bundle == ld.SteamGenerator_2:
         
         if CalendarYear >= 2009:
-            NumberPluggedTubes = 21
+            NumberPluggedTubes = 0
         else:
             NumberPluggedTubes = 0
             
@@ -572,8 +572,6 @@ def pht_steam_quality(Temperature, j):
     else:
         PercentDerates = [0]
         YearDerates = [0]
-    
-    PercentDerates = [i + (1 / 100) for i in PercentDerates]
          
     CoreMassFlow =  7600  # [kg /s]
 #     Delta_T = T_sat_primary - (262 + 273.15)  # [K]
@@ -582,13 +580,14 @@ def pht_steam_quality(Temperature, j):
 #     C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
 
     Power = 2062 * 1000 #CoreMassFlow * C_p_avg * Delta_T  # [kW]
-
+#     print (CalendarYear, PercentDerates)
     difference = []
     if CalendarYear in YearDerates:
         for Yr in YearDerates:
             difference.append(abs(CalendarYear - Yr))
             ClosestYear = difference.index(min(difference))
-            Percent_derating = PercentDerates[ClosestYear]
+        Percent_derating = PercentDerates[ClosestYear]
+        print (Percent_derating)
     else:
         Percent_derating = 1
        
@@ -605,12 +604,13 @@ def pht_steam_quality(Temperature, j):
     H_current = nc.enthalpyD2O_liquid(Temperature) + H_pht
 #     H_current = nc.enthalpyH2O_liquid(nc.PrimarySidePressure, Temperature) + H_pht
     x = (H_current - H_satliq_outlet) / (EnthalpySaturatedSteam.magnitude - H_satliq_outlet)
-
+    
+#     print (CalendarYear, P, Percent_derating)
     if x < 0:
         x = 0
     return x
 
-# print (pht_steam_quality(264 +273.15, (18) * 876))
+# print (pht_steam_quality(264 +273.15, (25.5) * 876))
 
 
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
@@ -1151,7 +1151,7 @@ def station_events(calendar_year):
         None
     
     
-    PostOutageYearlyLeakage = 0.0004
+    PostOutageYearlyLeakage = 0.00035
     PostOutageInitialLeakage = 0.0325   
     
     # Divider plate raplacement only:

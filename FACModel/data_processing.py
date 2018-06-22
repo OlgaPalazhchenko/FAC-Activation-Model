@@ -170,10 +170,9 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
         )
         OutletCorrosionRate_um.append(x)
     
-    Years = []
-    for i in range((pht_model.SimulationYears + 1) * 4):
-        Years.append((i / 4) + SGHX.YearStartup)
     
+    year_end = year_end + 0.25 # arange function does not include last element
+    Years = np.arange(SGHX.YearStartup, year_end, 0.25)
 
     Data = [
         SGHX.TubeLengths, TotalDistance, InnerOxide_SteamGeneratorTubes, OuterOxide_SteamGeneratorTubes,
