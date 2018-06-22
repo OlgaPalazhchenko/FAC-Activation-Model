@@ -15,9 +15,9 @@ YearOutageRestart = 1996
 YearRefurbishment = 2008.25
 YearRefurbRestart = 2014
 
-T_sat_primary = 311 + 273.15
-T_PreheaterIn = 189 + 273.15
-RecirculationRatio = 5.1
+T_sat_primary = 310.77 + 273.15
+T_PreheaterIn = 187 + 273.15
+RecirculationRatio = 5.3
 
 
 h_i = nc.SGParameters()
@@ -48,7 +48,7 @@ for i in [U_h, U_c, U_total]:
 for i in [R_F_primary, R_F_secondary]:
     i.unit = "cm^2 K/W"
 
-MassFlow_h.magnitude = 1925 * 1000
+MassFlow_h.magnitude = 1900 * 1000
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
 # 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
 MassFlow_preheater.magnitude = 239 * 1000
@@ -96,7 +96,7 @@ def total_tubes_plugged(Bundle, CalendarYear):
         if CalendarYear >= 2009:
             NumberPluggedTubes = 21
         else:
-            NumberPluggedTubes = 10
+            NumberPluggedTubes = 0
             
  
     TotalSGTubeNumber = 3542 - NumberPluggedTubes
@@ -230,7 +230,7 @@ def sludge_fouling_resistance(Bundle, i, calendar_year):
     TubeGrowth = 0.00135  # [g/cm^2] /year = 6.5 um /year
     ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
     
-    InitialAccumulation = 0#0.00025 #g/cm^2
+    InitialAccumulation = 0.0001 #g/cm^2
       
     # between 1983 and 1986 (included)
     if YearStartup <= calendar_year <= YearCPP:
@@ -581,7 +581,7 @@ def pht_steam_quality(Temperature, j):
 #     C_p_hot = nc.heatcapacityD2O_liquid(T_sat_primary)
 #     C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
 
-    Power = 2062000 #CoreMassFlow * C_p_avg * Delta_T  # [kW]
+    Power = 2062 * 1000 #CoreMassFlow * C_p_avg * Delta_T  # [kW]
 
     difference = []
     if CalendarYear in YearDerates:
@@ -590,16 +590,15 @@ def pht_steam_quality(Temperature, j):
             ClosestYear = difference.index(min(difference))
             Percent_derating = PercentDerates[ClosestYear]
     else:
-        Percent_derating = 0
-        
-    P = Power - Power * (Percent_derating / 100)
+        Percent_derating = 1
+       
+    P = Power * Percent_derating
 
     # core inlet enthalpy at RIHT + that added from fuel
     # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
     H_pht = P / CoreMassFlow
 
-    H_satliq_outlet = 940.79#nc.enthalpyD2O_liquid(T_sat_primary)
-    print (H_satliq_outlet)
+    H_satliq_outlet = nc.enthalpyD2O_liquid(T_sat_primary)
 #     H_satliq_outlet = nc.enthalpyH2O_liquid(nc.PrimarySidePressure, T_sat_primary)
     
     # no quality in return primary flow
@@ -611,7 +610,7 @@ def pht_steam_quality(Temperature, j):
         x = 0
     return x
 
-# print (pht_steam_quality(261.9+273.15, 876*0))
+# print (pht_steam_quality(264 +273.15, (18) * 876))
 
 
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
@@ -746,33 +745,66 @@ def Cooper_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySideP
     return h_nb     
 
 
-def ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure):
+# def ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure):
+# 
+#     # W/cm K / 1000 -- > kW/cm K * 100 --> kW/m K thermal conductivity
+#     lambda_l = (nc.thermal_conductivityH2O_liquid(T_sat_secondary, SecondarySidePressure) / 10) ** 0.79 
+#     #J / g K --> liquid specific heat
+#     cp_l = (nc.heatcapacityH2O_liquid(T_sat_secondary, SecondarySidePressure)) ** 0.45 
+#     rho_l = (nc.densityH2O_liquid(T_sat_secondary, SecondarySidePressure) * (100 ** 3) / 1000) ** 0.49 # kg/m^3
+#     rho_v = (nc.densityH2O_vapour(SecondarySidePressure, T_sat_secondary) * (100 ** 3) / 1000) ** 0.24 # kg/m^3
+#     sigma = (0.024) ** 0.5 #surface tension N/m
+#     mu = (nc.viscosityH2O_liquid(T_sat_secondary, SecondarySidePressure) / 10) ** 0.29 # liquid viscosity #kg/m s 
+#     
+#     enthalpy_l = nc.enthalpyH2O_liquid(SecondarySidePressure, T_sat_secondary)  # J / g (kJ/kg)
+#     enthalpy_v = nc.enthalpyH2O_vapour(SecondarySidePressure, T_sat_secondary) 
+#     h_lg = (enthalpy_v - enthalpy_l) ** 0.24 
+#     
+#     if T_SecondaryWall <= T_sat_secondary:
+#         T_SecondaryWall = T_sat_secondary + 0.5
+#         
+#     deltaT_sat = (T_SecondaryWall - T_sat_secondary) ** 0.24 # K
+#     P_w = nc.saturation_pressureH2O(T_SecondaryWall) * 10 ** 6
+#     P_s = nc.saturation_pressureH2O(T_sat_secondary) * 10 ** 6
+#     
+#     deltaP_sat = (P_w - P_s) ** 0.75 # MPa
+#         
+#     h = 0.00122 * lambda_l * cp_l * rho_l * deltaT_sat * deltaP_sat / (sigma * mu * h_lg * rho_v) 
+#     h_nb = 1000 * h / (100 ** 2) # [W/cm^2 K]
+#     print (h, h_nb)
+# 
+#     return h_nb
 
-    # W/cm K / 1000 -- > kW/cm K * 100 --> kW/m K thermal conductivity
-    lambda_l = (nc.thermal_conductivityH2O_liquid(T_sat_secondary, SecondarySidePressure) / 10) ** 0.79 
+
+def ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure):
+ 
+    # W/cm K  * 100 --> W/m K thermal conductivity
+    lambda_l = (nc.thermal_conductivityH2O_liquid(T_sat_secondary, SecondarySidePressure) * 100) ** 0.79 
     #J / g K --> liquid specific heat
-    cp_l = (nc.heatcapacityH2O_liquid(T_sat_secondary, SecondarySidePressure)) ** 0.45 
+    cp_l = (nc.heatcapacityH2O_liquid(T_sat_secondary, SecondarySidePressure) * 1000) ** 0.45 
     rho_l = (nc.densityH2O_liquid(T_sat_secondary, SecondarySidePressure) * (100 ** 3) / 1000) ** 0.49 # kg/m^3
     rho_v = (nc.densityH2O_vapour(SecondarySidePressure, T_sat_secondary) * (100 ** 3) / 1000) ** 0.24 # kg/m^3
     sigma = (0.024) ** 0.5 #surface tension N/m
     mu = (nc.viscosityH2O_liquid(T_sat_secondary, SecondarySidePressure) / 10) ** 0.29 # liquid viscosity #kg/m s 
-    
-    enthalpy_l = nc.enthalpyH2O_liquid(SecondarySidePressure, T_sat_secondary)  # J / g (kJ/kg)
-    enthalpy_v = nc.enthalpyH2O_vapour(SecondarySidePressure, T_sat_secondary) 
+     
+    enthalpy_l = nc.enthalpyH2O_liquid(SecondarySidePressure, T_sat_secondary) * 1000  # J / g (kJ/kg)
+    enthalpy_v = nc.enthalpyH2O_vapour(SecondarySidePressure, T_sat_secondary) * 1000
     h_lg = (enthalpy_v - enthalpy_l) ** 0.24 
-    
+     
     if T_SecondaryWall <= T_sat_secondary:
-        T_SecondaryWall = T_sat_secondary + 0.5
-        
+        T_SecondaryWall = T_sat_secondary + 1
+         
     deltaT_sat = (T_SecondaryWall - T_sat_secondary) ** 0.24 # K
     P_w = nc.saturation_pressureH2O(T_SecondaryWall) * 10 ** 6
     P_s = nc.saturation_pressureH2O(T_sat_secondary) * 10 ** 6
-    
+     
     deltaP_sat = (P_w - P_s) ** 0.75 # MPa
-        
-    h = 0.00122 * lambda_l * cp_l * rho_l * deltaT_sat * deltaP_sat / (sigma * mu * h_lg * rho_v) 
-    h_nb = 1000 * h / (100 ** 2) # [kW/cm^2 K]
-
+         
+    h = 0.00122 * lambda_l * cp_l * rho_l * deltaT_sat * deltaP_sat / (sigma * mu * h_lg * rho_v) # W / m^2 K
+     
+    h_nb = h / (100 ** 2) # [W/cm^2 K]
+#     print (h, h_nb)
+ 
     return h_nb
 
 
@@ -781,7 +813,7 @@ def outside_bundle_pool_boiling(
         i
         ):
     
-    F = .18 # bundle boiling factor (empirical)
+    F = .11 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -1117,7 +1149,10 @@ def station_events(calendar_year):
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     else:
         None
-        
+    
+    
+    PostOutageYearlyLeakage = 0.0004
+    PostOutageInitialLeakage = 0.0325   
     
     # Divider plate raplacement only:
     
@@ -1130,24 +1165,26 @@ def station_events(calendar_year):
         InitialYear = YearStartup
          
     elif calendar_year == YearOutageRestart: #1996
-        InitialLeakage = 0.01  # controls where first post-outage point is (underpredicted w/o this)
+        InitialLeakage = 0.0075  # controls where first post-outage point is (underpredicted w/o this)
         YearlyRateLeakage = 0
         InitialYear = YearOutageRestart
     
     elif calendar_year > YearOutageRestart: # after 1996
-        InitialLeakage = 0.03  # helps second post-outage point rise (second leak of 2% magnitude initialized)
-        YearlyRateLeakage = 0.00015  # either this or some SHT deposits help out Phase 4 from dipping so much
+        # helps second post-outage point rise (second leak of 2.5% magnitude initialized)
+        InitialLeakage = PostOutageInitialLeakage
+        # either this or some SHT deposits help out Phase 4 from dipping so much
+        YearlyRateLeakage = PostOutageYearlyLeakage
         InitialYear = YearOutageRestart    
     
     elif YearRefurbishment < calendar_year < YearRefurbRestart: # (2008.25 - 2014)
-        InitialLeakage = (YearRefurbishment - YearOutageRestart) * 0.00015 + 0.03
+        InitialLeakage = (YearRefurbishment - YearOutageRestart) * PostOutageYearlyRateLeakage + PostOutageYearlyLeakage
         # plateau during outage 
         YearlyRateLeakage = 0
         InitialYear = YearRefurbishment #doesn't matter, growth rate is zero throughout refurb outage
     
     elif calendar_year >= YearRefurbRestart: # after and incl. 2014
-        InitialLeakage = (YearRefurbishment - YearOutageRestart) * 0.0015 + 0.03
-        YearlyRateLeakage = 0.00015
+        InitialLeakage = (YearRefurbishment - YearOutageRestart) * PostOutageYearlyLeakage + PostOutageInitialLeakage
+        YearlyRateLeakage = 0.0001
         InitialYear = YearRefurbRestart
         
     else:
@@ -1163,7 +1200,7 @@ def station_events(calendar_year):
     return SecondarySidePressure, m_h_leakagecorrection, DividerPlateMassFlow
 
 
-def energy_balance(SteamGenerator, j, x_pht, SGFastMode):
+def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     
     year = (j * nc.TIME_STEP / 8760) 
     CalendarYear = year + YearStartup
@@ -1248,4 +1285,4 @@ def energy_balance(SteamGenerator, j, x_pht, SGFastMode):
     return RIHT
 
              
-# print (energy_balance(ld.SteamGenerator_2, 0.01, 876 * 0, SGFastMode="yes")- 273.15)
+# print (energy_balance(ld.SteamGenerator_2, 0.02, 876 * 0, SGFastMode="yes")- 273.15)

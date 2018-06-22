@@ -312,9 +312,10 @@ for j in range(SimulationHours):
     if Loop == "full":
         InletInput = ld.InletFeeder_2
     # for 1/2 of single figure-of-eight loop, SG flow returned to same inlet header as that at start of loop
+    # for full loop, 
     else:
         InletInput = ld.InletFeeder
-            
+    # half loop iterates through 4 sections (inlet feeder 1, fuel channel 1, outlet feeder 2, sg 2, back to inlet 1)        
     
     InletFeeder_1_Loop1 = PHTS(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j)
     
@@ -347,7 +348,7 @@ for j in range(SimulationHours):
         
         SelectedTubes, SelectedTubeNumbers = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator)
         SteamGeneratorTubes_1 = sg_heat_transfer(ld.OutletFeeder, ld.InletFeeder, SelectedTubes, j)
-    # loop ends with only 4 parts (inlet feeder 1, fuel channel 1, outlet feeder 2, sg tube 2, back to inlet feeder 1)
+    
     else:
         None
 
@@ -355,7 +356,7 @@ for j in range(SimulationHours):
     if j % (219) == 0:  # 2190 h * 10 = 4x a year  
         
         if j ==0:
-            x_pht = 0.01 # PHT steam fraction for "clean" boiler
+            x_pht = 0.01 # PHT steam fraction assumed for "clean" boiler
 
         if Loop == "full":
             RIHT_1 = SGHX.energy_balance(ld.SteamGenerator, x_pht, j, SGHX.SGFastMode) - 273.15
@@ -363,28 +364,34 @@ for j in range(SimulationHours):
             ld.InletFeeder_2.PrimaryBulkTemperature = [RIHT_2 + 273.15] * ld.InletFeeder_2.NodeNumber
         
         else:
+            #SG 2 is in the half and full loop configurations (default steam generator)
             RIHT_2 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, j, SGHX.SGFastMode) - 273.15
-            RIHT_1 = RIHT_2 * 1   
+            RIHT_1 = RIHT_2 * 1  # output logging function needs value for both RIHT's and inlet header 1 needs input 
 
+        # in full loop mode, this is calculated based on SG 1 output
+        # in half loop mode, this is based on SG 2 output (RIHT_1 set equal to RIHT_2)
         ld.InletFeeder.PrimaryBulkTemperature  = [RIHT_1 + 273.15] * ld.InletFeeder.NodeNumber
         
-        
+        # in half loop mode, these are equal, so avg = RIHT_1 = RIHT_2
         T_RIH_average = (RIHT_1 + RIHT_2) / 2
-        
         x_pht = SGHX.pht_steam_quality(T_RIH_average + 273.15, j)
-
+        
+        # core and outlet temperatures currently not being updated, but all sections called for continuity
         for Section in Sections:
-            # new temperatures in steam generators and inlet feeders
+            # update solubility based on new temperatures in steam generators and inlet heades/feeders
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)
         
+        # optional preview of RIHT and primary-side steam quality
         print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, RIHT_1, RIHT_2)
         
 
+        #final node temperature of first 2 of selected bundles (first two bundles from all 87 if not run in "fast mode")
+        # currently tracking only one steam generator...second set of Temp1 and Temp2 can be added for SG1 if needed
         Temperature1 = (
             ld.SteamGenerator_2[SelectedTubeNumbers[0]].PrimaryBulkTemperature[21] - 273.15
                        )
 
-        if len(SelectedTubes) > 1:
+        if len(SelectedTubes) > 1: # provided that the selected bundle array is not just one element
             Temperature2 = (
                 ld.SteamGenerator_2[SelectedTubeNumbers[1]].PrimaryBulkTemperature[21] - 273.15
                            )
@@ -392,12 +399,13 @@ for j in range(SimulationHours):
             Temperature2 = None
         
     
-        output_1 = output_time_logging(
+        #output_2 is from second steam generator and second inlet header (RIHT_2), always run, half or full loop 
+        output_2 = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_2, x_pht, Temperature1, Temperature2
             )     
         
         if Loop == "full":
-            output_2 = output_time_logging(
+            output_1 = output_time_logging(
             OutletFeeder_1_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, x_pht, Temperature1, Temperature2
             )     
     else:

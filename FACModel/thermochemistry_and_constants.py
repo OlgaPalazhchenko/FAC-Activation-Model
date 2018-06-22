@@ -195,13 +195,13 @@ def enthalpyH2O_vapour(Pressure, Temperature):
     H = R_IAPWS * Temperature * ratio_temperatures * (Gibbs_idealgas_T + Gibbs_reduced_T_sum)  # [kJ / kg K]
     
     return H
-    
+
 
 def enthalpyD2O_liquid(Temperature):
     T = Temperature - 273.15
     
-#     return 5.30856 * T - 708.94715  # [kJ/kg]
-    return 4.7307 * T - 546.55  # [kJ/kg]
+    return 5.30856 * T - 708.94715  # [kJ/kg]
+#     return 4.7307 * T - 546.55  # [kJ/kg]
 
 
 def temperature_from_enthalpyD2O_liquid(Enthalpy):
@@ -312,7 +312,7 @@ def densityH2O_vapour(Pressure, Temperature):
     # [g/cm^3]
     return rho_vap * 1000 / (100 ** 3) 
 
-     
+
 def densityH2O_liquid(Temperature, SecondarySidePressure):
     p = SecondarySidePressure 
 
@@ -328,7 +328,7 @@ def densityH2O_liquid(Temperature, SecondarySidePressure):
     
     return rho_l 
 
-    
+
 def densityD2O_liquid(Temperature):
     T = Temperature - 273
     return -0.0023 * T + 1.4646  # [g/cm^3]
@@ -409,7 +409,9 @@ def heatcapacityD2O_liquid(Temperature):
     
     return Cp # J/g K    
 
-
+# a = heatcapacityD2O_liquid(260+273)
+# b = heatcapacityH2O_liquid(260+273, 4.593)
+# print (a,b)
 def thermal_conductivityH2O_liquid(Temperature, SecondarySidePressure):
     
     p = SecondarySidePressure
