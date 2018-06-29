@@ -331,8 +331,8 @@ def activity_volumetric(Isotope):
     
     return VolumetricActivity
 
-   
-def plot_output():
+     
+def concentration_and_loading_plots():   
     
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(221)
@@ -424,4 +424,4 @@ def plot_output():
     plt.show()
     
 if PlotOutput == "yes":
-    plot_output()
+    concentration_and_loading_plots()

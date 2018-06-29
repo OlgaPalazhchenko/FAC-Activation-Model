@@ -2,11 +2,37 @@ import lepreau_data as ld
 import numpy as np
 import thermochemistry_and_constants as nc
 import random
+import matplotlib.pyplot as plt
+import csv
+
+
+def RIHT_plots():
+    RIHT_data = open('RIHTOutputSG2.csv', 'r')
+    RIHTReader = list(csv.reader(RIHT_data, delimiter=',')) 
+    
+    RIHT = [float(RIHTReader[1][i]) for i in range((2016-1983)*4)]
+    Year = [float(RIHTReader[2][i]) for i in range((2016-1983)*4)]
+   
+    ax1 = plt.subplot()
+    
+    ax1.plot(
+        Year, RIHT, linestyle=None, marker='o', color='0.50',
+        label='Inner Oxide'
+        )
+    ax1.set_xlabel('Year')
+    ax1.set_ylabel('Reactor Inlet Header Temperature (${^o C}$)')
+    plt.tight_layout()
+    plt.show()
+   
+    # converts from string object to time series  
+    
+    
+# RIHT_plots()
 
 SGFastMode = "yes"
 Method = "tube length"
 
-FullTubeComplement = 3542
+FullTubeComplement = 3541
 
 YearStartup = 1983.25
 YearCPP = 1988.25
@@ -15,8 +41,8 @@ YearOutageRestart = 1996
 YearRefurbishment = 2008.25
 YearRefurbRestart = 2014
 
-T_sat_primary = 310.77 + 273.15
-T_PreheaterIn = 187 + 273.15
+T_sat_primary = 310 + 273.15
+T_PreheaterIn = 186.5 + 273.15
 RecirculationRatio = 5.3
 
 
@@ -83,27 +109,48 @@ TubeLengths = [1887, 1807, 1970, 2046]
 def total_tubes_plugged(Bundle, CalendarYear):
     #total tubes called sometimes by bundle inside an SG or for a specific boiler itself
     
-    if Bundle in ld.SteamGenerator or Bundle == ld.SteamGenerator:
+    if Bundle in ld.SteamGenerator:
+        SteamGenerator = ld.SteamGenerator
+        YearPlugged = [YearStartup, 1988, 1992, 1993, 1994, 1996, 1999, 2002, 2009]
+        AmountPlugged = [1, 1, 10, 6, 6, 1, 8, 1, 2]
+    
+    
+    elif Bundle in ld.SteamGenerator_2:
+        SteamGenerator = ld.SteamGenerator_2
+        
+        YearPlugged = [YearStartup, 1996, 1999]
+        AmountPlugged = [6, 5, 11]
 
-        if CalendarYear >= 2009:
-            NumberPluggedTubes = 0
-        else:
-            NumberPluggedTubes = 0
-            
-        
-    elif Bundle in ld.SteamGenerator_2 or Bundle == ld.SteamGenerator_2:
-        
-        if CalendarYear >= 2009:
-            NumberPluggedTubes = 0
-        else:
-            NumberPluggedTubes = 0
+    
+#     TotalAmountPlugged = []
+#     for i in range(len(AmountPlugged)):
+#         x = sum(AmountPlugged[0:(i+1)])
+#         TotalAmountPlugged.append(x)    
+    
+    if CalendarYear < YearPlugged[0]:
+        NumberPluggedTubes = 0
+    
+    elif CalendarYear >= YearPlugged[len(YearPlugged) - 1]:
+        NumberPluggedTubes = sum(AmountPlugged)
+    else:
+        for i in range(len(YearPlugged) - 1):
+
+            if YearPlugged[i] <= CalendarYear < YearPlugged[i + 1]:
+                NumberPluggedTubes = sum(AmountPlugged[0:(i+1)])
             
  
     TotalSGTubeNumber = 3542 - NumberPluggedTubes
     
     return TotalSGTubeNumber
-    
 
+
+def bundle_sizes(SteamGenerator, TotalSGTubeNumber):
+    if TotalSGTubeNumber < 3542:
+        for i in range(3542 - TotalSGTubeNumber):
+            x = random.randint(0, 86)
+            SteamGenerator[x].TubeNumber = SteamGenerator[x].TubeNumber - 1
+            
+    
 def primaryside_cleaned_tubes(Bundle, CalendarYear):
     #amount of tubes cleaned per each cleaning will have to be custom
     if CalendarYear == YearOutageRestart:
@@ -579,7 +626,7 @@ def pht_steam_quality(Temperature, j):
 #     C_p_hot = nc.heatcapacityD2O_liquid(T_sat_primary)
 #     C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
 
-    Power = 2062 * 1000 #CoreMassFlow * C_p_avg * Delta_T  # [kW]
+    Power = 2061.4 * 1000 #CoreMassFlow * C_p_avg * Delta_T  # [kW]
 #     print (CalendarYear, PercentDerates)
     difference = []
     if CalendarYear in YearDerates:
@@ -1128,6 +1175,9 @@ def temperature_profile(
 
 
 # separate function for divider plate leakage
+def divider_plate(CalendarYear):
+    None
+
 
 def station_events(calendar_year):
 
@@ -1152,7 +1202,7 @@ def station_events(calendar_year):
     
     
     PostOutageYearlyLeakage = 0.00035
-    PostOutageInitialLeakage = 0.0325   
+    PostOutageInitialLeakage = 0.02   
     
     # Divider plate raplacement only:
     
@@ -1184,7 +1234,7 @@ def station_events(calendar_year):
     
     elif calendar_year >= YearRefurbRestart: # after and incl. 2014
         InitialLeakage = (YearRefurbishment - YearOutageRestart) * PostOutageYearlyLeakage + PostOutageInitialLeakage
-        YearlyRateLeakage = 0.0001
+        YearlyRateLeakage = 0.0015
         InitialYear = YearRefurbRestart
         
     else:
@@ -1204,13 +1254,15 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     
     year = (j * nc.TIME_STEP / 8760) 
     CalendarYear = year + YearStartup
-    
+
     if j == 0:
         x_pht = 0.01
     
     Energy = []
     
-    Cleaned, TotalSGTubeNumber = primaryside_cleaned_tubes(SteamGenerator, CalendarYear)
+    Cleaned, TotalSGTubeNumber = primaryside_cleaned_tubes(SteamGenerator[0], CalendarYear)
+    # adusts how many tubes per bundle to account for tubes plugged
+    bundle_sizes(SteamGenerator, TotalSGTubeNumber)
     
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(CalendarYear)
     

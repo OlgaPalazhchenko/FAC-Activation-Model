@@ -2,7 +2,7 @@ import numpy as np
 import thermochemistry_and_constants as nc
 import csv
 
-
+    
 def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, OxideDensity, MolarMass, Temperature):
     # Converts temperature from Celsius to Kelvin
     if UnitInput == "Celsius" and UnitOutput == "Kelvin":
@@ -125,8 +125,7 @@ class Section():  # Defining each primary heat transport section as a class
         self.CoThickness = None
         self.OxThickness = None
 
-        self.StandardEqmPotentialFe = [float(SizingParametersReader[j + 13][i])\
-                                       for i in range(self.RowStart, self.RowEnd)]
+        self.StandardEqmPotentialFe = [float(SizingParametersReader[j + 13][i]) for i in range(self.RowStart, self.RowEnd)]
         self.StandardEqmPotentialFe3O4red = [float(SizingParametersReader[j + 14][i]) \
                                             for i in range(self.RowStart, self.RowEnd)]
         self.StandardEqmPotentialFe3O4oxid = [float(SizingParametersReader[j + 15][i]) \
