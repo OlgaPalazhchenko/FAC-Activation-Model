@@ -4,7 +4,53 @@ import thermochemistry_and_constants as nc
 import random
 import matplotlib.pyplot as plt
 import csv
+import pandas as pd
 
+
+def station_RIHT():
+    Filename = 'C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\PLNGS_RIHT.csv'
+    df = pd.read_csv(Filename, header=None)
+    df.columns = ['date','RIHT2', "RIHT4", "RIHT6", "RIHT8"]
+
+    # converts from string object to time series  
+    df.date = pd.to_datetime(df.date)
+    df.set_index('date', inplace=True)
+    
+    # separate sub dataframes based on PLNGS 'Phases' of operation
+    df_phase3 = df['1996-1-26':'1998-11-25']
+    df_phase4 = df['1998-11-26':'2008-3-1']
+    df_phase5 = df['2013-1-29': '2013-12-14']
+    df_phase6 = df['2013-12-15' : '2017-08-02']
+    df_phase7 = df['2017-08-02':]
+
+    
+    AllPhases = [df_phase3, df_phase4, df_phase5, df_phase6, df_phase7]
+    
+    # groups data in each Phase by day
+    for Phase in AllPhases:
+        Phase['year'] = [Phase.index[i].year for i in range(len(Phase))]
+        Phase['month'] = [Phase.index[i].month for i in range(len(Phase))]
+        Phase['day'] = [Phase.index[i].day for i in range(len(Phase))]
+        
+    
+    
+    day_grouping = df.groupby(["year", "month","day"])
+    dates = df.groupby(["year", "month","day"]).groups.keys()
+    
+#     dates = list(dates)
+#     print (dates)
+    day_average = day_grouping.aggregate({"RIHT2":np.mean})
+#     print (day_average)   
+    RIHT_output = day_average.as_matrix(['RIHT2'])
+    
+    
+    # converts matrix notation to 1D array
+    RIHT_output = RIHT_output.flatten()
+    
+    
+#     print (RIHT_output)
+
+station_RIHT()
 
 def RIHT_plots():
     RIHT_data = open('RIHTOutputSG2.csv', 'r')
@@ -32,7 +78,7 @@ def RIHT_plots():
 SGFastMode = "yes"
 Method = "tube length"
 
-FullTubeComplement = 3541
+FullTubeComplement = 3542
 
 YearStartup = 1983.25
 YearCPP = 1988.25
@@ -107,49 +153,51 @@ TubeLengths = [1887, 1807, 1970, 2046]
 
 
 def total_tubes_plugged(Bundle, CalendarYear):
-    #total tubes called sometimes by bundle inside an SG or for a specific boiler itself
     
+    #plug events arbitrarily assumed to happen at the start of each year (no month/quarter granularity currently used) 
     if Bundle in ld.SteamGenerator:
         SteamGenerator = ld.SteamGenerator
         YearPlugged = [YearStartup, 1988, 1992, 1993, 1994, 1996, 1999, 2002, 2009]
         AmountPlugged = [1, 1, 10, 6, 6, 1, 8, 1, 2]
-    
+        
     
     elif Bundle in ld.SteamGenerator_2:
         SteamGenerator = ld.SteamGenerator_2
-        
         YearPlugged = [YearStartup, 1996, 1999]
         AmountPlugged = [6, 5, 11]
 
-    
-#     TotalAmountPlugged = []
-#     for i in range(len(AmountPlugged)):
-#         x = sum(AmountPlugged[0:(i+1)])
-#         TotalAmountPlugged.append(x)    
     
     if CalendarYear < YearPlugged[0]:
         NumberPluggedTubes = 0
     
     elif CalendarYear >= YearPlugged[len(YearPlugged) - 1]:
         NumberPluggedTubes = sum(AmountPlugged)
+    
     else:
         for i in range(len(YearPlugged) - 1):
 
             if YearPlugged[i] <= CalendarYear < YearPlugged[i + 1]:
+                # last tube in range not included, hence the + 1
                 NumberPluggedTubes = sum(AmountPlugged[0:(i+1)])
-            
- 
+        
     TotalSGTubeNumber = 3542 - NumberPluggedTubes
-    
     return TotalSGTubeNumber
 
 
 def bundle_sizes(SteamGenerator, TotalSGTubeNumber):
-    if TotalSGTubeNumber < 3542:
+    
+    TotalTubesinBundles = []
+    for i in range(87):
+        TotalTubesinBundles.append(SteamGenerator[i].TubeNumber)
+        
+    TotalTubesinBundles = sum(TotalTubesinBundles)
+#     print (TotalSGTubeNumber, TotalTubesinBundles)
+    if TotalSGTubeNumber < TotalTubesinBundles:
+        
         for i in range(3542 - TotalSGTubeNumber):
             x = random.randint(0, 86)
             SteamGenerator[x].TubeNumber = SteamGenerator[x].TubeNumber - 1
-            
+#             print(x, "lol")
     
 def primaryside_cleaned_tubes(Bundle, CalendarYear):
     #amount of tubes cleaned per each cleaning will have to be custom
@@ -277,7 +325,7 @@ def sludge_fouling_resistance(Bundle, i, calendar_year):
     TubeGrowth = 0.00135  # [g/cm^2] /year = 6.5 um /year
     ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
     
-    InitialAccumulation = 0.0001 #g/cm^2
+    InitialAccumulation = 0.0005 #g/cm^2
       
     # between 1983 and 1986 (included)
     if YearStartup <= calendar_year <= YearCPP:
@@ -527,9 +575,6 @@ def outer_area(SteamGenerator):
 
 
 def reactor_power(CalendarYear):
-    from matplotlib import pyplot as plt
-    import pandas as pd
-    
     
     if CalendarYear == YearOutage:
         Filename = 'C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\OutagePower.csv'
@@ -553,7 +598,7 @@ def reactor_power(CalendarYear):
     df['year'] = [df.index[i].year for i in range(len(df))]
     df['quarter'] = [df.index[i].quarter for i in range(len(df))]
     # df['day'] = [df.index[i].day for i in range(len(df))]
-    
+
     quarterly_grouping = df.groupby(["year","quarter"])
     
     year_output = df.as_matrix(['year'])
@@ -634,7 +679,7 @@ def pht_steam_quality(Temperature, j):
             difference.append(abs(CalendarYear - Yr))
             ClosestYear = difference.index(min(difference))
         Percent_derating = PercentDerates[ClosestYear]
-        print (Percent_derating)
+        
     else:
         Percent_derating = 1
        
@@ -860,7 +905,7 @@ def outside_bundle_pool_boiling(
         i
         ):
     
-    F = .11 # bundle boiling factor (empirical)
+    F = .17 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -1254,16 +1299,21 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     
     year = (j * nc.TIME_STEP / 8760) 
     CalendarYear = year + YearStartup
+#     print (CalendarYear)
 
     if j == 0:
         x_pht = 0.01
     
     Energy = []
     
+
+    #passed as 0th bundle for now, but this really needs to be changed such that it's always just the steam generator
+    # will need to pass total number tubes through several other functions inside iteration (primary_convection...etc)    
+    
     Cleaned, TotalSGTubeNumber = primaryside_cleaned_tubes(SteamGenerator[0], CalendarYear)
     # adusts how many tubes per bundle to account for tubes plugged
     bundle_sizes(SteamGenerator, TotalSGTubeNumber)
-    
+#     print (CalendarYear, TotalSGTubeNumber)
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(CalendarYear)
     
     for Bundle in SteamGenerator:
@@ -1337,4 +1387,4 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     return RIHT
 
              
-# print (energy_balance(ld.SteamGenerator_2, 0.02, 876 * 0, SGFastMode="yes")- 273.15)
+print (energy_balance(ld.SteamGenerator_2, 0.01, 219, SGFastMode="yes")- 273.15)

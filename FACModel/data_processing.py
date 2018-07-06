@@ -122,12 +122,13 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
     
 #     FeSolubility_SteamGeneratorTubes = []
 #     FeConcentration_SteamGeneratorTubes = []
-
-    if OutletFeeder == ld.OutletFeeder_2:
-        Output = pht_model.output_2
-    elif OutletFeeder == ld.OutletFeeder:
-        Output = pht_model.output_1 
+    Output = pht_model.output
     
+    if OutletFeeder == ld.OutletFeeder_2:
+        RIHT = Output[2]
+    elif OutletFeeder == ld.OutletFeeder:
+        RIHT = Output[1]
+        
     SelectedTubes = SGHX.tube_picker(SGHX.Method, SteamGenerator)[0]
     
     for Tube in SelectedTubes:
@@ -158,10 +159,9 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
 
     
     OutletCorrosionRate = Output[0]
-    RIHT = Output[2]
-    pht_SteamFraction = Output[3]
-    OutletTemperatures1 = Output[4]
-    OutletTemperatures2 = Output[5]
+    pht_SteamFraction = Output[4]
+    OutletTemperatures1 = Output[5]
+    OutletTemperatures2 = Output[6]
     
     # for outlet feeder that connects to current steam generator
     for Rate in OutletCorrosionRate:
@@ -171,7 +171,7 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
         OutletCorrosionRate_um.append(x)
     
     
-    year_end = year_end + 0.25 # arange function does not include last element
+    year_end = 2017 + 0.25 # arange function does not include last element
     Years = np.arange(SGHX.YearStartup, year_end, 0.25)
 
     Data = [
@@ -208,12 +208,10 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
         writer.writerow(OutletTemperatures1)
         writer.writerow(OutletTemperatures2)
 
+# if loop run in half configuration, these will be identical
 RIHT_csv(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, "RIHTOutputSG2.csv")
-
 if pht_model.Loop == "full":
     RIHT_csv(ld.InletFeeder_2, ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator, "RIHTOutputSG1.csv")  
-else:
-    None
 
 
 LoopDistance = []
