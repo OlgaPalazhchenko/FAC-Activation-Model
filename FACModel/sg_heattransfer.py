@@ -7,8 +7,21 @@ import csv
 import pandas as pd
 
 
+
+time = pd.date_range('1/1/2000', periods=5, freq='T')
+df2 = pd.DataFrame(data=10*[range(4)],
+                       columns=['a', 'b', 'c', 'd'],
+                       index=pd.MultiIndex.from_product([time, [1, 2]])
+                       )
+
+# print (df2)
+df2.resample('3T', level=0).sum()
+                    
+print (df2)
+
+
 def station_RIHT():
-    Filename = 'C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\PLNGS_RIHT.csv'
+    Filename = 'C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\PLNGS_RIHT_raw.csv'
     df = pd.read_csv(Filename, header=None)
     df.columns = ['date','RIHT2', "RIHT4", "RIHT6", "RIHT8"]
 
@@ -17,38 +30,66 @@ def station_RIHT():
     df.set_index('date', inplace=True)
     
     # separate sub dataframes based on PLNGS 'Phases' of operation
+    # creating new data frames using old ones by default makes them a copy of the old one, is_copy = None prevents error
     df_phase3 = df['1996-1-26':'1998-11-25']
     df_phase4 = df['1998-11-26':'2008-3-1']
     df_phase5 = df['2013-1-29': '2013-12-14']
     df_phase6 = df['2013-12-15' : '2017-08-02']
     df_phase7 = df['2017-08-02':]
 
-    
     AllPhases = [df_phase3, df_phase4, df_phase5, df_phase6, df_phase7]
     
-    # groups data in each Phase by day
+    RIHT2 = []
+    RIHT4 = []
+    RIHT6 = []
+    RIHT8 = []
+    
     for Phase in AllPhases:
+        
+        # is_copy = None prevents error from "copy" data frames
+        Phase.is_copy = None
+        
         Phase['year'] = [Phase.index[i].year for i in range(len(Phase))]
         Phase['month'] = [Phase.index[i].month for i in range(len(Phase))]
         Phase['day'] = [Phase.index[i].day for i in range(len(Phase))]
         
+        # groups data in each Phase by day
+        day_grouping = Phase.groupby(['year', 'month','day'])
+
+        day_averageRIHT2 = day_grouping.aggregate({'RIHT2':np.mean})
+        day_averageRIHT4 = day_grouping.aggregate({'RIHT4':np.mean})
+        day_averageRIHT6 = day_grouping.aggregate({'RIHT6':np.mean})
+        day_averageRIHT8 = day_grouping.aggregate({'RIHT8':np.mean})
+        
+        day_averageRIHT2 = day_averageRIHT2.as_matrix(['RIHT2'])
+        day_averageRIHT4 = day_averageRIHT4.as_matrix(['RIHT4'])
+        day_averageRIHT6 = day_averageRIHT6.as_matrix(['RIHT6'])
+        day_averageRIHT8 = day_averageRIHT8.as_matrix(['RIHT8'])
+    
+        # converts matrix notation to 1D array
+        averageRIHT2 = day_averageRIHT2.flatten()
+        averageRIHT4 = day_averageRIHT4.flatten()
+        averageRIHT6 = day_averageRIHT6.flatten()
+        averageRIHT8 = day_averageRIHT8.flatten()
+        
+        RIHT2.append(averageRIHT2)
+        RIHT4.append(averageRIHT4)
+        RIHT6.append(averageRIHT6)
+        RIHT8.append(averageRIHT8)
+        
+    
+    csvfile = 'PLNGS_RIHT_by_Phase.csv'
+    with open(csvfile, "w") as output:
+        writer = csv.writer(output, lineterminator='\n')
+        writer.writerow(['Date'])
+        writer.writerow(['\n'])
+#         writer.writerow(GroupedDates[0])
+        writer.writerow(RIHT2[0])
+        
     
     
-    day_grouping = df.groupby(["year", "month","day"])
-    dates = df.groupby(["year", "month","day"]).groups.keys()
-    
-#     dates = list(dates)
-#     print (dates)
-    day_average = day_grouping.aggregate({"RIHT2":np.mean})
-#     print (day_average)   
-    RIHT_output = day_average.as_matrix(['RIHT2'])
-    
-    
-    # converts matrix notation to 1D array
-    RIHT_output = RIHT_output.flatten()
-    
-    
-#     print (RIHT_output)
+#     print (RIHT2[0])
+#     print (GroupedDates[0])
 
 station_RIHT()
 
