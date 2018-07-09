@@ -43,19 +43,19 @@ def station_RIHT():
     
     writer = pd.ExcelWriter('PLNGS_RIHT_by_Phase.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
     
-    daily_average_phase3.to_excel(writer, sheet_name = 'Sheet 1')
-    daily_average_phase4.to_excel(writer, sheet_name = 'Sheet 2')
-    daily_average_phase5.to_excel(writer, sheet_name = 'Sheet 3')
-    daily_average_phase6.to_excel(writer, sheet_name = 'Sheet 4')
-    daily_average_phase7.to_excel(writer, sheet_name = 'Sheet 5')
+    daily_average_phase3.to_excel(writer, sheet_name = 'Phase 3')
+    daily_average_phase4.to_excel(writer, sheet_name = 'Phase 4')
+    daily_average_phase5.to_excel(writer, sheet_name = 'Phase 5')
+    daily_average_phase6.to_excel(writer, sheet_name = 'Phase 6')
+    daily_average_phase7.to_excel(writer, sheet_name = 'Phase 7')
     
     # sets spacing between columns A and B so date column (A) is more clear
     workbook  = writer.book
-    worksheet1 = writer.sheets['Sheet 1']
-    worksheet2 = writer.sheets['Sheet 2']
-    worksheet3 = writer.sheets['Sheet 3']
-    worksheet4 = writer.sheets['Sheet 4']
-    worksheet5 = writer.sheets['Sheet 5']
+    worksheet1 = writer.sheets['Phase 3']
+    worksheet2 = writer.sheets['Phase 4']
+    worksheet3 = writer.sheets['Phase 5']
+    worksheet4 = writer.sheets['Phase 6']
+    worksheet5 = writer.sheets['Phase 7']
     
     worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5]
     
@@ -64,7 +64,7 @@ def station_RIHT():
     
     writer.save()
     
-station_RIHT()
+# station_RIHT()
 
 
 def RIHT_plots():
@@ -589,12 +589,9 @@ def outer_area(SteamGenerator):
     return [np.pi * x * y for x, y in zip(SteamGenerator.OuterDiameter, SteamGenerator.Length.magnitude)]
 
 
-def reactor_power(CalendarYear):
+def reactor_power():
     
-    if CalendarYear == YearOutage:
-        Filename = 'C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\OutagePower.csv'
-    else:
-        FileName = Filename = 'C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\RefurbPower.csv'
+    Filename = 'C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\OutagePower.csv'
     
     df = pd.read_csv(Filename, header=None)
     df.columns = ['date','power']
@@ -648,7 +645,7 @@ def reactor_power(CalendarYear):
         year_end = final_yr + 0.75
     
     year_end = year_end + 0.25 # arange function does not include last element
-    YearDerates = np.arange(year_start, year_end, 0.25)
+    Year = np.arange(year_start, year_end, 0.25)
      
     # For each group, calculate the average of only the Power column
     quarterly_average = quarterly_grouping.aggregate({"power":np.mean})
@@ -657,24 +654,20 @@ def reactor_power(CalendarYear):
     # converts matrix notation to 1D array
     power_output = power_output.flatten()
 
-    return power_output, YearDerates
+    return power_output, Year
 
 
-OutagePower, OutageYearDerate = reactor_power(YearOutage)
-RefurbPower, RefurbYearDerate = reactor_power(YearRefurbishment)
+OperatingPower, OperatingYear = reactor_power()
 
 
 def pht_steam_quality(Temperature, j):
     
     CalendarYear = (j * nc.TIME_STEP / 8760) + YearStartup
     
-    if CalendarYear in OutageYearDerate:
-        PercentDerates = OutagePower
-        YearDerates = OutageYearDerate
-    
-    elif CalendarYear in RefurbYearDerate:
-        PercentDerates = RefurbPower
-        YearDerates = RefurbYearDerate
+    if CalendarYear in OperatingYear:
+        
+        PercentDerates = OperatingPower
+        YearDerates = OperatingYear
     
     else:
         PercentDerates = [0]
@@ -689,11 +682,12 @@ def pht_steam_quality(Temperature, j):
     Power = 2061.4 * 1000 #CoreMassFlow * C_p_avg * Delta_T  # [kW]
 #     print (CalendarYear, PercentDerates)
     difference = []
-    if CalendarYear in YearDerates:
-        for Yr in YearDerates:
+    if CalendarYear in OperatingYear:
+        for Yr in OperatingYear:
             difference.append(abs(CalendarYear - Yr))
             ClosestYear = difference.index(min(difference))
         Percent_derating = PercentDerates[ClosestYear]
+        print (Percent_derating)
         
     else:
         Percent_derating = 1
@@ -712,12 +706,11 @@ def pht_steam_quality(Temperature, j):
 #     H_current = nc.enthalpyH2O_liquid(nc.PrimarySidePressure, Temperature) + H_pht
     x = (H_current - H_satliq_outlet) / (EnthalpySaturatedSteam.magnitude - H_satliq_outlet)
     
-#     print (CalendarYear, P, Percent_derating)
     if x < 0:
         x = 0
     return x
 
-# print (pht_steam_quality(264 +273.15, (25.5) * 876))
+# print (pht_steam_quality(262 +273.15, 876 * 13.5))
 
 
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
