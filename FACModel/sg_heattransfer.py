@@ -7,91 +7,65 @@ import csv
 import pandas as pd
 
 
-
-time = pd.date_range('1/1/2000', periods=5, freq='T')
-df2 = pd.DataFrame(data=10*[range(4)],
-                       columns=['a', 'b', 'c', 'd'],
-                       index=pd.MultiIndex.from_product([time, [1, 2]])
-                       )
-
-# print (df2)
-df2.resample('3T', level=0).sum()
-                    
-print (df2)
-
-
 def station_RIHT():
-    Filename = 'C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\PLNGS_RIHT_raw.csv'
+    Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_RIHT_raw.csv'
     df = pd.read_csv(Filename, header=None)
-    df.columns = ['date','RIHT2', "RIHT4", "RIHT6", "RIHT8"]
+    
+    Header1 = 'RIHT 2'
+    Header2 = 'RIHT 4'
+    Header3 = 'RIHT 6'
+    Header4 = 'RIHT 8'
+    
+    df.columns = ['date', Header1, Header2, Header3, Header4]
 
     # converts from string object to time series  
     df.date = pd.to_datetime(df.date)
     df.set_index('date', inplace=True)
     
+    # average of all 4 
+    df['mean'] = df.mean(axis = 1)
+    
+    #filters data to remove anything below 235 oC (arbitrarily set)
+    df = df[df[Header1] > 235]
+        
+    #resamples all data by desired time period ('D' for daily) and performs operation, here taking the mean
+    daily_average = df.resample('D').mean().copy()
+    
+    daily_average_no_missing = daily_average.dropna(axis = 0, how='any')
+    
+    
     # separate sub dataframes based on PLNGS 'Phases' of operation
-    # creating new data frames using old ones by default makes them a copy of the old one, is_copy = None prevents error
-    df_phase3 = df['1996-1-26':'1998-11-25']
-    df_phase4 = df['1998-11-26':'2008-3-1']
-    df_phase5 = df['2013-1-29': '2013-12-14']
-    df_phase6 = df['2013-12-15' : '2017-08-02']
-    df_phase7 = df['2017-08-02':]
-
-    AllPhases = [df_phase3, df_phase4, df_phase5, df_phase6, df_phase7]
+    daily_average_phase3 = daily_average_no_missing['1996-1-26':'1998-11-25']
+    daily_average_phase4 = daily_average_no_missing['1998-11-26':'2008-3-1']
+    daily_average_phase5 = daily_average_no_missing['2013-1-29': '2013-12-14']
+    daily_average_phase6 = daily_average_no_missing['2013-12-15' : '2017-08-02']
+    daily_average_phase7 = daily_average_no_missing['2017-08-02':]
     
-    RIHT2 = []
-    RIHT4 = []
-    RIHT6 = []
-    RIHT8 = []
+    writer = pd.ExcelWriter('PLNGS_RIHT_by_Phase.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
     
-    for Phase in AllPhases:
-        
-        # is_copy = None prevents error from "copy" data frames
-        Phase.is_copy = None
-        
-        Phase['year'] = [Phase.index[i].year for i in range(len(Phase))]
-        Phase['month'] = [Phase.index[i].month for i in range(len(Phase))]
-        Phase['day'] = [Phase.index[i].day for i in range(len(Phase))]
-        
-        # groups data in each Phase by day
-        day_grouping = Phase.groupby(['year', 'month','day'])
-
-        day_averageRIHT2 = day_grouping.aggregate({'RIHT2':np.mean})
-        day_averageRIHT4 = day_grouping.aggregate({'RIHT4':np.mean})
-        day_averageRIHT6 = day_grouping.aggregate({'RIHT6':np.mean})
-        day_averageRIHT8 = day_grouping.aggregate({'RIHT8':np.mean})
-        
-        day_averageRIHT2 = day_averageRIHT2.as_matrix(['RIHT2'])
-        day_averageRIHT4 = day_averageRIHT4.as_matrix(['RIHT4'])
-        day_averageRIHT6 = day_averageRIHT6.as_matrix(['RIHT6'])
-        day_averageRIHT8 = day_averageRIHT8.as_matrix(['RIHT8'])
+    daily_average_phase3.to_excel(writer, sheet_name = 'Sheet 1')
+    daily_average_phase4.to_excel(writer, sheet_name = 'Sheet 2')
+    daily_average_phase5.to_excel(writer, sheet_name = 'Sheet 3')
+    daily_average_phase6.to_excel(writer, sheet_name = 'Sheet 4')
+    daily_average_phase7.to_excel(writer, sheet_name = 'Sheet 5')
     
-        # converts matrix notation to 1D array
-        averageRIHT2 = day_averageRIHT2.flatten()
-        averageRIHT4 = day_averageRIHT4.flatten()
-        averageRIHT6 = day_averageRIHT6.flatten()
-        averageRIHT8 = day_averageRIHT8.flatten()
-        
-        RIHT2.append(averageRIHT2)
-        RIHT4.append(averageRIHT4)
-        RIHT6.append(averageRIHT6)
-        RIHT8.append(averageRIHT8)
-        
+    # sets spacing between columns A and B so date column (A) is more clear
+    workbook  = writer.book
+    worksheet1 = writer.sheets['Sheet 1']
+    worksheet2 = writer.sheets['Sheet 2']
+    worksheet3 = writer.sheets['Sheet 3']
+    worksheet4 = writer.sheets['Sheet 4']
+    worksheet5 = writer.sheets['Sheet 5']
     
-    csvfile = 'PLNGS_RIHT_by_Phase.csv'
-    with open(csvfile, "w") as output:
-        writer = csv.writer(output, lineterminator='\n')
-        writer.writerow(['Date'])
-        writer.writerow(['\n'])
-#         writer.writerow(GroupedDates[0])
-        writer.writerow(RIHT2[0])
-        
+    worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5]
     
+    for sheet in worksheets:
+        sheet.set_column('A:B', 12)
     
-#     print (RIHT2[0])
-#     print (GroupedDates[0])
-
+    writer.save()
+    
 station_RIHT()
+
 
 def RIHT_plots():
     RIHT_data = open('RIHTOutputSG2.csv', 'r')
@@ -1428,4 +1402,4 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     return RIHT
 
              
-print (energy_balance(ld.SteamGenerator_2, 0.01, 219, SGFastMode="yes")- 273.15)
+# print (energy_balance(ld.SteamGenerator_2, 0.01, 219, SGFastMode="yes")- 273.15)
