@@ -355,7 +355,7 @@ for j in range(SimulationHours):
         None
 
     # parameters tracked/updated with time
-    if j % (219) == 0:  # 2190 h * 10 = 4x a year  
+    if j % (73) == 0:  # 73 h * 10 = 12 x a year  
         
         if j ==0:
             x_pht = 0.01 # PHT steam fraction assumed for "clean" boiler

@@ -5,6 +5,7 @@ import random
 import matplotlib.pyplot as plt
 import csv
 import pandas as pd
+from datetime import date, timedelta
 
 
 def station_RIHT():
@@ -26,7 +27,7 @@ def station_RIHT():
     df['mean'] = df.mean(axis = 1)
     
     #filters data to remove anything below 235 oC (arbitrarily set)
-    df = df[df[Header1] > 235]
+    df = df[df[Header1] > 255]
         
     #resamples all data by desired time period ('D' for daily) and performs operation, here taking the mean
     daily_average = df.resample('D').mean().copy()
@@ -95,12 +96,12 @@ Method = "tube length"
 
 FullTubeComplement = 3542
 
-YearStartup = 1983.25
+YearStartup = date(1983, 4, 8)
 YearCPP = 1988.25
-YearOutage = 1995.25
-YearOutageRestart = 1996
-YearRefurbishment = 2008.25
-YearRefurbRestart = 2014
+YearOutage = (1995, 4)
+YearOutageRestart = (1997, 1)
+YearRefurbishment = (2008, 3)
+YearRefurbRestart = (2013, 1)
 
 T_sat_primary = 310 + 273.15
 T_PreheaterIn = 186.5 + 273.15
@@ -599,7 +600,18 @@ def reactor_power():
     # converts from string object to time series  
     df.date = pd.to_datetime(df.date)
     df.set_index('date', inplace=True)
-
+    
+    daily_average = df.resample('M').mean().copy()
+    daily_average = daily_average.fillna(method='ffill')
+#     daily_average = daily_average.dropna(how = "any")
+        
+    Year_Month = []
+    for date in daily_average.index:
+        x = (date.year, date.month)
+        Year_Month.append(x)
+    
+    
+    OperatingPower = daily_average.as_matrix(['power']).flatten()
 #     plt.plot(df)
 #     plt.xlabel('Year')
 #     plt.ylabel('Power')
@@ -607,92 +619,54 @@ def reactor_power():
 ##     prints first 5 rows to check everything is assigned properly
 #     print (df.head())
 
-    df['year'] = [df.index[i].year for i in range(len(df))]
-    df['quarter'] = [df.index[i].quarter for i in range(len(df))]
-    # df['day'] = [df.index[i].day for i in range(len(df))]
-
-    quarterly_grouping = df.groupby(["year","quarter"])
-    
-    year_output = df.as_matrix(['year'])
-    quarter_output = df.as_matrix(['quarter'])
-    
-    #first and last year and quarter of averaged power data
-    initial_quart = quarter_output[0]
-    initial_yr = year_output[0]
-  
-    final_quart = quarter_output[len(quarter_output) - 1]
-    final_yr = year_output[len(year_output) - 1]
-   
-    # year/mo converted to year.quarter (i.e., 1999.75) based on which quarter first data point is in
-    if initial_quart == 1:
-        year_start = initial_yr
-    elif initial_quart == 2:
-        year_start = initial_yr + 0.25
-    elif initial_quart == 3:
-        year_start = initial_yr + 0.5
-    else:
-        year_start = initial_yr + 0.75
-    
-    
-    if final_quart == 1:
-        year_end = final_yr
-       
-    elif final_quart == 2:
-        year_end = final_yr + 0.25
-    elif final_quart == 3:
-        year_end = final_yr + 0.5
-    else:
-        year_end = final_yr + 0.75
-    
-    year_end = year_end + 0.25 # arange function does not include last element
-    Year = np.arange(year_start, year_end, 0.25)
-     
-    # For each group, calculate the average of only the Power column
-    quarterly_average = quarterly_grouping.aggregate({"power":np.mean})
-    
-    power_output = quarterly_average.as_matrix(['power'])
-    # converts matrix notation to 1D array
-    power_output = power_output.flatten()
-
-    return power_output, Year
+    return Year_Month, OperatingPower
 
 
-OperatingPower, OperatingYear = reactor_power()
-
+Year_Month_PowerTracked, Operating_Power = reactor_power()
+print (list(zip(Year_Month_PowerTracked, Operating_Power)))
 
 def pht_steam_quality(Temperature, j):
     
-    CalendarYear = (j * nc.TIME_STEP / 8760) + YearStartup
+    start = YearStartup
+    delta = timedelta(hours = j * nc.TIME_STEP)
+    CalendarYear = start + delta
     
-    if CalendarYear in OperatingYear:
-        
-        PercentDerates = OperatingPower
-        YearDerates = OperatingYear
-    
-    else:
-        PercentDerates = [0]
-        YearDerates = [0]
-         
+    Current_Year_Month = (CalendarYear.year, CalendarYear.month)
+
     CoreMassFlow =  7600  # [kg /s]
 #     Delta_T = T_sat_primary - (262 + 273.15)  # [K]
 #     C_p_cold = nc.heatcapacityD2O_liquid(262 + 273.15)
 #     C_p_hot = nc.heatcapacityD2O_liquid(T_sat_primary)
 #     C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
 
-    Power = 2061.4 * 1000 #CoreMassFlow * C_p_avg * Delta_T  # [kW]
-#     print (CalendarYear, PercentDerates)
+    FullPower = 2061.4 * 1000 #CoreMassFlow * C_p_avg * Delta_T  # [kW]
+
     difference = []
-    if CalendarYear in OperatingYear:
-        for Yr in OperatingYear:
-            difference.append(abs(CalendarYear - Yr))
-            ClosestYear = difference.index(min(difference))
-        Percent_derating = PercentDerates[ClosestYear]
-        print (Percent_derating)
+    
+    if Current_Year_Month in Year_Month_PowerTracked:
+        
+        for x in Year_Month_PowerTracked:
+            
+            delta_time = (Current_Year_Month[0] - x[0], Current_Year_Month[1] - x[1])
+            
+            delta_time = [abs(number) for number in delta_time]
+            
+            difference.append(delta_time)
+            
+        ClosestYear_Month = difference.index(min(difference))
+        print (ClosestYear_Month)
+        
+        Derating = Operating_Power[ClosestYear_Month]
+    
+    # no steam quality during outage
+    elif YearOutage <= Current_Year_Month <  YearOutageRestart:
+        Derating = 0
         
     else:
-        Percent_derating = 1
+        Derating = 1
        
-    P = Power * Percent_derating
+    P = FullPower * Derating
+    print (CalendarYear, Derating, P)
 
     # core inlet enthalpy at RIHT + that added from fuel
     # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
@@ -710,7 +684,7 @@ def pht_steam_quality(Temperature, j):
         x = 0
     return x
 
-# print (pht_steam_quality(262 +273.15, 876 * 13.5))
+print (pht_steam_quality(262 +273.15, 876 * 13.35))
 
 
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
@@ -1236,19 +1210,22 @@ def station_events(calendar_year):
 
     # Pressure changes only:
     
-    if calendar_year < 1993:
+    FirstPressureReduction = (1992, 11)
+    SecondPressureReduction = (1998, 12)
+    
+    if calendar_year < FirstPressureReduction:
         SecondarySidePressure = 4.593  # MPa
     
     # PLNGS pressure reduction in 1992 (september) by 125 kPa
-    elif 1993 <= calendar_year < 1996.25:
+    elif FirstPressureReduction <= calendar_year < YearOutage:
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     
     # return to full boiler secondary side pressure, 4.593 MPa
     # pressure restored shortly after reactor back online from refurb.
-    elif 1996.25 <= calendar_year < 1999:
+    elif YearOutage <= calendar_year < SecondPressureReduction:
         SecondarySidePressure = 4.593
     
-    elif calendar_year >= 1999:
+    elif calendar_year >= SecondPressureReduction:
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     else:
         None
@@ -1265,30 +1242,30 @@ def station_events(calendar_year):
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
         InitialLeakage = 0.025
         YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
-        InitialYear = YearStartup
+        InitialYear = YearStartup.year
          
     elif calendar_year == YearOutageRestart: #1996
         InitialLeakage = 0.0075  # controls where first post-outage point is (underpredicted w/o this)
         YearlyRateLeakage = 0
-        InitialYear = YearOutageRestart
+        InitialYear = YearOutageRestart[0]
     
     elif calendar_year > YearOutageRestart: # after 1996
         # helps second post-outage point rise (second leak of 2.5% magnitude initialized)
         InitialLeakage = PostOutageInitialLeakage
         # either this or some SHT deposits help out Phase 4 from dipping so much
         YearlyRateLeakage = PostOutageYearlyLeakage
-        InitialYear = YearOutageRestart    
+        InitialYear = YearOutageRestart[0]    
     
     elif YearRefurbishment < calendar_year < YearRefurbRestart: # (2008.25 - 2014)
         InitialLeakage = (YearRefurbishment - YearOutageRestart) * PostOutageYearlyRateLeakage + PostOutageYearlyLeakage
         # plateau during outage 
         YearlyRateLeakage = 0
-        InitialYear = YearRefurbishment #doesn't matter, growth rate is zero throughout refurb outage
+        InitialYear = YearRefurbishment[0] #doesn't matter, growth rate is zero throughout refurb outage
     
     elif calendar_year >= YearRefurbRestart: # after and incl. 2014
         InitialLeakage = (YearRefurbishment - YearOutageRestart) * PostOutageYearlyLeakage + PostOutageInitialLeakage
         YearlyRateLeakage = 0.0015
-        InitialYear = YearRefurbRestart
+        InitialYear = YearRefurbRestart[0]
         
     else:
         None
@@ -1305,12 +1282,14 @@ def station_events(calendar_year):
 
 def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     
-    year = (j * nc.TIME_STEP / 8760) 
-    CalendarYear = year + YearStartup
-#     print (CalendarYear)
-
+    start = YearStartup
+    delta = timedelta(hours = j * nc.TIME_STEP)
+    CalendarYear = start + delta
+    
+    Year_Month = (CalendarYear.year, CalendarYear.month)
+    
     if j == 0:
-        x_pht = 0.01
+        x_pht = 0.002
     
     Energy = []
     
@@ -1318,11 +1297,11 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     #passed as 0th bundle for now, but this really needs to be changed such that it's always just the steam generator
     # will need to pass total number tubes through several other functions inside iteration (primary_convection...etc)    
     
-    Cleaned, TotalSGTubeNumber = primaryside_cleaned_tubes(SteamGenerator[0], CalendarYear)
+    Cleaned, TotalSGTubeNumber = primaryside_cleaned_tubes(SteamGenerator[0], Year_Month)
     # adusts how many tubes per bundle to account for tubes plugged
     bundle_sizes(SteamGenerator, TotalSGTubeNumber)
 #     print (CalendarYear, TotalSGTubeNumber)
-    [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(CalendarYear)
+    [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude] = station_events(Year_Month)
     
     for Bundle in SteamGenerator:
         
@@ -1369,7 +1348,7 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
                        
         
         [Bundle.PrimaryBulkTemperature, Bundle.HeatFlux] = temperature_profile(
-            Bundle, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, CalendarYear
+            Bundle, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, Year_Month
             )
         
         SteamGeneratorOutputNode = SteamGenerator[Default_Tube].NodeNumber - 1
@@ -1395,4 +1374,4 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     return RIHT
 
              
-# print (energy_balance(ld.SteamGenerator_2, 0.01, 219, SGFastMode="yes")- 273.15)
+print (energy_balance(ld.SteamGenerator_2, 0.01, 876, SGFastMode="yes")- 273.15)
