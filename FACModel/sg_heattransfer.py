@@ -68,6 +68,61 @@ def station_RIHT():
 # station_RIHT()
 
 
+def reactor_power():
+    
+    Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw.csv'
+    
+    df = pd.read_csv(Filename, header=None)
+    df.columns = ['date','power']
+
+    # converts from string object to time series  
+    df.date = pd.to_datetime(df.date)
+    df.set_index('date', inplace=True)
+    
+    # frequency of power data changed from every few minutes to monthly average
+    monthly_average = df.resample('M').mean().copy()
+    
+    # for months that are blank, e.g, 1996-8, forward filled, i.e., power from 1996-7 applied forward to 1996-8
+    monthly_average = monthly_average.fillna(method='ffill')
+#     monthly_average = monthly_average.dropna(how = "any")
+    
+    writer = pd.ExcelWriter('PLNGS_Power.xlsx', engine='xlsxwriter', datetime_format='mm-yyyy')
+    monthly_average.to_excel(writer, sheet_name = 'Monthly Averaged FP')
+    
+    workbook  = writer.book
+    worksheet1 = writer.sheets['Monthly Averaged FP']
+    writer.save()
+    
+    Outages = monthly_average.index[monthly_average['power'] < 0.89]
+    
+    OutageYears = []
+    for date in Outages:
+        x = (date.year, date.month)
+        OutageYears.append(x)
+    
+    
+    # converts dates from datetime (dd-mm-yyyy) to tuples with just (yy, mm) indices  
+    Year_Month = []
+    for date in monthly_average.index:
+        x = (date.year, date.month)
+        Year_Month.append(x)
+    
+    
+    OperatingPower = monthly_average.as_matrix(['power']).flatten()
+#     plt.plot(df)
+#     plt.xlabel('Year')
+#     plt.ylabel('Power')
+#     plt.show()
+##     prints first 5 rows to check everything is assigned properly
+#     print (df.head())
+
+    return Year_Month, OperatingPower, OutageYears
+
+
+Year_Month_PowerTracked, Operating_Power, OutageYears = reactor_power()
+
+
+
 def RIHT_plots():
     RIHT_data = open('RIHTOutputSG2.csv', 'r')
     RIHTReader = list(csv.reader(RIHT_data, delimiter=',')) 
@@ -88,7 +143,6 @@ def RIHT_plots():
    
     # converts from string object to time series  
     
-    
 # RIHT_plots()
 
 SGFastMode = "yes"
@@ -97,11 +151,12 @@ Method = "tube length"
 FullTubeComplement = 3542
 
 YearStartup = date(1983, 4, 8)
-YearCPP = 1988.25
+YearCPP = (1987, 1)
 YearOutage = (1995, 4)
-YearOutageRestart = (1997, 1)
+YearOutageRestart = (1996, 1)
 YearRefurbishment = (2008, 3)
 YearRefurbRestart = (2013, 1)
+
 
 T_sat_primary = 310 + 273.15
 T_PreheaterIn = 186.5 + 273.15
@@ -168,35 +223,37 @@ UBends = [i * 100 for i in UBends]
 TubeLengths = [1887, 1807, 1970, 2046]
 
 
-def total_tubes_plugged(Bundle, CalendarYear):
+def total_tubes_plugged(SteamGenerator, Year_Month):
     
     #plug events arbitrarily assumed to happen at the start of each year (no month/quarter granularity currently used) 
-    if Bundle in ld.SteamGenerator:
-        SteamGenerator = ld.SteamGenerator
-        YearPlugged = [YearStartup, 1988, 1992, 1993, 1994, 1996, 1999, 2002, 2009]
+    if SteamGenerator == ld.SteamGenerator:
+        YearPlugged = [
+            (1983, 4), (1988, 1), (1992, 1), (1993, 1), (1994, 1), (1996, 1), (1999, 1), (2002, 1), (2009, 1)
+            ]
         AmountPlugged = [1, 1, 10, 6, 6, 1, 8, 1, 2]
         
     
-    elif Bundle in ld.SteamGenerator_2:
-        SteamGenerator = ld.SteamGenerator_2
-        YearPlugged = [YearStartup, 1996, 1999]
+    elif SteamGenerator == ld.SteamGenerator_2:
+        YearPlugged = [(1983, 4), (1996, 1), (1999, 1)]
         AmountPlugged = [6, 5, 11]
 
     
-    if CalendarYear < YearPlugged[0]:
+    if Year_Month < YearPlugged[0]:
         NumberPluggedTubes = 0
     
-    elif CalendarYear >= YearPlugged[len(YearPlugged) - 1]:
+    elif Year_Month >= YearPlugged[len(YearPlugged) - 1]:
         NumberPluggedTubes = sum(AmountPlugged)
     
     else:
         for i in range(len(YearPlugged) - 1):
 
-            if YearPlugged[i] <= CalendarYear < YearPlugged[i + 1]:
+            if YearPlugged[i] <= Year_Month < YearPlugged[i + 1]:
                 # last tube in range not included, hence the + 1
-                NumberPluggedTubes = sum(AmountPlugged[0:(i+1)])
+                # e.g., SG 1: if date 1989-4, Year_Month is <= i =1, so amount plugged summed from 0 to 1 --> 1 + 1 =2 
+                NumberPluggedTubes = sum(AmountPlugged[0:(i + 1)])
         
     TotalSGTubeNumber = 3542 - NumberPluggedTubes
+    
     return TotalSGTubeNumber
 
 
@@ -207,27 +264,27 @@ def bundle_sizes(SteamGenerator, TotalSGTubeNumber):
         TotalTubesinBundles.append(SteamGenerator[i].TubeNumber)
         
     TotalTubesinBundles = sum(TotalTubesinBundles)
-#     print (TotalSGTubeNumber, TotalTubesinBundles)
+
     if TotalSGTubeNumber < TotalTubesinBundles:
         
         for i in range(3542 - TotalSGTubeNumber):
             x = random.randint(0, 86)
             SteamGenerator[x].TubeNumber = SteamGenerator[x].TubeNumber - 1
-#             print(x, "lol")
     
-def primaryside_cleaned_tubes(Bundle, CalendarYear):
+    return None
+
+   
+def primaryside_cleaned_tubes(TotalSGTubeNumber, Year_Month):
     #amount of tubes cleaned per each cleaning will have to be custom
-    if CalendarYear == YearOutageRestart:
+    if Year_Month == YearOutageRestart:
         # siva blast in 1995 used on only 60% of tubes due to time/spacial constraints
         PercentTubesCleaned = 0.6
-    elif CalendarYear == YearRefurbRestart:
+    elif Year_Month == YearRefurbRestart:
         PercentTubesCleaned = 1
     else:
         # none cleaned outside of outages, cleaned tubes list below has no appended bundles
         PercentTubesCleaned = 0
-    
-    TotalSGTubeNumber = total_tubes_plugged(Bundle, CalendarYear)
-    
+     
     # chooses tube bundles until % of total sg tube number reached, adds all chosen to "cleaned" tube list
     Cleaned = []
     NumberTubes = []
@@ -241,7 +298,7 @@ def primaryside_cleaned_tubes(Bundle, CalendarYear):
         else:
             break
     
-    return Cleaned, TotalSGTubeNumber
+    return Cleaned
 
 
 def closest_tubelength(TubeLength):
@@ -336,37 +393,57 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
         return None
 
 
-def sludge_fouling_resistance(Bundle, i, calendar_year):
+def sludge_fouling_resistance(Bundle, i, Year_Month):
     
-    TubeGrowth = 0.00135  # [g/cm^2] /year = 6.5 um /year
+    # default values
+    TubeGrowth = 0.00135
     ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
+    InitialAccumulation = 0.0005 # [g/cm^2]
+    StartUp = (1983, 4)
     
-    InitialAccumulation = 0.0005 #g/cm^2
-      
     # between 1983 and 1986 (included)
-    if YearStartup <= calendar_year <= YearCPP:
+    if StartUp <= Year_Month <= YearCPP:
         # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
-        Accumulation = InitialAccumulation + (calendar_year - YearStartup) * TubeGrowth
+        ReferenceYear = StartUp
      
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
-    elif YearCPP < calendar_year < YearOutageRestart:
-        Accumulation = InitialAccumulation + (calendar_year - YearCPP) * ReducedTubeGrowth
+    elif YearCPP < Year_Month <= YearOutage:
+        TubeGrowth = ReducedTubeGrowth
+        ReferenceYear = YearCPP
     
-    elif calendar_year >= YearOutageRestart:
-        Accumulation = (calendar_year - YearOutageRestart) * ReducedTubeGrowth
+    
+    elif YearOutage < Year_Month <= YearOutageRestart:
+        TubeGrowth = 0
+        InitialAccumulation = 0
+        ReferenceYear = YearOutage
+    
+    
+    elif Year_Month > YearOutageRestart:
+        InitialAccumulation = 0
+        TubeGrowth = ReducedTubeGrowth
+        ReferenceYear = YearOutageRestart
         
-    elif YearRefurbishment < calendar_year < YearRefurbRestart:
+    
+    elif YearRefurbishment < Year_Month <= YearRefurbRestart:
         #no more SHT fouling growth during refurbishment outage - stays at this while those years are run blank
-        Accumulation = (YearRefurbishment - YearOutageRestart) * ReducedTubeGrowth
-    #
-    #
-    #
-    #
-    #
-    # did all of SHT get cleaned?
-    elif calendar_year >= YearRefurbRestart:
-        Accumulation = (calendar_year - YearRefurbRestart) * ReducedTubeGrowth
+        TubeGrowth = 0
+        InitialAccumulation = 0
+        ReferenceYear = YearRefurbishment
+        
+    
+    elif Year_Month >= YearRefurbRestart:
+        TubeGrowth = ReducedTubeGrowth
+        ReferenceYear = YearRefurbRestart
+        InitialAccumulation = 0
+    
+    else:
+        None
+        
+        
+    delta_time = [x1 - x2 for (x1, x2) in zip(Year_Month, ReferenceYear)]
+    delta_time = delta_time[0] + delta_time[1] / 12 
+    Accumulation = InitialAccumulation + delta_time * TubeGrowth
     
     Thickness = Accumulation / nc.Fe3O4Density
     
@@ -375,7 +452,7 @@ def sludge_fouling_resistance(Bundle, i, calendar_year):
     return Fouling
     
 
-def pht_fouling_resistance(i, calendar_year, InnerAccumulation, OuterAccumulation):
+def pht_fouling_resistance(i, InnerAccumulation, OuterAccumulation):
     
     # [g/cm^2]/[g/cm^3] = [cm]
     # thickness/thermal conductivity [cm]/[W/cm K] = [cm^2 K/W]
@@ -408,10 +485,8 @@ def conduction_resistance(Bundle, Twall, SecondarySidePressure, i):
 
 
 def primary_convection_resistance(
-        Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, CalendarYear
+        Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, TotalSGTubeNumber
         ):
-    
-    TotalSGTubeNumber = total_tubes_plugged(Bundle, CalendarYear)
     
     # R_1,Convective = 1/(h_1,convectove *A)
     # A = inner area (based on inner diameter)
@@ -590,40 +665,7 @@ def outer_area(SteamGenerator):
     return [np.pi * x * y for x, y in zip(SteamGenerator.OuterDiameter, SteamGenerator.Length.magnitude)]
 
 
-def reactor_power():
-    
-    Filename = 'C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\OutagePower.csv'
-    
-    df = pd.read_csv(Filename, header=None)
-    df.columns = ['date','power']
-
-    # converts from string object to time series  
-    df.date = pd.to_datetime(df.date)
-    df.set_index('date', inplace=True)
-    
-    daily_average = df.resample('M').mean().copy()
-    daily_average = daily_average.fillna(method='ffill')
-#     daily_average = daily_average.dropna(how = "any")
-        
-    Year_Month = []
-    for date in daily_average.index:
-        x = (date.year, date.month)
-        Year_Month.append(x)
-    
-    
-    OperatingPower = daily_average.as_matrix(['power']).flatten()
-#     plt.plot(df)
-#     plt.xlabel('Year')
-#     plt.ylabel('Power')
-#     plt.show()
-##     prints first 5 rows to check everything is assigned properly
-#     print (df.head())
-
-    return Year_Month, OperatingPower
-
-
-Year_Month_PowerTracked, Operating_Power = reactor_power()
-print (list(zip(Year_Month_PowerTracked, Operating_Power)))
+# print (list(zip(Year_Month_PowerTracked, Operating_Power)))
 
 def pht_steam_quality(Temperature, j):
     
@@ -643,30 +685,34 @@ def pht_steam_quality(Temperature, j):
 
     difference = []
     
+    # outages are accounted for in the 1996-01 to 2018-06 data via power derating (down to 0.01 or lower)
     if Current_Year_Month in Year_Month_PowerTracked:
         
         for x in Year_Month_PowerTracked:
             
-            delta_time = (Current_Year_Month[0] - x[0], Current_Year_Month[1] - x[1])
+            delta_time = [x1 - x2 for (x1, x2) in zip(Current_Year_Month, x)] 
+            #(Current_Year_Month[0] - x[0], Current_Year_Month[1] - x[1])
             
             delta_time = [abs(number) for number in delta_time]
             
             difference.append(delta_time)
-            
+
+        # min function --> smallest difference between first index in all lists in tuple compared, followed by second     
+        # index = location of list with this minimum difference relative to that of current (year, month) input 
         ClosestYear_Month = difference.index(min(difference))
-        print (ClosestYear_Month)
         
-        Derating = Operating_Power[ClosestYear_Month]
+        Fraction_of_FP = Operating_Power[ClosestYear_Month]
     
+    # the outage in 1995 precedes the station log data available, so this is manually set to 0 % FP here
     # no steam quality during outage
     elif YearOutage <= Current_Year_Month <  YearOutageRestart:
-        Derating = 0
+        Fraction_of_FP = 0
         
+    # outside of data in the logs and the 1995 outage (1983-1995 data) 100 % full power is assumed
     else:
-        Derating = 1
+        Fraction_of_FP = 1
        
-    P = FullPower * Derating
-    print (CalendarYear, Derating, P)
+    P = FullPower * Fraction_of_FP
 
     # core inlet enthalpy at RIHT + that added from fuel
     # H_fromfuel = Power / CoreMassFlow # [kJ/s /kg/s] = [kJ/kg]
@@ -684,7 +730,7 @@ def pht_steam_quality(Temperature, j):
         x = 0
     return x
 
-print (pht_steam_quality(262 +273.15, 876 * 13.35))
+# print (pht_steam_quality(262 +273.15, 876 * 13.5))
 
 
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
@@ -951,7 +997,7 @@ def outside_bundle_pool_boiling(
 
 def wall_temperature(
         Bundle, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation,
-        CalendarYear, SecondarySidePressure, m_h_leakagecorrection):
+        Year_Month, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber):
      
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
@@ -969,7 +1015,7 @@ def wall_temperature(
         T_SecondaryFilm = (T_SecondaryBulkIn + T_SecondaryWall) / 2
                
         h_i.magnitude = (1 / (A_i * primary_convection_resistance(
-            Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, CalendarYear
+            Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, TotalSGTubeNumber
             )))
         
         h_o.magnitude = (1 / (A_o * secondary_convection_resistance(
@@ -986,7 +1032,7 @@ def wall_temperature(
 
         U_c1 = A_o * conduction_resistance(Bundle, T_PrimaryWall, SecondarySidePressure, i)
         U_c2 = A_o * primary_convection_resistance(
-            Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, CalendarYear) 
+            Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, TotalSGTubeNumber) 
         
         U_c.magnitude = 1 / (U_c1 + U_c2)  # [W/cm^2 K]
 
@@ -1003,12 +1049,12 @@ def wall_temperature(
         if abs(RE1) <= .05 and abs(RE2) <= .05:
 #             print (h_i.magnitude, h_o.magnitude, i)
             # [cm^2 K/W]
-            R_F_primary.magnitude = pht_fouling_resistance(i, CalendarYear, InnerAccumulation[i], OuterAccumulation[i]) 
+            R_F_primary.magnitude = pht_fouling_resistance(i, InnerAccumulation[i], OuterAccumulation[i]) 
             
-            R_F_secondary.magnitude = sludge_fouling_resistance(Bundle, i, CalendarYear)
+            R_F_secondary.magnitude = sludge_fouling_resistance(Bundle, i, Year_Month)
                         
             PCR = primary_convection_resistance(
-                Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, CalendarYear
+                Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, TotalSGTubeNumber
                 )
             
             SCR = secondary_convection_resistance(
@@ -1032,9 +1078,9 @@ def wall_temperature(
 
 
 def temperature_profile(
-        Bundle, InnerOxide, OuterOxide, m_h_leakagecorrection, SecondarySidePressure, x_pht, CalendarYear):
-    
-    TotalSGTubeNumber = total_tubes_plugged(Bundle, CalendarYear)
+        Bundle, InnerOxide, OuterOxide, m_h_leakagecorrection, SecondarySidePressure, x_pht, Year_Month, 
+        TotalSGTubeNumber
+        ):
     
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
@@ -1058,8 +1104,8 @@ def temperature_profile(
         Cp_c = nc.heatcapacityH2O_liquid(T_SecondaryBulkIn, SecondarySidePressure)
         
         T_wh, T_wc, U = wall_temperature(
-            Bundle, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerOxide, OuterOxide, CalendarYear,
-            SecondarySidePressure, m_h_leakagecorrection)
+            Bundle, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerOxide, OuterOxide, Year_Month,
+            SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber)
         
         # [W/ cm^2 K] * [K] * [cm^2] = [W] = [J/s]
         Q = U * (T_PrimaryBulkIn - T_SecondaryBulkIn) * outer_area(Bundle)[i] * TotalSGTubeNumber
@@ -1206,26 +1252,26 @@ def divider_plate(CalendarYear):
     None
 
 
-def station_events(calendar_year):
+def station_events(Year_Month):
 
     # Pressure changes only:
     
     FirstPressureReduction = (1992, 11)
     SecondPressureReduction = (1998, 12)
     
-    if calendar_year < FirstPressureReduction:
+    if Year_Month < FirstPressureReduction:
         SecondarySidePressure = 4.593  # MPa
     
     # PLNGS pressure reduction in 1992 (september) by 125 kPa
-    elif FirstPressureReduction <= calendar_year < YearOutage:
+    elif FirstPressureReduction <= Year_Month < YearOutage:
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     
     # return to full boiler secondary side pressure, 4.593 MPa
     # pressure restored shortly after reactor back online from refurb.
-    elif YearOutage <= calendar_year < SecondPressureReduction:
+    elif YearOutage <= Year_Month < SecondPressureReduction:
         SecondarySidePressure = 4.593
     
-    elif calendar_year >= SecondPressureReduction:
+    elif Year_Month >= SecondPressureReduction:
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     else:
         None
@@ -1236,33 +1282,35 @@ def station_events(calendar_year):
     
     # Divider plate raplacement only:
     
-    if calendar_year < YearOutageRestart: # (1983.25 - 1996, not including)
+    if Year_Month < YearOutageRestart: # (1983.25 - 1996, not including)
         # divider plate leakage rates estimated based on AECL work (2-3.5 % range estimated)
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
         InitialLeakage = 0.025
         YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
         InitialYear = YearStartup.year
-         
-    elif calendar_year == YearOutageRestart: #1996
+                
+        
+    elif Year_Month == YearOutageRestart: #1996
         InitialLeakage = 0.0075  # controls where first post-outage point is (underpredicted w/o this)
         YearlyRateLeakage = 0
         InitialYear = YearOutageRestart[0]
     
-    elif calendar_year > YearOutageRestart: # after 1996
+    
+    elif Year_Month > YearOutageRestart: # after 1996
         # helps second post-outage point rise (second leak of 2.5% magnitude initialized)
         InitialLeakage = PostOutageInitialLeakage
         # either this or some SHT deposits help out Phase 4 from dipping so much
         YearlyRateLeakage = PostOutageYearlyLeakage
         InitialYear = YearOutageRestart[0]    
     
-    elif YearRefurbishment < calendar_year < YearRefurbRestart: # (2008.25 - 2014)
+    elif YearRefurbishment < Year_Month < YearRefurbRestart: # (2008.25 - 2014)
         InitialLeakage = (YearRefurbishment - YearOutageRestart) * PostOutageYearlyRateLeakage + PostOutageYearlyLeakage
         # plateau during outage 
         YearlyRateLeakage = 0
         InitialYear = YearRefurbishment[0] #doesn't matter, growth rate is zero throughout refurb outage
     
-    elif calendar_year >= YearRefurbRestart: # after and incl. 2014
+    elif Year_Month >= YearRefurbRestart: # after and incl. 2014
         InitialLeakage = (YearRefurbishment - YearOutageRestart) * PostOutageYearlyLeakage + PostOutageInitialLeakage
         YearlyRateLeakage = 0.0015
         InitialYear = YearRefurbRestart[0]
@@ -1271,7 +1319,8 @@ def station_events(calendar_year):
         None
         
     
-    Leakage = InitialLeakage + (calendar_year - InitialYear) * YearlyRateLeakage
+    Leakage = InitialLeakage + (Year_Month[0] - InitialYear) * YearlyRateLeakage
+#     print (Year_Month, InitialLeakage, Leakage)
     
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
     # decreases as divider (bypass) flow increases
@@ -1294,10 +1343,13 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     Energy = []
     
 
+    TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Year_Month)
+    
     #passed as 0th bundle for now, but this really needs to be changed such that it's always just the steam generator
     # will need to pass total number tubes through several other functions inside iteration (primary_convection...etc)    
     
-    Cleaned, TotalSGTubeNumber = primaryside_cleaned_tubes(SteamGenerator[0], Year_Month)
+    Cleaned = primaryside_cleaned_tubes(TotalSGTubeNumber, Year_Month)
+    
     # adusts how many tubes per bundle to account for tubes plugged
     bundle_sizes(SteamGenerator, TotalSGTubeNumber)
 #     print (CalendarYear, TotalSGTubeNumber)
@@ -1348,7 +1400,7 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
                        
         
         [Bundle.PrimaryBulkTemperature, Bundle.HeatFlux] = temperature_profile(
-            Bundle, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, Year_Month
+            Bundle, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, Year_Month, TotalSGTubeNumber
             )
         
         SteamGeneratorOutputNode = SteamGenerator[Default_Tube].NodeNumber - 1
