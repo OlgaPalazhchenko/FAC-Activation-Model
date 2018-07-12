@@ -191,13 +191,14 @@ def oxide_growth(
     return GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt
     
 
-def pht_cleaning(Section, InnerOxide, OuterOxide, calendar_year):
+def pht_cleaning(Section, InnerOxide, OuterOxide, Year_Month):
     
     #need to change cleaning efficiency for each individual clean 
-    if calendar_year == SGHX.YearOutageRestart:
-        CleaningEfficiency = 0.67
-    elif calendar_year == SGHX.YearRefurbRestart:
-        CleaningEfficiency = 0.22 #(IR-33110-0039-001-A)
+    if Year_Month in SGHX.CleaningYearsMonths:
+        if Year_Month[0] == 1995:
+            CleaningEfficiency = 0.67
+        else:
+            CleaningEfficiency = 0.22 #(IR-33110-0039-001-A)
     else:
         CleaningEfficiency = 0 # no cleaning, oxide layers returned without reduction in thickness
         
@@ -217,11 +218,18 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, calendar_year):
     return InnerOxide, OuterOxide
 
 
-def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, SGFastMode):
-    
-    CalendarYear = (j * nc.TIME_STEP / 8760) + SGHX.YearStartup   
+def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, SGFastMode):  
     
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
+        
+        start = YearStartup
+        delta = timedelta(hours = j * nc.TIME_STEP)
+        CalendarYear = start + delta
+        
+        Year_Month = (CalendarYear.year, CalendarYear.month) 
+        
+        TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Year_Month)
+        
         # here Section = a bundle from the SG, but tube picker needs entire SG to be passed through
         if Section in ld.SteamGenerator: 
             SteamGenerator = ld.SteamGenerator
@@ -234,25 +242,24 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
     
             if Section == SelectedTubes[0]: #first tube from list of desired tubes per each SG
                 [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
-                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, CalendarYear)
+                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Year_Month)
             else:
                 Section.InnerIronOxThickness = Section.InnerIronOxThickness
                 Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness
         
         else: #all sg tubes run (each bundle passed through, not entire SG) 
-            Cleaned = primaryside_cleaned_tubes(Section, CalendarYear)
+            Cleaned = primaryside_cleaned_tubes(TotalSGTubeNumber, Year_Month)
             
             if Section in Cleaned:
                 [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
-                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, CalendarYear)
+                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Year_Month)
             else:
                None 
     else:
         None
         
     
-    if SGHX.YearOutage < CalendarYear < SGHX.YearOutageRestart or (
-        SGHX.YearRefurbishment < CalendarYear < SGHX.YearRefurbRestart):
+    if Year_Month in SGHX.OutageYearsMonths:
          # no oxide growth anywhere in the PHT system
         Section.InnerIronOxThickness = Section.InnerIronOxThickness
         Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness

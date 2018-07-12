@@ -86,6 +86,7 @@ def reactor_power():
     monthly_average = monthly_average.fillna(method='ffill')
 #     monthly_average = monthly_average.dropna(how = "any")
     
+    # secondary side pressure wil be added here eventually (maybe also primary side pressure)
     writer = pd.ExcelWriter('PLNGS_Power.xlsx', engine='xlsxwriter', datetime_format='mm-yyyy')
     monthly_average.to_excel(writer, sheet_name = 'Monthly Averaged FP')
     
@@ -95,18 +96,31 @@ def reactor_power():
     
     Outages = monthly_average.index[monthly_average['power'] < 0.89]
     
-    OutageYears = []
+
+    CleaningYearsMonths = [(1995, 5), (1995, 6), (1995, 7), (1995, 8), (1995, 9), (1995, 10), (1995, 11), (1995, 12)]
+    
+    OutageYearsMonths = []
     for date in Outages:
         x = (date.year, date.month)
-        OutageYears.append(x)
-    
+        OutageYearsMonths.append(x)
+                                       
+        if (date.year == 2008 and 3 <= date.month <= 12):
+            CleaningYearsMonths.append((date.year, date.month))
+        
+        elif date.year in [2009, 2010, 2011, 2012]:
+            CleaningYearsMonths.append((date.year, date.month))
+        
+        elif (date.year == 2013 and date.month <2):
+            CleaningYearsMonths.append((date.year, date.month))
+        
+        else:
+            None
     
     # converts dates from datetime (dd-mm-yyyy) to tuples with just (yy, mm) indices  
     Year_Month = []
     for date in monthly_average.index:
         x = (date.year, date.month)
         Year_Month.append(x)
-    
     
     OperatingPower = monthly_average.as_matrix(['power']).flatten()
 #     plt.plot(df)
@@ -116,11 +130,10 @@ def reactor_power():
 ##     prints first 5 rows to check everything is assigned properly
 #     print (df.head())
 
-    return Year_Month, OperatingPower, OutageYears
+    return Year_Month, OperatingPower, OutageYearsMonths, CleaningYearsMonths
 
 
-Year_Month_PowerTracked, Operating_Power, OutageYears = reactor_power()
-
+Year_Month_PowerTracked, Operating_Power, OutageYearsMonths, CleaningYearsMonths = reactor_power()
 
 
 def RIHT_plots():
@@ -152,7 +165,7 @@ FullTubeComplement = 3542
 
 YearStartup = date(1983, 4, 8)
 YearCPP = (1987, 1)
-YearOutage = (1995, 4)
+YearOutage = (1995, 5)
 YearOutageRestart = (1996, 1)
 YearRefurbishment = (2008, 3)
 YearRefurbRestart = (2013, 1)
@@ -1278,49 +1291,46 @@ def station_events(Year_Month):
     
     
     PostOutageYearlyLeakage = 0.00035
-    PostOutageInitialLeakage = 0.02   
+    PostOutageInitialLeakage = 0.015   
     
     # Divider plate raplacement only:
+    if Year_Month in CleaningYearsMonths:
+        YearlyRateLeakage = 0
+        InitialLeakage = 0
+        InitialYear = YearOutage
+        
     
-    if Year_Month < YearOutageRestart: # (1983.25 - 1996, not including)
+    elif Year_Month < YearOutage: # (1983, 4) - (1995, 4)
         # divider plate leakage rates estimated based on AECL work (2-3.5 % range estimated)
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
         InitialLeakage = 0.025
-        YearlyRateLeakage = 0.0065  # yearly increase to fraction of total SG inlet mass flow
-        InitialYear = YearStartup.year
-                
-        
-    elif Year_Month == YearOutageRestart: #1996
-        InitialLeakage = 0.0075  # controls where first post-outage point is (underpredicted w/o this)
-        YearlyRateLeakage = 0
-        InitialYear = YearOutageRestart[0]
+        YearlyRateLeakage = 0.0065
+        InitialYear = (YearStartup.year, YearStartup.month)
     
     
-    elif Year_Month > YearOutageRestart: # after 1996
+    elif YearOutageRestart <= Year_Month < YearRefurbishment: # after (1996, 1) to 2008, 2
         # helps second post-outage point rise (second leak of 2.5% magnitude initialized)
         InitialLeakage = PostOutageInitialLeakage
         # either this or some SHT deposits help out Phase 4 from dipping so much
         YearlyRateLeakage = PostOutageYearlyLeakage
-        InitialYear = YearOutageRestart[0]    
+        InitialYear = YearOutageRestart    
     
-    elif YearRefurbishment < Year_Month < YearRefurbRestart: # (2008.25 - 2014)
-        InitialLeakage = (YearRefurbishment - YearOutageRestart) * PostOutageYearlyRateLeakage + PostOutageYearlyLeakage
-        # plateau during outage 
-        YearlyRateLeakage = 0
-        InitialYear = YearRefurbishment[0] #doesn't matter, growth rate is zero throughout refurb outage
     
-    elif Year_Month >= YearRefurbRestart: # after and incl. 2014
-        InitialLeakage = (YearRefurbishment - YearOutageRestart) * PostOutageYearlyLeakage + PostOutageInitialLeakage
+    elif Year_Month >= YearRefurbRestart:
+        InitialLeakageDates = [x1 - x2 for (x1, x2) in zip(YearRefurbishment, YearOutageRestart)]
+        InitialLeakage = (InitialLeakageDates[0] + InitialLeakageDates[1] / 12) * PostOutageYearlyLeakage  
         YearlyRateLeakage = 0.0015
-        InitialYear = YearRefurbRestart[0]
+        InitialYear = YearRefurbRestart
         
     else:
         None
         
+        
+    delta_time = [x1 - x2 for (x1, x2) in zip(Year_Month, InitialYear)]
+    delta_time = delta_time[0] + delta_time[1] / 12 
     
-    Leakage = InitialLeakage + (Year_Month[0] - InitialYear) * YearlyRateLeakage
-#     print (Year_Month, InitialLeakage, Leakage)
+    Leakage = InitialLeakage + delta_time * YearlyRateLeakage
     
     DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
     # decreases as divider (bypass) flow increases
@@ -1328,7 +1338,7 @@ def station_events(Year_Month):
 
     return SecondarySidePressure, m_h_leakagecorrection, DividerPlateMassFlow
 
-
+station_events((2014, 3))
 def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     
     start = YearStartup
@@ -1426,4 +1436,4 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     return RIHT
 
              
-print (energy_balance(ld.SteamGenerator_2, 0.01, 876, SGFastMode="yes")- 273.15)
+# print (energy_balance(ld.SteamGenerator_2, 0.01, 949, SGFastMode="yes")- 273.15)
