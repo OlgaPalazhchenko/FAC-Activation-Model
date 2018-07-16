@@ -300,7 +300,7 @@ def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
 
 # just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
-SimulationYears = 16 # years
+SimulationYears = 25 # years
 SimulationHours = SimulationYears * 876 # 851
 
 

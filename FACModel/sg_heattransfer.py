@@ -65,7 +65,7 @@ def station_RIHT():
     
     writer.save()
     
-# station_RIHT()
+station_RIHT()
 
 
 def reactor_power():
@@ -94,11 +94,15 @@ def reactor_power():
     worksheet1 = writer.sheets['Monthly Averaged FP']
     writer.save()
     
-    Outages = monthly_average.index[monthly_average['power'] < 0.89]
+    Outages = monthly_average.index[monthly_average['power'] < 0.86]
     
 
-    OutageYearsMonths = [(1995, 5), (1995, 6), (1995, 7), (1995, 8), (1995, 9), (1995, 10), (1995, 11), (1995, 12)]
-    
+    EstimatedOutageYearsMonths = [
+        (1984, 5), (1987, 4), (1987, 5), (1988, 4), (1988, 7), (1988, 10), (1990, 2), (1990, 4), (1993, 9), (1994, 4) 
+        ]
+    OutageYearsMonths = EstimatedOutageYearsMonths + \
+    [(1995, 5), (1995, 6), (1995, 7), (1995, 8), (1995, 9), (1995, 10), (1995, 11), (1995, 12)]
+
     for date in Outages:
         x = (date.year, date.month)
         OutageYearsMonths.append(x)
@@ -120,7 +124,7 @@ def reactor_power():
     for date in monthly_average.index:
         x = (date.year, date.month)
         Year_Month.append(x)
-    
+
     OperatingPower = monthly_average.as_matrix(['power']).flatten()
 #     plt.plot(df)
 #     plt.xlabel('Year')
@@ -133,7 +137,7 @@ def reactor_power():
 
 
 Year_Month_PowerTracked, Operating_Power, OutageYearsMonths = reactor_power()
-
+# print (Operating_Power)
 
 def RIHT_plots():
     RIHT_data = open('RIHTOutputSG2.csv', 'r')
@@ -183,7 +187,7 @@ YearRefurbRestart = (2013, 1)
 
 
 T_sat_primary = 310.77 + 273.15
-T_PreheaterIn = 186.5 + 273.15
+T_PreheaterIn = 187.5 + 273.15
 RecirculationRatio = 5.3
 
 
@@ -419,7 +423,7 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 def sludge_fouling_resistance(Bundle, Year_Month):
     
     # default values
-    TubeGrowth = 0.0016
+    TubeGrowth = 0.0014
     ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
     InitialAccumulation = 0.001 # [g/cm^2]
     StartUp = (1983, 4)
@@ -719,9 +723,10 @@ def pht_steam_quality(Temperature, j):
         
         Fraction_of_FP = Operating_Power[ClosestYear_Month]
     
-    # the outage in 1995 precedes the station log data available, so this is manually set to 0 % FP here
+    # the outage in 1995 precedes the station log data available, so this is manually set to 0 % FP here in addition
+    # to the other approximated outage dates
     # no steam quality during outage
-    elif YearOutage <= Current_Year_Month <  YearOutageRestart:
+    elif Current_Year_Month in OutageYearsMonths:
         Fraction_of_FP = 0
         
     # outside of data in the logs and the 1995 outage (1983-1995 data) 100 % full power is assumed
@@ -741,12 +746,12 @@ def pht_steam_quality(Temperature, j):
     H_current = nc.enthalpyD2O_liquid(Temperature) + H_pht
 #     H_current = nc.enthalpyH2O_liquid(nc.PrimarySidePressure, Temperature) + H_pht
     x = (H_current - H_satliq_outlet) / (EnthalpySaturatedSteam.magnitude - H_satliq_outlet)
-#     print (Current_Year_Month, Fraction_of_FP, FullPower, x)
+#     print (Current_Year_Month, P, FullPower, x)
     if x < 0:
         x = 0
     return x
 
-# print (pht_steam_quality(264.8 +273.15, 876 * 13.4))
+# print (pht_steam_quality(264.8 +273.15, 876 * 1.1))
 
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
         
@@ -948,7 +953,7 @@ def outside_bundle_pool_boiling(
         i
         ):
     
-    F = .165 # bundle boiling factor (empirical)
+    F = .17 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -1298,12 +1303,12 @@ def station_events(Year_Month):
         SecondarySidePressure = 4.593  # MPa
     
     # PLNGS pressure reduction in 1992 (september) by 125 kPa
-    elif FirstPressureReduction <= Year_Month < YearOutage:
+    elif FirstPressureReduction <= Year_Month < YearOutageRestart:
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     
     # return to full boiler secondary side pressure, 4.593 MPa
     # pressure restored shortly after reactor back online from refurb.
-    elif YearOutage <= Year_Month < SecondPressureReduction:
+    elif YearOutageRestart <= Year_Month < SecondPressureReduction:
         SecondarySidePressure = 4.593
     
     elif Year_Month >= SecondPressureReduction:
@@ -1312,8 +1317,8 @@ def station_events(Year_Month):
         None
     
     
-    PostOutageYearlyLeakage = 0.00035
-    PostOutageInitialLeakage = 0.025   
+    PostOutageYearlyLeakage = 0.001
+    PostOutageInitialLeakage = 0.015   
     
     # Divider plate raplacement only:
     if Year_Month in OutageYearsMonths:
@@ -1327,7 +1332,7 @@ def station_events(Year_Month):
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
         InitialLeakage = 0.03
-        YearlyRateLeakage = 0.0065
+        YearlyRateLeakage = 0.005
         InitialYear = (YearStartup.year, YearStartup.month)
     
     
@@ -1385,7 +1390,7 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     bundle_sizes(SteamGenerator, TotalSGTubeNumber)
 
     [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude, Leakage] = station_events(Year_Month)
-    print (Year_Month, TotalSGTubeNumber, SecondarySidePressure, Leakage)
+
     for Bundle in SteamGenerator:
         
         if SGFastMode == "yes":
