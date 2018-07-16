@@ -4,6 +4,7 @@ import thermochemistry_and_constants as nc
 import composition as c
 import electrochemistry as e
 import sg_heattransfer as SGHX
+from datetime import date, timedelta
 
 # Activation Energies [J/mol]
 
@@ -225,13 +226,15 @@ def EmpiricalFAC_solver(Section):
     return rate
 
 
-
 def FAC_solver(Section, ConstantRate, j):
     
-    year = (j * nc.TIME_STEP / 8760) 
-    calendar_year = year +  SGHX.YearStartup
+    start = SGHX.YearStartup
+    delta = timedelta(hours = j * nc.TIME_STEP)
+    CalendarYear = start + delta
     
-    if calendar_year < SGHX.YearRefurbRestart:
+    Year_Month = (CalendarYear.year, CalendarYear.month)
+    
+    if Year_Month < SGHX.YearRefurbRestart:
         ACTIVATION_ENERGY_Fe = 264860.0725
         ACTIVATION_ENERGY_H2onFe = 262286.4165
     

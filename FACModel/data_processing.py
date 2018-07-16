@@ -11,6 +11,7 @@ import thermochemistry_and_constants as nc
 import csv
 import iteration as it
 import pht_model
+import pandas as pd
 
 import matplotlib.pyplot as plt
 from matplotlib import rc
@@ -170,9 +171,7 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
         )
         OutletCorrosionRate_um.append(x)
     
-    
-    year_end = 2017 + 0.25 # arange function does not include last element
-    Years = np.arange(SGHX.YearStartup, year_end, 0.25)
+    Years = pd.date_range('1983-03-08','2018-06-08' , freq='1M')+pd.offsets.Day(8)
 
     Data = [
         SGHX.TubeLengths, TotalDistance, InnerOxide_SteamGeneratorTubes, OuterOxide_SteamGeneratorTubes,

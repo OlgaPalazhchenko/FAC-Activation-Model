@@ -7,9 +7,11 @@ import electrochemistry as e
 import iteration as it
 import sg_heattransfer as SGHX
 import numpy as np
+from datetime import date, timedelta
+
 # from operator import itemgetter
 
-Loop = "full"
+Loop = "half"
 ConstantRate = "yes" # preset corrosion rate instead of calculated from FAC model
 Purification = "yes"
 Activation = "no"
@@ -251,7 +253,7 @@ FACRate_OutletFeeder = []
 RIHT_average = []
 RIHT_InletFeeder1 = []
 RIHT_InletFeeder2 = []
-
+YM = []
 OutletTemperature_Bundle_1 = [] 
 OutletTemperature_Bundle_2 = []
 pht_SteamFraction = []
@@ -263,9 +265,8 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
     RIHT_InletFeeder2.append(RIHT2)
     RIHT_average.append(RIHT_avg)
     pht_SteamFraction.append(x)
-    
-    OutletTemperature_Bundle_1.append(Temperature1)
-    OutletTemperature_Bundle_2.append(Temperature2)
+#     OutletTemperature_Bundle_1.append(Temperature1)
+#     OutletTemperature_Bundle_2.append(Temperature2)
     
     return (
         FACRate_OutletFeeder, RIHT_InletFeeder1, RIHT_InletFeeder2, RIHT_average, pht_SteamFraction,
@@ -299,7 +300,7 @@ def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
 
 # just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
-SimulationYears = 14 # years
+SimulationYears = 16 # years
 SimulationHours = SimulationYears * 876 # 851
 
 
@@ -381,11 +382,7 @@ for j in range(SimulationHours):
         # core and outlet temperatures currently not being updated, but all sections called for continuity
         for Section in Sections:
             # update solubility based on new temperatures in steam generators and inlet heades/feeders
-            Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)
-        
-        # optional preview of RIHT and primary-side steam quality
-#         print (SGHX.YearStartup + j / (8760 / nc.TIME_STEP), x_pht, RIHT_1, RIHT_2)
-        
+            Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
         #final node temperature of first 2 of selected bundles (first two bundles from all 87 if not run in "fast mode")
         # currently tracking only one steam generator...second set of Temp1 and Temp2 can be added for SG1 if needed
@@ -399,13 +396,24 @@ for j in range(SimulationHours):
                            )
         else:
             Temperature2 = None
+            
+        # optional preview of RIHT and primary-side steam quality
+        start = SGHX.YearStartup
+        delta = timedelta(hours = j * nc.TIME_STEP)
+        CalendarYear = start + delta
         
-    
-        #output_2 is from second steam generator and second inlet header (RIHT_2), always run, half or full loop 
+        Year_Month = (CalendarYear.year, CalendarYear.month)
+        
+        print (Year_Month, x_pht, RIHT_1)#, RIHT_2)
+#         SelectedTubes = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)[1]
+#          
+#         print ('cleaned', ld.SteamGenerator_2[SelectedTubes[0]].OuterFe3O4Thickness)
+#         print ('normal', ld.SteamGenerator_2[Default_Tube].OuterFe3O4Thickness)
         output = output_time_logging(
-            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Temperature1, Temperature2
-            )     
-        
+            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Temperature1,
+            Temperature2
+            )
+            
     else:
         None
     

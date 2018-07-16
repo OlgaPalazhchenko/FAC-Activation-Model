@@ -7,6 +7,7 @@ import electrochemistry as e
 import random
 import sg_heattransfer as SGHX
 from lepreau_data import SteamGeneratorSections
+from datetime import date, timedelta
 
 
 # Spalling thermochemistry_and_constants depend heavily on particle size distribution
@@ -191,14 +192,14 @@ def oxide_growth(
     return GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt
     
 
-def pht_cleaning(Section, InnerOxide, OuterOxide, Year_Month):
+def pht_cleaning(Section, InnerOxide, OuterOxide, Year_Month_Day_Hour):
     
     #need to change cleaning efficiency for each individual clean 
-    if Year_Month in SGHX.CleaningYearsMonths:
-        if Year_Month[0] == 1995:
-            CleaningEfficiency = 0.67
-        else:
-            CleaningEfficiency = 0.22 #(IR-33110-0039-001-A)
+#     print (Year_Month_Day_Hour)
+    if Year_Month_Day_Hour == (1995, 5, 8, 8):
+        CleaningEfficiency = 0.67
+    elif Year_Month_Day_Hour == (2008, 3, 1, 14):
+        CleaningEfficiency = 0.22 #(IR-33110-0039-001-A)
     else:
         CleaningEfficiency = 0 # no cleaning, oxide layers returned without reduction in thickness
         
@@ -220,15 +221,21 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, Year_Month):
 
 def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, SGFastMode):  
     
+    start = SGHX.YearStartup
+    delta = timedelta(hours = j * nc.TIME_STEP)
+    CalendarDate = start + delta
+        
+    Year_Month_Day_Hour = (CalendarDate.year, CalendarDate.month, CalendarDate.day, CalendarDate.hour) 
+    Year_Month = (CalendarDate.year, CalendarDate.month)
+    
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
         
-        start = YearStartup
-        delta = timedelta(hours = j * nc.TIME_STEP)
-        CalendarYear = start + delta
+        if Section in ld.SteamGenerator:
+            SteamGenerator = ld.SteamGenerator
+        elif Section in ld.SteamGenerator_2:
+            SteamGenerator = ld.SteamGenerator_2
         
-        Year_Month = (CalendarYear.year, CalendarYear.month) 
-        
-        TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Year_Month)
+        TotalSGTubeNumber = SGHX.total_tubes_plugged(SteamGenerator, Year_Month_Day_Hour)
         
         # here Section = a bundle from the SG, but tube picker needs entire SG to be passed through
         if Section in ld.SteamGenerator: 
@@ -241,8 +248,9 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
             SelectedTubes = SGHX.tube_picker(SGHX.Method, SteamGenerator)[0]
     
             if Section == SelectedTubes[0]: #first tube from list of desired tubes per each SG
+                
                 [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
-                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Year_Month)
+                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Year_Month_Day_Hour)
             else:
                 Section.InnerIronOxThickness = Section.InnerIronOxThickness
                 Section.OuterFe3O4Thickness = Section.OuterFe3O4Thickness
@@ -252,7 +260,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
             
             if Section in Cleaned:
                 [Section.InnerIronOxThickness, Section.OuterFe3O4Thickness] = pht_cleaning(
-                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Year_Month)
+                Section, Section.InnerIronOxThickness, Section.OuterFe3O4Thickness, Year_Month_Day_Hour)
             else:
                None 
     else:
