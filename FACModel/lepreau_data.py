@@ -124,6 +124,7 @@ class Section():  # Defining each primary heat transport section as a class
         self.OuterOxThickness = None
         self.CoThickness = None
         self.OxThickness = None
+        self.SludgeThickness = None
 
         self.StandardEqmPotentialFe = [float(SizingParametersReader[j + 13][i]) for i in range(self.RowStart, self.RowEnd)]
         self.StandardEqmPotentialFe3O4red = [float(SizingParametersReader[j + 14][i]) \
@@ -253,40 +254,41 @@ number_tubes = [8, 11, 14, 15, 18, 19, 20, 21, 22, 23, 24, 27, 28, 28, 28, 29, 2
 
 def steam_generator_properties(SteamGenerator):
     
-    for Zone, length, i in zip(SteamGenerator, u_bend_total, number_tubes):
+    for Bundle, length, i in zip(SteamGenerator, u_bend_total, number_tubes):
         # u-bend split into 4 nodes, but length is just a float 
-        Zone.Length.magnitude = hot_leg_length + [length / 4] * 4 + cold_leg_length
-        Zone.TubeNumber = i
+        Bundle.Length.magnitude = hot_leg_length + [length / 4] * 4 + cold_leg_length
+        Bundle.TubeNumber = i
+        Bundle.SludgeThickness = [0.00025] * Bundle.NodeNumber
         
-        Zone.Diameter = [1.368] * Zone.NodeNumber
-        Zone.Velocity = [
+        Bundle.Diameter = [1.368] * Bundle.NodeNumber
+        Bundle.Velocity = [
             533.002, 533.001, 533, 531, 524, 517, 511, 506, 506, 502, 498, 494, 491, 489, 487, 484, 483, 481, 480, 479,
             476, 474
             ]
         
-        Zone.SolubilityNi = [
+        Bundle.SolubilityNi = [
             1.5452E-09, 1.5452E-09, 1.5452E-09, 1.54453E-09, 1.54189E-09, 1.78271E-09, 1.84719E-09, 1.9062E-09,
             1.96011E-09, 2.22698E-09, 2.27478E-09, 2.31567E-09, 2.35035E-09, 2.3821E-09, 2.41091E-09, 2.59037E-09,
             2.60733E-09, 2.62118E-09, 2.63802E-09, 2.66147E-09, 2.68978E-09, 2.71747E-09
             ]
-        Zone.SolubilityCo = [
+        Bundle.SolubilityCo = [
             1.46729E-09, 1.46729E-09, 1.46729E-09, 1.49896E-09, 1.62443E-09, 1.75595E-09, 1.91821E-09, 2.06673E-09,
             2.2024E-09, 2.35035E-09, 2.5275E-09, 2.67907E-09, 2.80762E-09, 2.92529E-09, 3.0321E-09, 3.13232E-09,
             3.22305E-09, 3.2971E-09, 3.38716E-09, 3.51258E-09, 3.66401E-09, 3.81211E-09
             ]
-        Zone.SolubilityCr = [
+        Bundle.SolubilityCr = [
             4.84E-11, 4.84E-11, 4.84E-11, 4.99E-11, 5.61E-11, 6.20E-11, 6.73E-11, 7.22E-11, 7.67E-11, 8.10E-11,
             8.52E-11, 8.88E-11, 9.18E-11, 9.46E-11, 9.71E-11, 9.94E-11, 1.01E-10, 1.03E-10, 1.00E-10, 9.62E-11,
             9.15E-11, 8.70E-11
                              ]
         
-#         Zone.PrimaryBulkTemperature = UnitConverter(
+#         Bundle.PrimaryBulkTemperature = UnitConverter(
 #             Zone, "Celsius", "Kelvin", None, None, None, None, None,
 #             [310.002, 310.001, 310, 308.97, 304.89, 301.02, 297.48, 294.24, 291.28, 288.42, 285.65, 283.28, 281.27,
 #              279.43, 277.76, 276.22, 274.86, 273.75, 272.4, 270.52, 268.25, 266.03]
 #             )
         
-        Zone.Length.label = [None] \
+        Bundle.Length.label = [None] \
         + ["opposite preheater"] * 2 \
         + ["preheater mixing"] \
         + [None] * 4 \

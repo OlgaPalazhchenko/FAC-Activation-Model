@@ -17,17 +17,17 @@ def station_RIHT():
     Header3 = 'RIHT 6'
     Header4 = 'RIHT 8'
     
-    df.columns = ['date', Header1, Header2, Header3, Header4]
+    df.columns = ['date', 'power', Header1, Header2, Header3, Header4]
 
     # converts from string object to time series  
     df.date = pd.to_datetime(df.date)
     df.set_index('date', inplace=True)
     
     # average of all 4 
-    df['mean'] = df.mean(axis = 1)
+    df['mean'] = df.iloc[:, 1:5].mean(axis = 1)
     
-    #filters data to remove anything below 235 oC (arbitrarily set)
-    df = df[df[Header1] > 255]
+    #filters data to remove anything below 0.99 FP
+    df = df[df['power'] > 0.98]
         
     #resamples all data by desired time period ('D' for daily) and performs operation, here taking the mean
     daily_average = df.resample('D').mean().copy()
@@ -36,8 +36,8 @@ def station_RIHT():
     
     
     # separate sub dataframes based on PLNGS 'Phases' of operation
-    daily_average_phase3 = daily_average_no_missing['1996-1-26':'1998-11-25']
-    daily_average_phase4 = daily_average_no_missing['1998-11-26':'2008-3-1']
+    daily_average_phase3 = daily_average_no_missing['1996-1-26':'1998-10-31']
+    daily_average_phase4 = daily_average_no_missing['1998-11-1':'2008-3-1']
     daily_average_phase5 = daily_average_no_missing['2013-1-29': '2013-12-14']
     daily_average_phase6 = daily_average_no_missing['2013-12-15' : '2017-08-02']
     daily_average_phase7 = daily_average_no_missing['2017-08-02':]
@@ -98,7 +98,8 @@ def reactor_power():
     
 
     EstimatedOutageYearsMonths = [
-        (1984, 5), (1987, 4), (1987, 5), (1988, 4), (1988, 7), (1988, 10), (1990, 2), (1990, 4), (1993, 9), (1994, 4) 
+        (1984, 4), (1984, 5), (1986, 7), (1987, 4), (1988, 4), (1988, 7), (1988, 10), (1990, 2), (1990, 3), (1993, 9),
+        (1994, 4) 
         ]
     OutageYearsMonths = EstimatedOutageYearsMonths + \
     [(1995, 5), (1995, 6), (1995, 7), (1995, 8), (1995, 9), (1995, 10), (1995, 11), (1995, 12)]
@@ -179,7 +180,7 @@ YearStartup = datetime(1983, 4, 8, 0)
 #     print (Year_Month_Day_Hour,j)
 
 
-YearCPP = (1988, 3)
+YearCPP = (1987, 1)
 YearOutage = (1995, 5)
 YearOutageRestart = (1996, 1)
 YearRefurbishment = (2008, 3)
@@ -420,57 +421,31 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
         return None
 
 
-def sludge_fouling_resistance(Bundle, Year_Month):
+def sludge_fouling_resistance(Bundle, Year_Month, i):
     
+    TimeStep = 1 / 12 # 12 months in a year
     # default values
-    TubeGrowth = 0.0014
-    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
-    InitialAccumulation = 0.001 # [g/cm^2]
-    StartUp = (1983, 4)
+    Growth = 0.0014 #[g/cm^2]/yr
+    ReducedTubeGrowth = 0.00015  # [g/cm^2] /year = 3.25 um/year
     
-    if Year_Month in OutageYearsMonths:
-        TubeGrowth = 0
-        InitialAccumulation = 0
-        ReferenceYear = YearOutage
     
-    # between 1983 and 1986 (included)
-    elif StartUp <= Year_Month < YearCPP:
-        # secondary side fouling slope based on 1/2 that for average primary side cold leg deposit
-        ReferenceYear = StartUp
-        InitialAccumulation = 0
-     
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
-    elif YearCPP <= Year_Month < YearOutage:
-        TubeGrowth = ReducedTubeGrowth
-        ReferenceYear = YearCPP
+    if Year_Month >= YearCPP:
+        Growth = ReducedTubeGrowth
     
-    
-    elif Year_Month >= YearOutageRestart:
-        InitialAccumulation = 0.0008
-        TubeGrowth = ReducedTubeGrowth
-        ReferenceYear = YearOutageRestart
-        
-    
-    elif Year_Month >= YearRefurbRestart:
-        TubeGrowth = ReducedTubeGrowth
-        ReferenceYear = YearRefurbRestart
-        InitialAccumulation = 0
-    
-    else:
-        None
+    if Year_Month in OutageYearsMonths:
+        Growth = 0
         
         
-    delta_time = [x1 - x2 for (x1, x2) in zip(Year_Month, ReferenceYear)]
-    delta_time = delta_time[0] + delta_time[1] / 12 
-    Accumulation = InitialAccumulation + delta_time * TubeGrowth
+    Bundle.SludgeThickness[i] = Bundle.SludgeThickness[i] + Growth * TimeStep #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
     
-    Thickness = Accumulation / nc.Fe3O4Density
+    Thickness = Bundle.SludgeThickness[i] / nc.Fe3O4Density
     
     Fouling = Thickness / thermal_conductivity(None, "outer magnetite", None)
-#     print (Year_Month, Accumulation, Thickness, Fouling)
-    return Fouling # [cm^2 K/W]
     
+    return Fouling # [cm^2 K/W]
+
 
 def pht_fouling_resistance(i, InnerAccumulation, OuterAccumulation):
     
@@ -1018,7 +993,7 @@ def outside_bundle_pool_boiling(
 def wall_temperature(
         Bundle, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation,
         Year_Month, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber):
-     
+    
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
     T_SecondaryWall = T_PrimaryBulkIn - (2 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
@@ -1071,7 +1046,7 @@ def wall_temperature(
             # [cm^2 K/W]
             R_F_primary.magnitude = pht_fouling_resistance(i, InnerAccumulation[i], OuterAccumulation[i]) 
             
-            R_F_secondary.magnitude = sludge_fouling_resistance(Bundle, Year_Month)
+            R_F_secondary.magnitude = sludge_fouling_resistance(Bundle, Year_Month, i)
                         
             PCR = primary_convection_resistance(
                 Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, TotalSGTubeNumber
@@ -1317,7 +1292,7 @@ def station_events(Year_Month):
         None
     
     
-    PostOutageYearlyLeakage = 0.001
+    PostOutageYearlyLeakage = 0.0003
     PostOutageInitialLeakage = 0.015   
     
     # Divider plate raplacement only:
@@ -1331,8 +1306,8 @@ def station_events(Year_Month):
         # divider plate leakage rates estimated based on AECL work (2-3.5 % range estimated)
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-        InitialLeakage = 0.03
-        YearlyRateLeakage = 0.005
+        InitialLeakage = 0.0325
+        YearlyRateLeakage = 0.0065
         InitialYear = (YearStartup.year, YearStartup.month)
     
     
@@ -1462,4 +1437,4 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     return RIHT
 
              
-# print (energy_balance(ld.SteamGenerator_2, 0.01, 876, SGFastMode="yes")- 273.15)
+# print (energy_balance(ld.SteamGenerator_2, 0.01, 0, SGFastMode="yes")- 273.15)

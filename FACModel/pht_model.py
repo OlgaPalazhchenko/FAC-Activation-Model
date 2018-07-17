@@ -404,7 +404,7 @@ for j in range(SimulationHours):
         
         Year_Month = (CalendarYear.year, CalendarYear.month)
         
-        print (Year_Month, x_pht, RIHT_1)#, RIHT_2)
+        print (Year_Month, x_pht, RIHT_1, ld.SteamGenerator_2[1].SludgeThickness)#, RIHT_2)
 #         SelectedTubes = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)[1]
 #          
 #         print ('cleaned', ld.SteamGenerator_2[SelectedTubes[0]].OuterFe3O4Thickness)
