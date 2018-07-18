@@ -404,11 +404,8 @@ for j in range(SimulationHours):
         
         Year_Month = (CalendarYear.year, CalendarYear.month)
         
-        print (Year_Month, x_pht, RIHT_1, ld.SteamGenerator_2[1].SludgeThickness)#, RIHT_2)
-#         SelectedTubes = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)[1]
-#          
-#         print ('cleaned', ld.SteamGenerator_2[SelectedTubes[0]].OuterFe3O4Thickness)
-#         print ('normal', ld.SteamGenerator_2[Default_Tube].OuterFe3O4Thickness)
+        print (Year_Month, x_pht, RIHT_1)#, RIHT_2)
+
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Temperature1,
             Temperature2

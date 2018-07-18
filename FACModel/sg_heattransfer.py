@@ -26,8 +26,8 @@ def station_RIHT():
     # average of all 4 
     df['mean'] = df.iloc[:, 1:5].mean(axis = 1)
     
-    #filters data to remove anything below 0.99 FP
-    df = df[df['power'] > 0.98]
+    #filters data to remove anything below 0.99 FP (except for phase 4, where power deratings took place to ~0.9 FP
+    df = df[df['power'] > 0.90]
         
     #resamples all data by desired time period ('D' for daily) and performs operation, here taking the mean
     daily_average = df.resample('D').mean().copy()
@@ -36,11 +36,18 @@ def station_RIHT():
     
     
     # separate sub dataframes based on PLNGS 'Phases' of operation
-    daily_average_phase3 = daily_average_no_missing['1996-1-26':'1998-10-31']
-    daily_average_phase4 = daily_average_no_missing['1998-11-1':'2008-3-1']
+    daily_average_phase3 = daily_average_no_missing['1996-1-26':'1998-10-1']
+    daily_average_phase4 = daily_average_no_missing['1998-10-2':'2008-03-1']
     daily_average_phase5 = daily_average_no_missing['2013-1-29': '2013-12-14']
     daily_average_phase6 = daily_average_no_missing['2013-12-15' : '2017-08-02']
     daily_average_phase7 = daily_average_no_missing['2017-08-02':]
+    
+    
+    daily_average_phase3 = daily_average_phase3[daily_average_phase3['power'] > 0.99]
+    daily_average_phase4 = daily_average_phase4[daily_average_phase4['power'] > 0.90]
+    daily_average_phase5 = daily_average_phase5[daily_average_phase5['power'] > 0.99]
+    daily_average_phase6 = daily_average_phase6[daily_average_phase6['power'] > 0.99]
+    daily_average_phase7 = daily_average_phase7[daily_average_phase7['power'] > 0.99]
     
     writer = pd.ExcelWriter('PLNGS_RIHT_by_Phase.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
     
@@ -98,8 +105,8 @@ def reactor_power():
     
 
     EstimatedOutageYearsMonths = [
-        (1984, 4), (1984, 5), (1986, 7), (1987, 4), (1988, 4), (1988, 7), (1988, 10), (1990, 2), (1990, 3), (1993, 9),
-        (1994, 4) 
+        (1984, 4), (1984, 5), (1986, 7), (1987, 4), (1988, 4), (1988, 7), (1988, 10), (1989, 6), (1990, 2), (1990, 3),
+        (1991, 8), (1991, 9), (1993, 9), (1994, 4) 
         ]
     OutageYearsMonths = EstimatedOutageYearsMonths + \
     [(1995, 5), (1995, 6), (1995, 7), (1995, 8), (1995, 9), (1995, 10), (1995, 11), (1995, 12)]
@@ -134,10 +141,10 @@ def reactor_power():
 ##     prints first 5 rows to check everything is assigned properly
 #     print (df.head())
 
-    return Year_Month, OperatingPower, OutageYearsMonths
+    return Year_Month, OperatingPower, OutageYearsMonths, EstimatedOutageYearsMonths
 
 
-Year_Month_PowerTracked, Operating_Power, OutageYearsMonths = reactor_power()
+Year_Month_PowerTracked, Operating_Power, OutageYearsMonths, EstimatedOutageYearsMonths = reactor_power()
 # print (Operating_Power)
 
 def RIHT_plots():
@@ -180,7 +187,7 @@ YearStartup = datetime(1983, 4, 8, 0)
 #     print (Year_Month_Day_Hour,j)
 
 
-YearCPP = (1987, 1)
+YearCPP = (1987, 3)
 YearOutage = (1995, 5)
 YearOutageRestart = (1996, 1)
 YearRefurbishment = (2008, 3)
@@ -425,18 +432,24 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
     
     TimeStep = 1 / 12 # 12 months in a year
     # default values
-    Growth = 0.0014 #[g/cm^2]/yr
-    ReducedTubeGrowth = 0.00015  # [g/cm^2] /year = 3.25 um/year
+    Growth = 0.0016 #[g/cm^2]/yr
+    ReducedTubeGrowth = 0.000015  # [g/cm^2] /year = 3.25 um/year
     
     
     # CPP installation (late 1986) reduces secondary side crud by 50% 
-    # between 1987 and 1995, not including, maybe some form of dissolution event to historic deposits
-    if Year_Month >= YearCPP:
+    
+    if Year_Month > YearCPP:
         Growth = ReducedTubeGrowth
     
     if Year_Month in OutageYearsMonths:
         Growth = 0
+    
+    #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
+    if Year_Month == YearCPP:
+        Bundle.SludgeThickness[i] = 0.7 * Bundle.SludgeThickness[i]
         
+    if Year_Month == YearRefurbishment:
+        Bundle.SludgeThickness = 0  
         
     Bundle.SludgeThickness[i] = Bundle.SludgeThickness[i] + Growth * TimeStep #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
     
@@ -700,6 +713,11 @@ def pht_steam_quality(Temperature, j):
     
     # the outage in 1995 precedes the station log data available, so this is manually set to 0 % FP here in addition
     # to the other approximated outage dates
+    
+    # many of these estimated outages are not the entire month (so a recovery power is taken into account)
+    elif Current_Year_Month in EstimatedOutageYearsMonths:
+        Fraction_of_FP = 0.2
+    
     # no steam quality during outage
     elif Current_Year_Month in OutageYearsMonths:
         Fraction_of_FP = 0
@@ -1292,7 +1310,7 @@ def station_events(Year_Month):
         None
     
     
-    PostOutageYearlyLeakage = 0.0003
+    PostOutageYearlyLeakage = 0.0004
     PostOutageInitialLeakage = 0.015   
     
     # Divider plate raplacement only:
@@ -1306,8 +1324,8 @@ def station_events(Year_Month):
         # divider plate leakage rates estimated based on AECL work (2-3.5 % range estimated)
         # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
         # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-        InitialLeakage = 0.0325
-        YearlyRateLeakage = 0.0065
+        InitialLeakage = 0.03
+        YearlyRateLeakage = 0.005
         InitialYear = (YearStartup.year, YearStartup.month)
     
     
