@@ -50,7 +50,7 @@ def Diffusion(Section, Element):
 
 
 def MetalOxideInterfaceConcentration(
-        Section, Element, SolutionOxideInterfaceConcentration, InnerOxThickness, OuterOxThickness, Corrosion
+        Section, Element, SolutionOxideInterfaceConcentration, InnerOxLoading, OuterOxLoading, Corrosion
         ):
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
         OxideDensity = nc.NiFe2O4Density
@@ -70,7 +70,7 @@ def MetalOxideInterfaceConcentration(
     
     PathLength = [(x * nc.Fe3O4Tortuosity / (OxideDensity * (1 - nc.Fe3O4Porosity_inner)))
                   + (y * nc.Fe3O4Tortuosity / (OxideDensity * (1 - nc.Fe3O4Porosity_outer)))
-                  for x, y in zip(InnerOxThickness, OuterOxThickness)] 
+                  for x, y in zip(InnerOxLoading, OuterOxLoading)] 
     
     # more oxide = longer path length
     DiffusivityTerm = [x * nc.Fe3O4Porosity_inner / y for x, y in zip(Diffusivity, PathLength)]
@@ -115,8 +115,8 @@ def InterfaceOxideKinetics (Section, KineticConstant, SaturationConcentration, M
     
 
 def SolutionOxide(
-        Section, BulkConcentration, SaturationConcentration, SolutionOxideConcentration, InnerIronOxThickness,
-        OuterFe3O4Thickness, NiThickness, CoThickness, Element
+        Section, BulkConcentration, SaturationConcentration, SolutionOxideConcentration, InnerIronOxLoading,
+        OuterFe3O4Loading, NiLoading, CoLoading, Element
         ):
 
     km = ld.MassTransfer(Section)
@@ -160,7 +160,7 @@ def SolutionOxide(
     # Same operation applied to all nodes
     OxideKinetics = InterfaceOxideKinetics(Section, KineticConstant, SaturationConcentration, MolarMass)
 
-    Oxide = [x + y for x, y in zip(InnerIronOxThickness, OuterFe3O4Thickness)]
+    Oxide = [x + y for x, y in zip(InnerIronOxLoading, OuterFe3O4Loading)]
     
     for i in range(Section.NodeNumber):  
         if Element == "Fe":
@@ -184,9 +184,9 @@ def SolutionOxide(
                 if SolutionOxideConcentration[i] >= SaturationConcentration[i]:
                     y = (Diff[i] + OxideKinetics[i] + BTrans[i]) / (Section.KpFe3O4electrochem[i] + km[i])
                 else:  # SolutionOxideConcentration[i] < SaturationConcentration[i]:
-                    if CoThickness[i] > 0:
+                    if CoLoading[i] > 0:
                         y = (Diff[i] + OxideKinetics[i] + BTrans[i]) / (Section.KdFe3O4electrochem[i] + km[i])
-                    else:  # CoThickness == 0
+                    else:  # CoLoading == 0
                         y = (Diff[i] + BTrans[i]) / km[i]  # No contribution from oxide kinetics
             else:  # Oxide[i] == 0 (Core) 
                 y = (Diff[i] + BTrans[i]) / km[i]
@@ -195,7 +195,7 @@ def SolutionOxide(
             if SolutionOxideConcentration[i] >= SaturationConcentration[i]:
                 y = (Diff[i] + OxideKinetics[i] + BTrans[i]) / (Section.KpFe3O4electrochem[i] + km[i])
             else:  # SolutionOxideConcentration < SaturationConcentration:
-                if NiThickness[i] > 0:
+                if NiLoading[i] > 0:
                     y = (Diff[i] + OxideKinetics[i] + BTrans[i]) / (Section.KdFe3O4electrochem[i] + km[i])
                 else:
                     y = (Diff[i] + BTrans[i]) / km[i] 
@@ -331,8 +331,8 @@ def FAC_solver(Section, ConstantRate, j):
     return rate, MixedECP 
 
 
-def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturations, RK4_InnerIronOxThickness,
-                                  RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness, j):
+def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturations, RK4_InnerIronOxLoading,
+                                  RK4_OuterFe3O4Loading, RK4_NiLoading, RK4_CoLoading, j):
         
     #Solves S/O elemental concentrations at current approximation of oxide thickness(es)
     # (needed inside SolutionOxideBalance function to determine if <> saturation)
@@ -345,7 +345,7 @@ def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturati
     # Excludes Cr concentrations --> purely based on stellite transport (all Cr-oxides assumed to be insoluble)
     for x, y, z, w in zip (SolutionOxideConcentrations, BulkConcentrations[0:3], Saturations, ["Fe", "Ni", "Co"]):
         q = SolutionOxide(
-            Section, y, z, x, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness, RK4_NiThickness, RK4_CoThickness,
+            Section, y, z, x, RK4_InnerIronOxLoading, RK4_OuterFe3O4Loading, RK4_NiLoading, RK4_CoLoading,
             w
             )
 
@@ -361,14 +361,14 @@ def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturati
     else:
 
         Section.MetalOxide.FeTotal = MetalOxideInterfaceConcentration(
-            Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxThickness, RK4_OuterFe3O4Thickness,
+            Section, "Fe", Section.SolutionOxide.FeTotal, RK4_InnerIronOxLoading, RK4_OuterFe3O4Loading,
             Section.CorrRate
             )
         Section.CorrRate, Section.MetalOxide.MixedPotential = FAC_solver(Section, ConstantRate, j)
 
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
         Section.MetalOxide.NiTotal = MetalOxideInterfaceConcentration(
-            Section, "Ni", Section.SolutionOxide.NiTotal, Section.InnerOxThickness, Section.OuterOxThickness,
+            Section, "Ni", Section.SolutionOxide.NiTotal, Section.InnerOxLoading, Section.OuterOxLoading,
             Section.CorrRate
             )
 
@@ -377,7 +377,7 @@ def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturati
         
     # Cobalt M/O interface concentration not currently tracked but can be enabled
 #         MetalOxideCo = MetalOxideInterfaceConcentration(
-#         Section, "Co", SolutionOxideCoTotal, InnerOxThickness, OuterOxThickness, CorrRate
+#         Section, "Co", SolutionOxideCoTotal, InnerOxLoading, OuterOxLoading, CorrRate
 #         )
     
     

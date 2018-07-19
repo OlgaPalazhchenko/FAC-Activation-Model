@@ -72,7 +72,7 @@ def station_RIHT():
     
     writer.save()
     
-station_RIHT()
+# station_RIHT()
 
 
 def reactor_power():
@@ -432,7 +432,6 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
     
     TimeStep = 1 / 12 # 12 months in a year
     # default values
-    Growth = 0.0016 #[g/cm^2]/yr
     ReducedTubeGrowth = 0.000015  # [g/cm^2] /year = 3.25 um/year
     
     
@@ -441,15 +440,18 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
     if Year_Month > YearCPP:
         Growth = ReducedTubeGrowth
     
-    if Year_Month in OutageYearsMonths:
+    elif Year_Month in OutageYearsMonths:
         Growth = 0
     
+    else:
+        Growth = 0.0017 #[g/cm^2]/yr
+        
     #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
     if Year_Month == YearCPP:
-        Bundle.SludgeThickness[i] = 0.7 * Bundle.SludgeThickness[i]
+        Bundle.SludgeThickness[i] = 0.75 * Bundle.SludgeThickness[i]
         
     if Year_Month == YearRefurbishment:
-        Bundle.SludgeThickness = 0  
+        Bundle.SludgeThickness[i] = 0  
         
     Bundle.SludgeThickness[i] = Bundle.SludgeThickness[i] + Growth * TimeStep #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
     
@@ -744,7 +746,7 @@ def pht_steam_quality(Temperature, j):
         x = 0
     return x
 
-# print (pht_steam_quality(264.8 +273.15, 876 * 1.1))
+# print (pht_steam_quality(264.8 +273.15, 876 * 8.44))
 
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
         
@@ -946,7 +948,7 @@ def outside_bundle_pool_boiling(
         i
         ):
     
-    F = .17 # bundle boiling factor (empirical)
+    F = .18 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -1280,14 +1282,59 @@ def temperature_profile(
     return PrimaryBulk, HeatFlux
 
 
-# separate function for divider plate leakage
-def divider_plate(CalendarYear):
-    None
+def divider_plate(j, DividerPlateLeakage):
+    
+    start = YearStartup
+    delta = timedelta(hours = j * nc.TIME_STEP)
+    CalendarDate = start + delta
+    
+    Year_Month = (CalendarDate.year, CalendarDate.month)
+    
+    Time_Step = 1 / 12 # 12 months in a year, monthly timestep through heat transfer package
+    PostOutageYearlyLeakage = 0.001
+    
+    if Year_Month < YearOutage:
+        LeakageRate = 0.005
+    
+    if Year_Month in OutageYearsMonths:
+        LeakageRate = 0
+        
+    elif Year_Month == YearOutageRestart:
+        DividerPlateLeakage = 0.005
+        LeakageRate = PostOutageYearlyLeakage
+    
+    elif YearOutageRestart < Year_Month < (1998, 12):
+        LeakageRate = PostOutageYearlyLeakage
+    
+    elif Year_Month == (1998, 12):
+        DividerPlateLeakage = 0.015
+        LeakageRate = PostOutageYearlyLeakage * 2
+    
+    elif Year_Month > (1998, 12):
+        LeakageRate = PostOutageYearlyLeakage * 1.2
+    
+    else:
+        None
+        
+    DividerPlateLeakage = DividerPlateLeakage + Time_Step * LeakageRate
+
+    return DividerPlateLeakage
+
+# for j in range(15000):
+#     start = YearStartup
+#     delta = timedelta(hours = j * nc.TIME_STEP)
+#     CalendarDate = start + delta
+#     Year_Month = (CalendarDate.year, CalendarDate.month)
+#     
+#     if j % (73) == 0:
+#         if j ==0:
+#             DividerPlateLeakage = 0.03
+#         
+#         DividerPlateLeakage = divider_plate(Year_Month, DividerPlateLeakage, j)[2]
+#         print (Year_Month, DividerPlateLeakage * 100)
 
 
-def station_events(Year_Month):
-
-    # Pressure changes only:
+def secondary_side_pressure(Year_Month):
     
     FirstPressureReduction = (1992, 11)
     SecondPressureReduction = (1998, 12)
@@ -1308,58 +1355,11 @@ def station_events(Year_Month):
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     else:
         None
-    
-    
-    PostOutageYearlyLeakage = 0.0004
-    PostOutageInitialLeakage = 0.015   
-    
-    # Divider plate raplacement only:
-    if Year_Month in OutageYearsMonths:
-        YearlyRateLeakage = 0
-        InitialLeakage = 0
-        InitialYear = YearOutage
-        
-    
-    elif Year_Month < YearOutage: # (1983, 4) - (1995, 4)
-        # divider plate leakage rates estimated based on AECL work (2-3.5 % range estimated)
-        # InitialLeakage = 0.035 # fraction of total SG inlet mass flow
-        # YearlyRateLeakage = 0.0065 # yearly increase to fraction of total SG inlet mass flow
-        InitialLeakage = 0.03
-        YearlyRateLeakage = 0.005
-        InitialYear = (YearStartup.year, YearStartup.month)
-    
-    
-    elif YearOutageRestart <= Year_Month < YearRefurbishment: # after (1996, 1) to 2008, 2
-        # helps second post-outage point rise (second leak of 2.5% magnitude initialized)
-        InitialLeakage = PostOutageInitialLeakage
-        # either this or some SHT deposits help out Phase 4 from dipping so much
-        YearlyRateLeakage = PostOutageYearlyLeakage
-        InitialYear = YearOutageRestart    
-    
-    
-    elif Year_Month >= YearRefurbRestart:
-        InitialLeakageDates = [x1 - x2 for (x1, x2) in zip(YearRefurbishment, YearOutageRestart)]
-        InitialLeakage = (InitialLeakageDates[0] + InitialLeakageDates[1] / 12) * PostOutageYearlyLeakage  
-        YearlyRateLeakage = 0.0015
-        InitialYear = YearRefurbRestart
-        
-    else:
-        None
-        
-        
-    delta_time = [x1 - x2 for (x1, x2) in zip(Year_Month, InitialYear)]
-    delta_time = delta_time[0] + delta_time[1] / 12 
-    
-    Leakage = InitialLeakage + delta_time * YearlyRateLeakage
 
-    DividerPlateMassFlow = MassFlow_h.magnitude * Leakage
-    # decreases as divider (bypass) flow increases
-    m_h_leakagecorrection = MassFlow_h.magnitude - DividerPlateMassFlow
-
-    return SecondarySidePressure, m_h_leakagecorrection, DividerPlateMassFlow, Leakage * 100
+    return SecondarySidePressure
 
 
-def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
+def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
     
     start = YearStartup
     delta = timedelta(hours = j * nc.TIME_STEP)
@@ -1367,9 +1367,6 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
 #     print (CalendarDate)
     Year_Month = (CalendarDate.year, CalendarDate.month)
 
-    if j == 0:
-        x_pht = 0.01
-    
     Energy = []
 
     TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Year_Month)
@@ -1382,7 +1379,11 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
     # adjusts how many tubes per bundle to account for tubes plugged
     bundle_sizes(SteamGenerator, TotalSGTubeNumber)
 
-    [SecondarySidePressure, RemainingPHTMassFlow, MasssFlow_dividerplate.magnitude, Leakage] = station_events(Year_Month)
+    SecondarySidePressure = secondary_side_pressure(Year_Month)
+    
+    MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude * DividerPlateLeakage
+    # decreases as divider (bypass) flow increases
+    RemainingPHTMassFlow = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude
 
     for Bundle in SteamGenerator:
         
@@ -1393,22 +1394,22 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
             
             if Bundle in Selected_Tubes:
                 # tracks oxide growth for these tubes specifically
-                InnerOx = Bundle.InnerOxThickness
-                OuterOx = Bundle.OuterOxThickness
+                InnerOx = Bundle.InnerOxLoading
+                OuterOx = Bundle.OuterOxLoading
             
             elif Bundle in Cleaned:
                 # first tube in selected tube list (for that steam generator) simulates all cleaned tubes in "fast mode"
                 CleanedTubeNumber = tube_picker(Method, SteamGenerator)[1][0]
-                CleanedInnerOxide = SteamGenerator[CleanedTubeNumber].InnerOxThickness
-                CleanedOuterOxide = SteamGenerator[CleanedTubeNumber].OuterOxThickness
+                CleanedInnerOxide = SteamGenerator[CleanedTubeNumber].InnerOxLoading
+                CleanedOuterOxide = SteamGenerator[CleanedTubeNumber].OuterOxLoading
                 
                 InnerOx = CleanedInnerOxide
                 OuterOx = CleanedOuterOxide
   
             else:  # assumes same growth as in default passed tube for remaining tubes
                 
-                DefaultUncleanedInnerOxide = SteamGenerator[Default_Tube].InnerOxThickness
-                DefaultUncleanedOuterOxide = SteamGenerator[Default_Tube].OuterOxThickness
+                DefaultUncleanedInnerOxide = SteamGenerator[Default_Tube].InnerOxLoading
+                DefaultUncleanedOuterOxide = SteamGenerator[Default_Tube].OuterOxLoading
                 
                 InnerOx = DefaultUncleanedInnerOxide
                 OuterOx = DefaultUncleanedOuterOxide
@@ -1422,8 +1423,8 @@ def energy_balance(SteamGenerator, x_pht, j, SGFastMode):
             
             if Bundle in Selected_Tubes:
                 # tracks oxide growth for all tubes
-                InnerOx = Bundle.InnerOxThickness
-                OuterOx = Bundle.OuterOxThickness
+                InnerOx = Bundle.InnerOxLoading
+                OuterOx = Bundle.OuterOxLoading
             else:
                 None
                        

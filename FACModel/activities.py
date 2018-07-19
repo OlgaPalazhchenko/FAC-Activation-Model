@@ -90,7 +90,7 @@ def eta(Section):
      
     DIFF_i = [
         i / (2 * nc.Fe3O4Density * nc.FeDiffusivity * nc.Fe3O4Porosity_inner * (1 - nc.Fe3O4Porosity_inner)) for i in
-        Section.InnerOxThickness
+        Section.InnerOxLoading
         ]
           
     CRYST_i = [x / (y * z) for x, y, z in zip(ConvertedSaturation, [0.35] * Section.NodeNumber, MassInnerOxide)]
@@ -182,17 +182,17 @@ def core_active_deposit(Section, j, Element, ParentAbundance, DecayConstant, Cro
     # calculates elemental composition, adds that node's composition   
     # to the list below until all nodes in outlet are computed
     for i in range(Section2.NodeNumber): 
-        if Section2.OuterOxThickness[i] > 0:
+        if Section2.OuterOxLoading[i] > 0:
             Outer = "yes"
-            OxideType = Section2.OuterOxThickness[i]
+            OxideType = Section2.OuterOxLoading[i]
         else:
             Outer = "no"
-            if Section2.InnerIronOxThickness[i] > 0:
-                OxideType = Section2.InnerIronOxThickness[i]
+            if Section2.InnerIronOxLoading[i] > 0:
+                OxideType = Section2.InnerIronOxLoading[i]
         
         x = rk_4.oxide_composition(
-            Section2, Element, OxideType, Outer, Section2.OuterFe3O4Thickness[i], Section2.NiThickness[i],
-            Section2.CoThickness[i], Section2.InnerIronOxThickness[i]
+            Section2, Element, OxideType, Outer, Section2.OuterFe3O4Loading[i], Section2.NiLoading[i],
+            Section2.CoLoading[i], Section2.InnerIronOxLoading[i]
             )
         
         Composition.append(x)

@@ -134,10 +134,10 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
     
     for Tube in SelectedTubes:
         x = ld.UnitConverter(
-        Tube, "Grams per Cm Squared", "Grams per M Squared", None, None, Tube.InnerIronOxThickness, None, None, None
+        Tube, "Grams per Cm Squared", "Grams per M Squared", None, None, Tube.InnerIronOxLoading, None, None, None
         )
         y = ld.UnitConverter(
-        Tube, "Grams per Cm Squared", "Grams per M Squared", None, None, Tube.OuterFe3O4Thickness, None, None, None
+        Tube, "Grams per Cm Squared", "Grams per M Squared", None, None, Tube.OuterFe3O4Loading, None, None, None
         )
         z = [i / 100 for i in Tube.Distance]
         q = [i + j for i, j in zip(x, y)]
@@ -284,13 +284,13 @@ def oxide_loading(Layer):
     
     for Section in Sections:
         if Layer == "Inner":
-            x = Section.InnerOxThickness
+            x = Section.InnerOxLoading
         elif Layer == "Outer":
-            x = Section.OuterOxThickness
+            x = Section.OuterOxLoading
         elif Layer == "Cobalt":
-            x = Section.CoThickness
+            x = Section.CoLoading
         elif Layer == "Nickel":
-            x = Section.NiThickness
+            x = Section.NiLoading
         else:
             None 
         Oxide.append(x)

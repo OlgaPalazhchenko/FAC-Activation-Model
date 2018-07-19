@@ -117,12 +117,12 @@ class Section():  # Defining each primary heat transport section as a class
         self.SolubilityCo = None
         self.SolubilityNi = None
 
-        self.InnerOxThickness = None
-        self.InnerIronOxThickness = None
-        self.OuterFe3O4Thickness = None
-        self.NiThickness = None
-        self.OuterOxThickness = None
-        self.CoThickness = None
+        self.InnerOxLoading = None
+        self.InnerIronOxLoading = None
+        self.OuterFe3O4Loading = None
+        self.NiLoading = None
+        self.OuterOxLoading = None
+        self.CoLoading = None
         self.OxThickness = None
         self.SludgeThickness = None
 
@@ -321,29 +321,29 @@ for Section in FullLoop:
 
     # Oxide thicknesses [g/cm^2]
     if Section in SteamGenerator or Section in SteamGenerator_2:
-        Section.OuterFe3O4Thickness = [1.3E-4] * Section.NodeNumber
-        Section.NiThickness = [1.3E-4] * Section.NodeNumber
-        Section.OuterOxThickness = [1 * x + 1 * y for x, y in zip(Section.OuterFe3O4Thickness, Section.NiThickness)]
+        Section.OuterFe3O4Loading = [1.3E-4] * Section.NodeNumber
+        Section.NiLoading = [1.3E-4] * Section.NodeNumber
+        Section.OuterOxLoading = [1 * x + 1 * y for x, y in zip(Section.OuterFe3O4Loading, Section.NiLoading)]
 
         Section.TubeThickness = 0.113
         Section.OuterDiameter = [x + 2 * Section.TubeThickness for x in Section.Diameter]
 
     if Section in OutletSections or Section in InletSections:
-        Section.OuterFe3O4Thickness = [2.5E-4] * Section.NodeNumber
-        Section.NiThickness = [0] * Section.NodeNumber
-        Section.OuterOxThickness = [i * 1 for i in Section.OuterFe3O4Thickness]
+        Section.OuterFe3O4Loading = [2.5E-4] * Section.NodeNumber
+        Section.NiLoading = [0] * Section.NodeNumber
+        Section.OuterOxLoading = [i * 1 for i in Section.OuterFe3O4Loading]
 
-    Section.InnerOxThickness = [2.5E-4] * Section.NodeNumber
-    Section.InnerIronOxThickness = [i * 1 for i in Section.InnerOxThickness]
-    Section.CoThickness = [0] * Section.NodeNumber
+    Section.InnerOxLoading = [2.5E-4] * Section.NodeNumber
+    Section.InnerIronOxLoading = [i * 1 for i in Section.InnerOxLoading]
+    Section.CoLoading = [0] * Section.NodeNumber
     
     if Section in FuelSections:
-        Section.InnerOxThickness = [0] * Section.NodeNumber
-        Section.OuterFe3O4Thickness = [0] * Section.NodeNumber
-        Section.NiThickness = [0] * Section.NodeNumber
-        Section.OuterOxThickness = [i * 1 for i in Section.OuterFe3O4Thickness]
+        Section.InnerOxLoading = [0] * Section.NodeNumber
+        Section.OuterFe3O4Loading = [0] * Section.NodeNumber
+        Section.NiLoading = [0] * Section.NodeNumber
+        Section.OuterOxLoading = [i * 1 for i in Section.OuterFe3O4Loading]
     
-    Section.OxThickness = [x + y for x, y in zip(Section.InnerOxThickness, Section.OuterOxThickness)]
+    Section.OxThickness = [x + y for x, y in zip(Section.InnerOxLoading, Section.OuterOxLoading)]
 
     Section.Distance = np.cumsum(Section.Length.magnitude)
 

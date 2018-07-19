@@ -18,7 +18,7 @@ def potential(
     
     if ProductConcentration < 0:
         print ("Error in electrochemistry calculation: concentration < 0", ProductConcentration,
-               Section.InnerOxThickness, "Inner Oxide g/cm2", Section.OuterOxThickness, "Outer Oxide g/cm2")
+               Section.InnerOxLoading, "Inner Oxide g/cm2", Section.OuterOxLoading, "Outer Oxide g/cm2")
         ProductConcentration = 5e-10
         print ("Concentration reset to", ProductConcentration)
     
