@@ -105,7 +105,7 @@ def reactor_power():
     
 
     EstimatedOutageYearsMonths = [
-        (1984, 4), (1984, 5), (1986, 7), (1987, 4), (1988, 4), (1988, 7), (1988, 10), (1989, 6), (1990, 2), (1990, 3),
+        (1984, 4), (1984, 5), (1986, 5), (1987, 4), (1988, 4), (1988, 7), (1988, 10), (1989, 6), (1990, 2), (1990, 3),
         (1991, 8), (1991, 9), (1993, 9), (1994, 4) 
         ]
     OutageYearsMonths = EstimatedOutageYearsMonths + \
@@ -432,7 +432,7 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
     
     TimeStep = 1 / 12 # 12 months in a year
     # default values
-    ReducedTubeGrowth = 0.000015  # [g/cm^2] /year = 3.25 um/year
+    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
     
     
     # CPP installation (late 1986) reduces secondary side crud by 50% 
@@ -444,11 +444,11 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
         Growth = 0
     
     else:
-        Growth = 0.0017 #[g/cm^2]/yr
+        Growth = 0.0021 #[g/cm^2]/yr
         
     #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
-    if Year_Month == YearCPP:
-        Bundle.SludgeThickness[i] = 0.75 * Bundle.SludgeThickness[i]
+    if Year_Month == (1988, 4):
+        Bundle.SludgeThickness[i] = 0.4 * Bundle.SludgeThickness[i]
         
     if Year_Month == YearRefurbishment:
         Bundle.SludgeThickness[i] = 0  
@@ -1291,27 +1291,28 @@ def divider_plate(j, DividerPlateLeakage):
     Year_Month = (CalendarDate.year, CalendarDate.month)
     
     Time_Step = 1 / 12 # 12 months in a year, monthly timestep through heat transfer package
-    PostOutageYearlyLeakage = 0.001
+    PostOutageYearlyLeakage = 0.002
     
     if Year_Month < YearOutage:
-        LeakageRate = 0.005
+        LeakageRate = 0.006
     
     if Year_Month in OutageYearsMonths:
         LeakageRate = 0
+        DividerPlateLeakage = 0
         
     elif Year_Month == YearOutageRestart:
-        DividerPlateLeakage = 0.005
+        DividerPlateLeakage = 0.02
         LeakageRate = PostOutageYearlyLeakage
     
     elif YearOutageRestart < Year_Month < (1998, 12):
         LeakageRate = PostOutageYearlyLeakage
     
     elif Year_Month == (1998, 12):
-        DividerPlateLeakage = 0.015
-        LeakageRate = PostOutageYearlyLeakage * 2
+        DividerPlateLeakage = 0.03
+        LeakageRate = PostOutageYearlyLeakage
     
     elif Year_Month > (1998, 12):
-        LeakageRate = PostOutageYearlyLeakage * 1.2
+        LeakageRate = PostOutageYearlyLeakage
     
     else:
         None
@@ -1456,4 +1457,4 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
     return RIHT
 
              
-# print (energy_balance(ld.SteamGenerator_2, 0.01, 0, SGFastMode="yes")- 273.15)
+# print (energy_balance(ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.0325, j=0, SGFastMode="yes")- 273.15)

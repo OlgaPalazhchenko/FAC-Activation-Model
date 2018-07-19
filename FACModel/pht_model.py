@@ -364,7 +364,7 @@ for j in range(SimulationHours):
         
         if j == 0:
             x_pht = 0.01
-            DividerPlateLeakage = 0.0325 # fraction of PHTS mass flow (3%)  
+            DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)  
 
         if Loop == "full":
             RIHT_1 = SGHX.energy_balance(ld.SteamGenerator, x_pht, DividerPlateLeakage, j, SGHX.SGFastMode) - 273.15
@@ -410,7 +410,7 @@ for j in range(SimulationHours):
         
         Year_Month = (CalendarYear.year, CalendarYear.month)
         
-        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)#, RIHT_2)
+        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100, ld.SteamGenerator_2[0].SludgeThickness[11])#, RIHT_2)
 
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Temperature1,
