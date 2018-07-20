@@ -21,7 +21,7 @@ def station_RIHT():
 
     # converts from string object to time series  
     df.date = pd.to_datetime(df.date)
-    df.set_index('date', inplace=True)
+    df.set_index('Date', inplace=True)
     
     # average of all 4 
     df['mean'] = df.iloc[:, 1:5].mean(axis = 1)
@@ -105,8 +105,8 @@ def reactor_power():
     
 
     EstimatedOutageYearsMonths = [
-        (1984, 4), (1984, 5), (1986, 5), (1987, 4), (1988, 4), (1988, 7), (1988, 10), (1989, 6), (1990, 2), (1990, 3),
-        (1991, 8), (1991, 9), (1993, 9), (1994, 4) 
+        (1984, 4), (1984, 5), (1986, 5), (1987, 4), (1988, 4), (1988, 7), (1988, 10), (1989, 6), (1990, 2), (1990, 4),
+        (1991, 8), (1991, 9), (1992, 4), (1993, 9), (1994, 4) 
         ]
     OutageYearsMonths = EstimatedOutageYearsMonths + \
     [(1995, 5), (1995, 6), (1995, 7), (1995, 8), (1995, 9), (1995, 10), (1995, 11), (1995, 12)]
@@ -432,7 +432,7 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
     
     TimeStep = 1 / 12 # 12 months in a year
     # default values
-    ReducedTubeGrowth = 0.0001  # [g/cm^2] /year = 3.25 um/year
+    ReducedTubeGrowth = 0.0003  # [g/cm^2] /year = 3.25 um/year
     
     
     # CPP installation (late 1986) reduces secondary side crud by 50% 
@@ -450,8 +450,13 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
     if Year_Month == (1988, 4):
         Bundle.SludgeThickness[i] = 0.4 * Bundle.SludgeThickness[i]
         
-    if Year_Month == YearRefurbishment:
-        Bundle.SludgeThickness[i] = 0  
+    elif YearOutage <= Year_Month <= YearOutageRestart:
+        Bundle.SludgeThickness[i] = 0
+        Growth = 0   
+    
+    elif YearRefurbishment <= Year_Month <= YearRefurbishmentRestart:
+        Bundle.SludgeThickness[i] = 0
+        Growth = 0 
         
     Bundle.SludgeThickness[i] = Bundle.SludgeThickness[i] + Growth * TimeStep #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
     
@@ -718,7 +723,7 @@ def pht_steam_quality(Temperature, j):
     
     # many of these estimated outages are not the entire month (so a recovery power is taken into account)
     elif Current_Year_Month in EstimatedOutageYearsMonths:
-        Fraction_of_FP = 0.2
+        Fraction_of_FP = 0.01
     
     # no steam quality during outage
     elif Current_Year_Month in OutageYearsMonths:
@@ -1291,29 +1296,38 @@ def divider_plate(j, DividerPlateLeakage):
     Year_Month = (CalendarDate.year, CalendarDate.month)
     
     Time_Step = 1 / 12 # 12 months in a year, monthly timestep through heat transfer package
-    PostOutageYearlyLeakage = 0.002
+    PostOutageYearlyLeakage = 0.001
     
-    if Year_Month < YearOutage:
-        LeakageRate = 0.006
-    
+    # changes to rate of leakage growth
     if Year_Month in OutageYearsMonths:
-        LeakageRate = 0
+        LeakageRate = 0 
+      
+    elif Year_Month < YearOutage:
+        LeakageRate = 0.005
+    
+#     elif YearOutage <= Year_Month <= YearOutageRestart:
+#         LeakageRate = 0
+    
+    elif Year_Month >= YearOutageRestart:
+        LeakageRate = PostOutageYearlyLeakage
+    
+    else:
+        None 
+       
+    
+    # changes in overall leakage amount
+    # replacement of divider plate
+    if YearOutage <= Year_Month < YearOutageRestart:
         DividerPlateLeakage = 0
-        
+    
+    # Leakage through the replaced welded divider plates immediately following replacement was estimated as 2% PHT flow
     elif Year_Month == YearOutageRestart:
         DividerPlateLeakage = 0.02
-        LeakageRate = PostOutageYearlyLeakage
     
-    elif YearOutageRestart < Year_Month < (1998, 12):
-        LeakageRate = PostOutageYearlyLeakage
-    
+    # Development of additional leak site
     elif Year_Month == (1998, 12):
-        DividerPlateLeakage = 0.03
-        LeakageRate = PostOutageYearlyLeakage
-    
-    elif Year_Month > (1998, 12):
-        LeakageRate = PostOutageYearlyLeakage
-    
+        DividerPlateLeakage = 0.04
+        
     else:
         None
         

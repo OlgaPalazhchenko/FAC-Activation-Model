@@ -12,6 +12,7 @@ import csv
 import iteration as it
 import pht_model
 import pandas as pd
+from datetime import date, timedelta, datetime
 
 import matplotlib.pyplot as plt
 from matplotlib import rc
@@ -111,7 +112,8 @@ def purification_csv():
     #     writer.writerow([''])
     
 
-def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
+def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1, FileName2):
+    
     #would have to select tubes from SG2 as well (in SG module)
     InnerOxide_SteamGeneratorTubes = []
     OuterOxide_SteamGeneratorTubes = []
@@ -171,7 +173,12 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
         )
         OutletCorrosionRate_um.append(x)
     
-    Years = pd.date_range('1983-03-08','2018-06-08' , freq='1M')+pd.offsets.Day(8)
+    
+    start = SGHX.YearStartup
+    delta = timedelta(hours = (pht_model.SimulationHours - 73)* nc.TIME_STEP)
+    CalendarDate = start + delta
+    
+    Years = pd.date_range('1983-03-08', CalendarDate, freq='1M')+pd.offsets.Day(8)
 
     Data = [
         SGHX.TubeLengths, TotalDistance, InnerOxide_SteamGeneratorTubes, OuterOxide_SteamGeneratorTubes,
@@ -180,20 +187,70 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
     Labels = [
         "U-bend length (cm)", "Distance (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Total Oxide (g/m^2)",
         "Outlet Corrosion Rate (um/a)", "Temperature Profile (oC)", "kp (cm/s"]
-     
-    RIHT_delta = [x-y for x, y in zip (RIHT[1:], RIHT)]   
-     
-    csvfile = FileName
+      
+    RIHT_delta = [x-y for x, y in zip (RIHT[1:], RIHT)]
+    #final difference to make lists all same length for dataframe entry
+    RIHT_delta.append(0)   
+    
+    RIHT_by_phase = pd.DataFrame(
+    {'Date': Years,
+     'RIHT': RIHT,
+     'Delta RIHT': RIHT_delta,
+     'Steam quality': pht_SteamFraction
+    })
+  
+    RIHT_by_phase.set_index('Date', inplace=True)
+    
+    #filters data to remove anything below 0.99 FP (except for phase 4, where power deratings took place to ~0.9 FP
+    RIHT_outages_removed = RIHT_by_phase[RIHT_by_phase['Steam quality'] > 0]
+    
+    RIHT_phase1 = RIHT_outages_removed['1983-4-8':'1992-9-8']
+    RIHT_phase2 = RIHT_outages_removed['1992-10-8':'1995-12-8']
+    RIHT_phase3 = RIHT_outages_removed['1996-1-8':'1998-11-8']
+    RIHT_phase4 = RIHT_outages_removed['1998-12-8':'2008-3-8']
+    RIHT_phase5_6 = RIHT_outages_removed['2013-1-8':'2017-8-8']
+    RIHT_phase7 = RIHT_outages_removed['2017-9-8':'2018-6-8']
+    
+    
+    writer = pd.ExcelWriter(FileName2, engine='xlsxwriter', datetime_format='mm-dd-yyyy')
+    
+    RIHT_phase1.to_excel(writer, sheet_name = 'Phase 1')
+    RIHT_phase2.to_excel(writer, sheet_name = 'Phase 2')
+    RIHT_phase3.to_excel(writer, sheet_name = 'Phase 3')
+    RIHT_phase4.to_excel(writer, sheet_name = 'Phase 4')
+    RIHT_phase5_6.to_excel(writer, sheet_name = 'Phase 5_6')
+    RIHT_phase7.to_excel(writer, sheet_name = 'Phase 7')
+    
+    
+    # sets spacing between columns A and B so date column (A) is more clear
+    workbook  = writer.book
+    worksheet1 = writer.sheets['Phase 1']
+    worksheet2 = writer.sheets['Phase 2']
+    worksheet3 = writer.sheets['Phase 3']
+    worksheet4 = writer.sheets['Phase 4']
+    worksheet5 = writer.sheets['Phase 5_6']
+    worksheet6 = writer.sheets['Phase 7']
+    
+    worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5]
+    
+    for sheet in worksheets:
+        sheet.set_column('A:B', 12)
+        sheet.set_column('D:E', 16)
+    
+    writer.save()
+    
+
+    csvfile = FileName1
     with open(csvfile, "w") as output:
         writer = csv.writer(output, lineterminator='\n')
-        writer.writerow(['RIHT (oC) and year'])
-        writer.writerow(RIHT)
-        writer.writerow(Years)
-        writer.writerow(['Delta RIHT (oC)'])
-        writer.writerow(RIHT_delta)
-        writer.writerow(['Steam fraction'])
-        writer.writerow(pht_SteamFraction)
-        writer.writerow([''])
+#         writer.writerow(['RIHT (oC) and year'])
+#         writer.writerow(RIHT)
+#         writer.writerow(Years)
+#         writer.writerow(['Delta RIHT (oC)'])
+#         writer.writerow(RIHT_delta)
+#         writer.writerow(['Steam fraction'])
+#         writer.writerow(pht_SteamFraction)
+#         writer.writerow([''])
          
         for i, j in zip(Labels, Data):
             writer.writerow([i])
@@ -208,9 +265,11 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName):
         writer.writerow(OutletTemperatures2)
 
 # if loop run in half configuration, these will be identical
-RIHT_csv(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, "RIHTOutputSG2.csv")
+RIHT_csv(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, "OutputSG2.csv", 'Modelled RIHT2.xlsx')
 if pht_model.Loop == "full":
-    RIHT_csv(ld.InletFeeder_2, ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator, "RIHTOutputSG1.csv")  
+    RIHT_csv(
+        ld.InletFeeder_2, ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator, "OutputSG1.csv", 'Modelled RIHT2.xlsx'
+        )  
 
 
 LoopDistance = []
