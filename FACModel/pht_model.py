@@ -8,8 +8,8 @@ import iteration as it
 import sg_heattransfer as SGHX
 import numpy as np
 from datetime import date, timedelta
+import pandas as pd
 
-# from operator import itemgetter
 
 Loop = "half"
 ConstantRate = "yes" # preset corrosion rate instead of calculated from FAC model
@@ -257,25 +257,88 @@ FACRate_OutletFeeder = []
 RIHT_average = []
 RIHT_InletFeeder1 = []
 RIHT_InletFeeder2 = []
-YM = []
 OutletTemperature_Bundle_1 = [] 
 OutletTemperature_Bundle_2 = []
 pht_SteamFraction = []
+DP_leakage = []
 
-def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temperature2):
+def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temperature2, DividerPlateLeakage, j):
         
     FACRate_OutletFeeder.append(FACRate)
     RIHT_InletFeeder1.append(RIHT1)
     RIHT_InletFeeder2.append(RIHT2)
     RIHT_average.append(RIHT_avg)
     pht_SteamFraction.append(x)
+    DP_leakage.append(DividerPlateLeakage)
 #     OutletTemperature_Bundle_1.append(Temperature1)
 #     OutletTemperature_Bundle_2.append(Temperature2)
     
-    return (
-        FACRate_OutletFeeder, RIHT_InletFeeder1, RIHT_InletFeeder2, RIHT_average, pht_SteamFraction,
-        OutletTemperature_Bundle_1, OutletTemperature_Bundle_2
-        ) 
+    RIHT1_delta = [x-y for x, y in zip (RIHT_InletFeeder1[1:], RIHT_InletFeeder1)]
+    RIHT2_delta = [x-y for x, y in zip (RIHT_InletFeeder2[1:], RIHT_InletFeeder2)]
+    
+    #final difference to make lists all same length for dataframe entry
+    RIHT1_delta.append(0)   
+    RIHT2_delta.append(0)
+    
+    start = SGHX.YearStartup
+    delta = timedelta(hours = j * nc.TIME_STEP)
+    CalendarDate = start + delta
+    
+    Years = pd.date_range('1983-03-08', CalendarDate, freq='1M')+pd.offsets.Day(8)
+    
+    # add RIHT_1 and delta_RIHT1 here later
+    RIHT_by_phase = pd.DataFrame(
+    {'Date': Years,
+     'RIHT_2': RIHT_InletFeeder2,
+     'Delta RIHT_2': RIHT2_delta,
+     'Steam quality': pht_SteamFraction,
+     'DP leakage' : DP_leakage
+    })
+  
+    RIHT_by_phase.set_index('Date', inplace=True)
+    
+    #filters data to remove anything below 0.99 FP (except for phase 4, where power deratings took place to ~0.9 FP
+    RIHT_outages_removed = RIHT_by_phase[RIHT_by_phase['Steam quality'] > 0]
+    
+    RIHT_phase1 = RIHT_outages_removed['1983-4-8':'1992-9-8']
+    RIHT_phase2 = RIHT_outages_removed['1992-10-8':'1995-12-8']
+    RIHT_phase3 = RIHT_outages_removed['1996-1-8':'1998-11-8']
+    RIHT_phase4 = RIHT_outages_removed['1998-12-8':'2008-3-8']
+    RIHT_phase5_6 = RIHT_outages_removed['2013-1-8':'2017-8-8']
+    RIHT_phase7 = RIHT_outages_removed['2017-9-8':'2018-6-8']
+    
+    if j % (876 * 3) == 0: 
+        writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
+        
+        RIHT_phase1.to_excel(writer, sheet_name = 'Phase 1')
+        RIHT_phase2.to_excel(writer, sheet_name = 'Phase 2')
+        RIHT_phase3.to_excel(writer, sheet_name = 'Phase 3')
+        RIHT_phase4.to_excel(writer, sheet_name = 'Phase 4')
+        RIHT_phase5_6.to_excel(writer, sheet_name = 'Phase 5_6')
+        RIHT_phase7.to_excel(writer, sheet_name = 'Phase 7')
+        
+        
+        # sets spacing between columns A and B so date column (A) is more clear
+        workbook  = writer.book
+        worksheet1 = writer.sheets['Phase 1']
+        worksheet2 = writer.sheets['Phase 2']
+        worksheet3 = writer.sheets['Phase 3']
+        worksheet4 = writer.sheets['Phase 4']
+        worksheet5 = writer.sheets['Phase 5_6']
+        worksheet6 = writer.sheets['Phase 7']
+        
+        worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5]
+        
+        for sheet in worksheets:
+            sheet.set_column('A:B', 12)
+            sheet.set_column('C:D', 13)
+            sheet.set_column('D:E', 13)
+            sheet.set_column('E:F', 13)
+        
+        writer.save()
+    
+    
+    return FACRate_OutletFeeder, OutletTemperature_Bundle_1, OutletTemperature_Bundle_2 
 
 
 def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
@@ -304,7 +367,7 @@ def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
 
 # just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
-SimulationYears = 25 # years
+SimulationYears = 37 # years
 SimulationHours = SimulationYears * 876 # 851
 
 
@@ -361,10 +424,15 @@ for j in range(SimulationHours):
 
     # parameters tracked/updated with time
     if j % (73) == 0:  # 73 h * 10 = 12 x a year
-        
         if j == 0:
             x_pht = 0.01
             DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)  
+        
+        start = SGHX.YearStartup
+        delta = timedelta(hours = j * nc.TIME_STEP)
+        CalendarYear = start + delta
+        
+        Year_Month = (CalendarYear.year, CalendarYear.month)
 
         if Loop == "full":
             RIHT_1 = SGHX.energy_balance(ld.SteamGenerator, x_pht, DividerPlateLeakage, j, SGHX.SGFastMode) - 273.15
@@ -382,8 +450,8 @@ for j in range(SimulationHours):
         
         # in half loop mode, these are equal, so avg = RIHT_1 = RIHT_2
         T_RIH_average = (RIHT_1 + RIHT_2) / 2
-        x_pht = SGHX.pht_steam_quality(T_RIH_average + 273.15, j)
-        DividerPlateLeakage = SGHX.divider_plate(j, DividerPlateLeakage)
+        x_pht = SGHX.pht_steam_quality(T_RIH_average + 273.15, Year_Month, j)
+        DividerPlateLeakage = SGHX.divider_plate(j, Year_Month, DividerPlateLeakage)
         
         # core and outlet temperatures currently not being updated, but all sections called for continuity
         for Section in Sections:
@@ -404,17 +472,11 @@ for j in range(SimulationHours):
             Temperature2 = None
             
         # optional preview of RIHT and primary-side steam quality
-        start = SGHX.YearStartup
-        delta = timedelta(hours = j * nc.TIME_STEP)
-        CalendarYear = start + delta
-        
-        Year_Month = (CalendarYear.year, CalendarYear.month)
-        
         print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100, ld.SteamGenerator_2[0].SludgeThickness[11])#, RIHT_2)
 
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Temperature1,
-            Temperature2
+            Temperature2, DividerPlateLeakage, j
             )
             
     else:

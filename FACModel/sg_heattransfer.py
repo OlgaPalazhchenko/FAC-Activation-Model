@@ -448,14 +448,14 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
         
     #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
     if Year_Month == (1988, 4):
-        Bundle.SludgeThickness[i] = 0.4 * Bundle.SludgeThickness[i]
+        Bundle.SludgeThickness[i] = 0.7 * Bundle.SludgeThickness[i]
         
     elif YearOutage <= Year_Month <= YearOutageRestart:
         Bundle.SludgeThickness[i] = 0
         Growth = 0   
     
-    elif YearRefurbishment <= Year_Month <= YearRefurbishmentRestart:
-        Bundle.SludgeThickness[i] = 0
+    elif YearRefurbishment <= Year_Month < YearRefurbRestart:
+        Bundle.SludgeThickness[i] = Bundle.SludgeThickness[i] * 0.1
         Growth = 0 
         
     Bundle.SludgeThickness[i] = Bundle.SludgeThickness[i] + Growth * TimeStep #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
@@ -682,14 +682,8 @@ def outer_area(SteamGenerator):
 
 # print (list(zip(Year_Month_PowerTracked, Operating_Power)))
 
-def pht_steam_quality(Temperature, j):
-    
-    start = YearStartup
-    delta = timedelta(hours = j * nc.TIME_STEP)
-    CalendarYear = start + delta
-    
-    Current_Year_Month = (CalendarYear.year, CalendarYear.month)
-
+def pht_steam_quality(Temperature, Year_Month, j):
+   
     CoreMassFlow =  7600  # [kg /s]
 #     Delta_T = T_sat_primary - (262 + 273.15)  # [K]
 #     C_p_cold = nc.heatcapacityD2O_liquid(262 + 273.15)
@@ -701,12 +695,11 @@ def pht_steam_quality(Temperature, j):
     difference = []
     
     # outages are accounted for in the 1996-01 to 2018-06 data via power derating (down to 0.01 or lower)
-    if Current_Year_Month in Year_Month_PowerTracked:
+    if Year_Month in Year_Month_PowerTracked:
         
         for x in Year_Month_PowerTracked:
             
-            delta_time = [x1 - x2 for (x1, x2) in zip(Current_Year_Month, x)] 
-            #(Current_Year_Month[0] - x[0], Current_Year_Month[1] - x[1])
+            delta_time = [x1 - x2 for (x1, x2) in zip(Year_Month, x)] 
             
             delta_time = [abs(number) for number in delta_time]
             
@@ -722,11 +715,11 @@ def pht_steam_quality(Temperature, j):
     # to the other approximated outage dates
     
     # many of these estimated outages are not the entire month (so a recovery power is taken into account)
-    elif Current_Year_Month in EstimatedOutageYearsMonths:
+    elif Year_Month in EstimatedOutageYearsMonths:
         Fraction_of_FP = 0.01
     
     # no steam quality during outage
-    elif Current_Year_Month in OutageYearsMonths:
+    elif Year_Month in OutageYearsMonths:
         Fraction_of_FP = 0
         
     # outside of data in the logs and the 1995 outage (1983-1995 data) 100 % full power is assumed
@@ -746,7 +739,7 @@ def pht_steam_quality(Temperature, j):
     H_current = nc.enthalpyD2O_liquid(Temperature) + H_pht
 #     H_current = nc.enthalpyH2O_liquid(nc.PrimarySidePressure, Temperature) + H_pht
     x = (H_current - H_satliq_outlet) / (EnthalpySaturatedSteam.magnitude - H_satliq_outlet)
-#     print (Current_Year_Month, P, FullPower, x)
+#     print (Year_Month, P, FullPower, x)
     if x < 0:
         x = 0
     return x
@@ -1287,23 +1280,17 @@ def temperature_profile(
     return PrimaryBulk, HeatFlux
 
 
-def divider_plate(j, DividerPlateLeakage):
-    
-    start = YearStartup
-    delta = timedelta(hours = j * nc.TIME_STEP)
-    CalendarDate = start + delta
-    
-    Year_Month = (CalendarDate.year, CalendarDate.month)
+def divider_plate(j, Year_Month, DividerPlateLeakage):
     
     Time_Step = 1 / 12 # 12 months in a year, monthly timestep through heat transfer package
-    PostOutageYearlyLeakage = 0.001
+    PostOutageYearlyLeakage = 0.002
     
     # changes to rate of leakage growth
     if Year_Month in OutageYearsMonths:
         LeakageRate = 0 
       
     elif Year_Month < YearOutage:
-        LeakageRate = 0.005
+        LeakageRate = 0.0055
     
 #     elif YearOutage <= Year_Month <= YearOutageRestart:
 #         LeakageRate = 0
@@ -1325,8 +1312,8 @@ def divider_plate(j, DividerPlateLeakage):
         DividerPlateLeakage = 0.02
     
     # Development of additional leak site
-    elif Year_Month == (1998, 12):
-        DividerPlateLeakage = 0.04
+    elif Year_Month == (1996, 2):
+        DividerPlateLeakage = 0.03
         
     else:
         None
