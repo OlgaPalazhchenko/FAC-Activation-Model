@@ -199,7 +199,7 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, Year_Month_Day_Hour):
     if Year_Month_Day_Hour == (1995, 5, 8, 8):
         CleaningEfficiency = 0.67
     elif Year_Month_Day_Hour == (2008, 3, 1, 14):
-        CleaningEfficiency = 0.22 #(IR-33110-0039-001-A)
+        CleaningEfficiency = 0.25 #(IR-33110-0039-001-A)
     else:
         CleaningEfficiency = 0 # no cleaning, oxide layers returned without reduction in thickness
         
@@ -256,7 +256,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
                 Section.OuterFe3O4Loading = Section.OuterFe3O4Loading
         
         else: #all sg tubes run (each bundle passed through, not entire SG) 
-            Cleaned = primaryside_cleaned_tubes(TotalSGTubeNumber, Year_Month)
+            Cleaned = primaryside_cleaned_tubes(Section, TotalSGTubeNumber, Year_Month)
             
             if Section in Cleaned:
                 [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(

@@ -261,6 +261,7 @@ OutletTemperature_Bundle_1 = []
 OutletTemperature_Bundle_2 = []
 pht_SteamFraction = []
 DP_leakage = []
+Years = []
 
 def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temperature2, DividerPlateLeakage, j):
         
@@ -284,7 +285,7 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
     delta = timedelta(hours = j * nc.TIME_STEP)
     CalendarDate = start + delta
     
-    Years = pd.date_range('1983-03-08', CalendarDate, freq='1M')+pd.offsets.Day(8)
+    Years.append(CalendarDate)
     
     # add RIHT_1 and delta_RIHT1 here later
     RIHT_by_phase = pd.DataFrame(
@@ -294,30 +295,30 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
      'Steam quality': pht_SteamFraction,
      'DP leakage' : DP_leakage
     })
-  
+   
     RIHT_by_phase.set_index('Date', inplace=True)
-    
-    #filters data to remove anything below 0.99 FP (except for phase 4, where power deratings took place to ~0.9 FP
+     
+#     filters data to remove anything below 0.99 FP (except for phase 4, where power deratings took place to ~0.9 FP
     RIHT_outages_removed = RIHT_by_phase[RIHT_by_phase['Steam quality'] > 0]
-    
+     
     RIHT_phase1 = RIHT_outages_removed['1983-4-8':'1992-9-8']
     RIHT_phase2 = RIHT_outages_removed['1992-10-8':'1995-12-8']
-    RIHT_phase3 = RIHT_outages_removed['1996-1-8':'1998-11-8']
-    RIHT_phase4 = RIHT_outages_removed['1998-12-8':'2008-3-8']
-    RIHT_phase5_6 = RIHT_outages_removed['2013-1-8':'2017-8-8']
+    RIHT_phase3 = RIHT_outages_removed['1996-1-8':'1998-10-8']
+    RIHT_phase4 = RIHT_outages_removed['1998-11-8':'2008-3-8']
+    RIHT_phase5_6 = RIHT_outages_removed['2008-4-8':'2017-8-8']
     RIHT_phase7 = RIHT_outages_removed['2017-9-8':'2018-6-8']
-    
-    if j % (876 * 3) == 0: 
+     
+    if j % (876 * 2) == 0: 
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
-        
+         
         RIHT_phase1.to_excel(writer, sheet_name = 'Phase 1')
         RIHT_phase2.to_excel(writer, sheet_name = 'Phase 2')
         RIHT_phase3.to_excel(writer, sheet_name = 'Phase 3')
         RIHT_phase4.to_excel(writer, sheet_name = 'Phase 4')
         RIHT_phase5_6.to_excel(writer, sheet_name = 'Phase 5_6')
         RIHT_phase7.to_excel(writer, sheet_name = 'Phase 7')
-        
-        
+         
+         
         # sets spacing between columns A and B so date column (A) is more clear
         workbook  = writer.book
         worksheet1 = writer.sheets['Phase 1']
@@ -326,15 +327,15 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
         worksheet4 = writer.sheets['Phase 4']
         worksheet5 = writer.sheets['Phase 5_6']
         worksheet6 = writer.sheets['Phase 7']
-        
+         
         worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5]
-        
+         
         for sheet in worksheets:
             sheet.set_column('A:B', 12)
             sheet.set_column('C:D', 13)
             sheet.set_column('D:E', 13)
             sheet.set_column('E:F', 13)
-        
+         
         writer.save()
     
     
@@ -472,7 +473,7 @@ for j in range(SimulationHours):
             Temperature2 = None
             
         # optional preview of RIHT and primary-side steam quality
-        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100, ld.SteamGenerator_2[0].SludgeThickness[11])#, RIHT_2)
+        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100, ld.SteamGenerator_2[0].SludgeThickness[11], ld.SteamGenerator_2[Default_Tube].OuterFe3O4Loading[11])#, RIHT_2)
 
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Temperature1,
