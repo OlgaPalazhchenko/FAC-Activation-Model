@@ -7,14 +7,19 @@ import csv
 import pandas as pd
 from datetime import date, timedelta, datetime
 
+# for j in range(876*24,876*26):
+#     start = YearStartup
+#     delta = timedelta(hours = j * nc.TIME_STEP)
+#     CalendarDate = start + delta
+#     print (CalendarDate)
 
+    
 def station_RIHT():
     Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_RIHT_raw.csv'
     df = pd.read_csv(Filename, header=None)
     
     Header1 = 'RIHT 2'
     Header2 = 'RIHT 4'
-    Header3 = 'RIHT 6'
     Header4 = 'RIHT 8'
     
     df.columns = ['date', 'power', Header1, Header2, Header3, Header4]
@@ -92,7 +97,7 @@ def reactor_power():
     # for months that are blank, e.g, 1996-8, forward filled, i.e., power from 1996-7 applied forward to 1996-8
     monthly_average = monthly_average.fillna(method='ffill')
 #     monthly_average = monthly_average.dropna(how = "any")
-    
+
     # secondary side pressure wil be added here eventually (maybe also primary side pressure)
     writer = pd.ExcelWriter('PLNGS_Power.xlsx', engine='xlsxwriter', datetime_format='mm-yyyy')
     monthly_average.to_excel(writer, sheet_name = 'Monthly Averaged FP')
@@ -102,7 +107,6 @@ def reactor_power():
     writer.save()
     
     Outages = monthly_average.index[monthly_average['power'] < 0.2]
-#     print (monthly_average[30:150])
 
     EstimatedOutageYearsMonths = [
         (1984, 4), (1984, 5), (1986, 5), (1987, 4), (1988, 4), (1988, 7), (1988, 10), (1989, 6), (1990, 2), (1990, 4),
@@ -312,11 +316,11 @@ def bundle_sizes(SteamGenerator, TotalSGTubeNumber):
    
 def primaryside_cleaned_tubes(SteamGenerator, TotalSGTubeNumber, Year_Month):
     #amount of tubes cleaned per each cleaning will have to be custom
-    if Year_Month == YearOutage:
+    if YearOutage <= Year_Month < YearRefurbishment:
         # siva blast in 1995 used on only 60% of tubes due to time/spacial constraints
         PercentTubesCleaned = 0.6
     
-    elif Year_Month == YearRefurbishment:
+    elif YearRefurbishment <= Year_Month:
 
         PercentTubesCleaned = 0.96
     else:
@@ -1283,7 +1287,7 @@ def temperature_profile(
 def divider_plate(j, Year_Month, DividerPlateLeakage):
     
     Time_Step = 1 / 12 # 12 months in a year, monthly timestep through heat transfer package
-    PostOutageYearlyLeakage = 0.001
+    PostOutageYearlyLeakage = 0.00035
     
     # changes to rate of leakage growth
     if Year_Month in OutageYearsMonths:
@@ -1291,9 +1295,6 @@ def divider_plate(j, Year_Month, DividerPlateLeakage):
       
     elif Year_Month < YearOutage:
         LeakageRate = 0.004
-    
-#     elif YearOutage <= Year_Month <= YearOutageRestart:
-#         LeakageRate = 0
     
     elif Year_Month >= YearOutageRestart:
         LeakageRate = PostOutageYearlyLeakage
@@ -1313,11 +1314,11 @@ def divider_plate(j, Year_Month, DividerPlateLeakage):
     
     # Development of additional leak site
     elif Year_Month == (1996, 2):
-        DividerPlateLeakage = 0.03
+        DividerPlateLeakage = 0.035
         
     # Development of additional leak site
     elif Year_Month == (1999, 2):
-        DividerPlateLeakage = 0.04
+        DividerPlateLeakage = 0.0425
         
     DividerPlateLeakage = DividerPlateLeakage + Time_Step * LeakageRate
 
@@ -1394,16 +1395,6 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
                 InnerOx = Bundle.InnerOxLoading
                 OuterOx = Bundle.OuterOxLoading
             
-            elif Bundle in Cleaned:
-                # first tube in selected tube list (for that steam generator) simulates all cleaned tubes in "fast mode"
-                CleanedTubeNumber = tube_picker(Method, SteamGenerator)[1][0]
-                CleanedInnerOxide = SteamGenerator[CleanedTubeNumber].InnerOxLoading
-                CleanedOuterOxide = SteamGenerator[CleanedTubeNumber].OuterOxLoading
-                
-                InnerOx = CleanedInnerOxide
-                OuterOx = CleanedOuterOxide
-        
-  
             else:  # assumes same growth as in default passed tube for remaining tubes
                 
                 DefaultUncleanedInnerOxide = SteamGenerator[Default_Tube].InnerOxLoading
@@ -1411,6 +1402,19 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
                 
                 InnerOx = DefaultUncleanedInnerOxide
                 OuterOx = DefaultUncleanedOuterOxide
+                
+            
+            if Bundle in Cleaned:
+                # first tube in selected tube list (for that steam generator) simulates all cleaned tubes in "fast mode"
+                CleanedTubeNumber = tube_picker(Method, SteamGenerator)[1][0]
+                CleanedInnerOxide = SteamGenerator[CleanedTubeNumber].InnerOxLoading
+                CleanedOuterOxide = SteamGenerator[CleanedTubeNumber].OuterOxLoading
+#                 print (Year_Month, CleanedOuterOxide[20])
+                InnerOx = CleanedInnerOxide
+                OuterOx = CleanedOuterOxide
+            
+            else:
+                None
                 
         # in non-fast-mode all tubes are passed through (all cleaned/uncleaned) through oxide growth functions
         else:
@@ -1448,9 +1452,9 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
         Enthalpy = (sum(Energy) + MasssFlow_dividerplate.magnitude * Enthalpy_dividerplate) / MassFlow_h.magnitude 
 
 #     RIHT = nc.temperature_from_enthalpyH2O_liquid("PHT", Enthalpy, None)
-   
+    
     RIHT = nc.temperature_from_enthalpyD2O_liquid(Enthalpy)
-
+        
     return RIHT
 
              

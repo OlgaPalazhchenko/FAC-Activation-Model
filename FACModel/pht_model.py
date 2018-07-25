@@ -473,7 +473,9 @@ for j in range(SimulationHours):
             Temperature2 = None
             
         # optional preview of RIHT and primary-side steam quality
-        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100, ld.SteamGenerator_2[0].SludgeThickness[11], ld.SteamGenerator_2[Default_Tube].OuterFe3O4Loading[11])#, RIHT_2)
+        print (
+            Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100, ld.SteamGenerator_2[0].SludgeThickness[11],
+            ld.SteamGenerator_2[SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)[1][0]].OuterOxLoading[20])#, RIHT_2)
 
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Temperature1,

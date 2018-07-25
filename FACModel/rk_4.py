@@ -9,7 +9,7 @@ import sg_heattransfer as SGHX
 from lepreau_data import SteamGeneratorSections
 from datetime import date, timedelta
 
-
+print (SGHX.OutageYearsMonths)
 # Spalling thermochemistry_and_constants depend heavily on particle size distribution
 OUTLET_OUTER_SPALL_CONSTANT = 5
 OUTLET_INNER_SPALL_CONSTANT = 5
@@ -195,11 +195,10 @@ def oxide_growth(
 def pht_cleaning(Section, InnerOxide, OuterOxide, Year_Month_Day_Hour):
     
     #need to change cleaning efficiency for each individual clean 
-#     print (Year_Month_Day_Hour)
     if Year_Month_Day_Hour == (1995, 5, 8, 8):
         CleaningEfficiency = 0.67
     elif Year_Month_Day_Hour == (2008, 3, 1, 14):
-        CleaningEfficiency = 0.25 #(IR-33110-0039-001-A)
+        CleaningEfficiency = 0.30 #(IR-33110-0039-001-A)
     else:
         CleaningEfficiency = 0 # no cleaning, oxide layers returned without reduction in thickness
         
@@ -265,7 +264,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
                None 
     else:
         None
-        
+    
     
     if Year_Month in SGHX.OutageYearsMonths:
          # no oxide growth anywhere in the PHT system
