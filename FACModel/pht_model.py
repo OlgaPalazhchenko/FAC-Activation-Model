@@ -425,7 +425,7 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator,):
 SimulationYears = 1 # years
 SimulationHours = SimulationYears * 876 # 851
 
-SimulationStart = 876 * 11
+SimulationStart = 876 * 12
 SimulationEnd = 876 * 13#SimulationHours
 
 import time

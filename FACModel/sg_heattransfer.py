@@ -7,12 +7,6 @@ import csv
 import pandas as pd
 from datetime import date, timedelta, datetime
 
-# for j in range(876*24,876*26):
-#     start = YearStartup
-#     delta = timedelta(hours = j * nc.TIME_STEP)
-#     CalendarDate = start + delta
-#     print (CalendarDate)
-
     
 def station_RIHT():
     Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_RIHT_raw.csv'
@@ -260,7 +254,7 @@ TubePitch.magnitude = 2.413
 UBends = [1.49, 0.685, 2.31, 3.09]
 UBends = [i * 100 for i in UBends]
 # select desired tubes to be run by total tube length
-TubeLengths = [1887, 1807]#, 1970, 2046]
+TubeLengths = [1887, 1807, 1970]# 2046]
 
 
 def total_tubes_plugged(SteamGenerator, Year_Month):
@@ -314,13 +308,16 @@ def bundle_sizes(SteamGenerator, TotalSGTubeNumber):
     return None
 
    
-def primaryside_cleaned_tubes(SteamGenerator, TotalSGTubeNumber, Year_Month):
+def primaryside_cleaned_tubes(SteamGenerator, Year_Month):
+    
+    TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Year_Month)
+    
     #amount of tubes cleaned per each cleaning will have to be custom
-    if YearOutage <= Year_Month < YearRefurbishment:
+    if Year_Month == YearOutage:
         # siva blast in 1995 used on only 60% of tubes due to time/spacial constraints
         PercentTubesCleaned = 0.6
     
-    elif YearRefurbishment <= Year_Month:
+    elif Year_Month == YearRefurbishment:
 
         PercentTubesCleaned = 0.96
     else:
@@ -1305,11 +1302,15 @@ def divider_plate(j, Year_Month, DividerPlateLeakage):
     
     # changes in overall leakage amount
     # replacement of divider plate
-    if Year_Month == YearOutage:
+    if YearOutage <= Year_Month < YearOutageRestart:
+        DividerPlateLeakage = 0
+    
+    # Leakage through the replaced welded divider plates immediately following replacement was estimated as 2% PHT flow
+    elif Year_Month == YearOutageRestart:
         DividerPlateLeakage = 0.025
     
     # Development of additional leak site
-    elif Year_Month == (1996, 3):
+    elif Year_Month == (1996, 4):
         DividerPlateLeakage = 0.035
         
     # Development of additional leak site
@@ -1359,12 +1360,28 @@ def secondary_side_pressure(Year_Month):
     return SecondarySidePressure
 
 
+Cleaned_OutageSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, YearOutage)
+CleanedOutageSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, YearOutage)
+
+CleanedRefurbishmentSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, YearRefurbishment)
+CleanedRefurbishmentSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, YearRefurbishment)
+
+
 def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
     
     start = YearStartup
     delta = timedelta(hours = j * nc.TIME_STEP)
     CalendarDate = start + delta
     Year_Month = (CalendarDate.year, CalendarDate.month)
+    
+    
+    if SteamGenerator == ld.SteamGenerator:
+        CleanedOutage = Cleaned_OutageSG1
+        CleanedRefurb = CleanedRefurbishmentSG1
+    else:
+        CleanedOutage = CleanedOutageSG2
+        CleanedRefurb = CleanedRefurbishmentSG2
+    
 
     Energy = []
 
@@ -1372,8 +1389,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
     
     # adjusts how many tubes per bundle to account for tubes plugged
     bundle_sizes(SteamGenerator, TotalSGTubeNumber)
-    Cleaned = primaryside_cleaned_tubes(SteamGenerator, TotalSGTubeNumber, Year_Month)
-
+    
     SecondarySidePressure = secondary_side_pressure(Year_Month)
     
     MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude * DividerPlateLeakage
@@ -1382,37 +1398,70 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
 
     Selected_Tubes = tube_picker(Method, SteamGenerator)[0]
     
+    # undergone none of the cleanings, with regular growth
     DefaultUncleanedInnerOxide = SteamGenerator[Default_Tube].InnerOxLoading
     DefaultUncleanedOuterOxide = SteamGenerator[Default_Tube].OuterOxLoading
     
+
     for Bundle in SteamGenerator:
         if SGFastMode == "yes":
-#             print (Year_Month, Selected_Tubes, Cleaned)
-            #not all tubes run (only those selected)
             if Bundle in Selected_Tubes:
                 # tracks oxide growth for these tubes specifically
                 InnerOx = Bundle.InnerOxLoading
                 OuterOx = Bundle.OuterOxLoading
-            
-            else:  # assumes same growth as in default passed tube for remaining tubes
                 
+            else:  # assumes same growth as in default passed tube for remaining tubes
                 InnerOx = DefaultUncleanedInnerOxide
                 OuterOx = DefaultUncleanedOuterOxide
+            
+            
+            if YearOutageRestart <= Year_Month < YearRefurbRestart:
+                if Bundle in CleanedOutage:   
+                    # first tube in selected tube list (for that steam generator) simulates all cleaned tubes in "fast mode"
+                    InnerOx = CleanedOutageOnlyInnerOxide
+                    OuterOx = CleanedOutageOnlyOuterOxide
                 
-            
-            if Bundle in Cleaned:
-                # first tube in selected tube list (for that steam generator) simulates all cleaned tubes in "fast mode"
-                CleanedTubeNumber = tube_picker(Method, SteamGenerator)[1][0]
-                CleanedInnerOxide = SteamGenerator[CleanedTubeNumber].InnerOxLoading
-                CleanedOuterOxide = SteamGenerator[CleanedTubeNumber].OuterOxLoading
-#                 print (Year_Month, CleanedOuterOxide[20])
-                InnerOx = CleanedInnerOxide
-                OuterOx = CleanedOuterOxide
-            
+                # reverts to above...either default tube or one of selected    
+                else:
+                    None  
+                    
+                
+            elif YearRefurbRestart <= Year_Month:
+                if Bundle in CleanedOutage and Bundle in CleanedRefurb:
+                    # only the first of the selected tubes undergoes both cleanings
+                    CleanedBothInnerOxide = Selected_Tubes[0].InnerOxLoading
+                    CleanedBothOuterOxide = Selected_Tubes[0].OuterOxLoading
+                    
+                    InnerOx = CleanedBothInnerOxide
+                    OuterOx = CleanedBothOuterOxide
+                    
+                # not targetted in refurb, outage only    
+                elif Bundle in CleanedOutage:
+                    CleanedOutageOnlyInnerOxide = Selected_Tubes[1].InnerOxLoading
+                    CleanedOutageOnlyOuterOxide = Selected_Tubes[1].OuterOxLoading
+                    
+                    InnerOx = CleanedOutageOnlyInnerOxide
+                    OuterOx = CleanedOutageOnlyOuterOxide
+                
+                #only targetted in the refurb clean, but not in outage
+                elif Bundle in CleanedRefurb:
+                    
+                    CleanedRefurbOnlyInnerOxide = Selected_Tubes[2].InnerOxLoading
+                    CleanedRefurbOnlyOuterOxide = Selected_Tubes[2].OuterOxLoading
+                    
+                    InnerOx = CleanedRefurbOnlyInnerOxide
+                    OuterOx = CleanedRefurbOnlyOuterOxide
+                
+                # not cleaned in either outage
+                # reverts to above...either default tube or one of selected    
+
+                else:
+                    None
+                    
+            # before any cleanings --> reverts to above...either default tube or one of selected    
             else:
-               
-                InnerOx = DefaultUncleanedInnerOxide
-                OuterOx = DefaultUncleanedOuterOxide               
+                None
+                      
         # in non-fast-mode all tubes are passed through (all cleaned/uncleaned) through oxide growth functions
         else:
             
@@ -1455,4 +1504,4 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
     return RIHT
 
              
-# print (energy_balance(ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.0325, j=876*24.94, SGFastMode="yes")- 273.15)
+print (energy_balance(ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.0325, j=876*0, SGFastMode="yes")- 273.15)

@@ -240,27 +240,48 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
             SteamGenerator = ld.SteamGenerator
         else:
             SteamGenerator = ld.SteamGenerator_2
-
-        if SGHX.SGFastMode == "yes":
-            
-            SelectedTubes = SGHX.tube_picker(SGHX.Method, SteamGenerator)[0]
-    
-            if Section == SelectedTubes[0]: #first tube from list of desired tubes per each SG
-                
-                [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
-                Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Year_Month_Day_Hour)
-            else:
-                Section.InnerIronOxLoading = Section.InnerIronOxLoading
-                Section.OuterFe3O4Loading = Section.OuterFe3O4Loading
+               
+        SelectedTubes = SGHX.tube_picker(SGHX.Method, SteamGenerator)[0]
+        # first tube cleaned in all
+        # second tube only outage cleaned
+        # third tube only refurb cleaned
         
-        else: #all sg tubes run (each bundle passed through, not entire SG) 
-            Cleaned = primaryside_cleaned_tubes(Section, TotalSGTubeNumber, Year_Month)
-            
-            if Section in Cleaned:
-                [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
+        if Year_Month_Day_Hour == (1995, 5, 8, 8):
+            # first two selected tubes outage cleaned
+            if SGHX.SGFastMode == "yes":
+                if Section in [SelectedTubes[0], SelectedTubes[1]]:
+                    [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
                 Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Year_Month_Day_Hour)
             else:
-               None 
+                # function accessed just once at specific date/time stamp
+                Cleaned = SGHX.primaryside_cleaned_tubes(SteamGenerator, Year_Month)
+                if Section in Cleaned:
+                    [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
+                Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Year_Month_Day_Hour)
+        
+        
+        elif Year_Month_Day_Hour == (2008, 3, 1, 14):
+            # first and third tubes refurbishment cleaned
+            if SGHX.SGFastMode == "yes":
+                if Section in [SelectedTubes[0], SelectedTubes[2]]:
+                    [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
+            Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Year_Month_Day_Hour)
+            
+            else:
+                # function accessed just once at specific date/time stamp
+                Cleaned = SGHX.primaryside_cleaned_tubes(SteamGenerator, Year_Month)
+            
+                if Section in Cleaned:
+                    [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
+                Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Year_Month_Day_Hour)
+        
+        else:
+            Section.InnerIronOxLoading = Section.InnerIronOxLoading
+            Section.OuterFe3O4Loading = Section.OuterFe3O4Loading
+    
+        
+            
+            
     else:
         None
     
