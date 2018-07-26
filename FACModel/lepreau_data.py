@@ -124,7 +124,7 @@ class Section():  # Defining each primary heat transport section as a class
         self.OuterOxLoading = None
         self.CoLoading = None
         self.OxThickness = None
-        self.SludgeThickness = None
+        self.SludgeLoadingThickness = None
 
         self.StandardEqmPotentialFe = [float(SizingParametersReader[j + 13][i]) for i in range(self.RowStart, self.RowEnd)]
         self.StandardEqmPotentialFe3O4red = [float(SizingParametersReader[j + 14][i]) \
@@ -258,7 +258,7 @@ def steam_generator_properties(SteamGenerator):
         # u-bend split into 4 nodes, but length is just a float 
         Bundle.Length.magnitude = hot_leg_length + [length / 4] * 4 + cold_leg_length
         Bundle.TubeNumber = i
-        Bundle.SludgeThickness = [0.002] * Bundle.NodeNumber
+        Bundle.SludgeLoading = [0.002] * Bundle.NodeNumber
         
         Bundle.Diameter = [1.368] * Bundle.NodeNumber
         Bundle.Velocity = [

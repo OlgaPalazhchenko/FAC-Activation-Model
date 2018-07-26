@@ -9,7 +9,6 @@ import sg_heattransfer as SGHX
 from lepreau_data import SteamGeneratorSections
 from datetime import date, timedelta
 
-print (SGHX.OutageYearsMonths)
 # Spalling thermochemistry_and_constants depend heavily on particle size distribution
 OUTLET_OUTER_SPALL_CONSTANT = 5
 OUTLET_INNER_SPALL_CONSTANT = 5
@@ -479,7 +478,7 @@ def layer_spalling(Layer, TotalOxideThickness, Spalling):
         return Ox
 
 
-def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
+def spall(Section, j, SimulationStart, ElapsedTime, SpallTime, ElementTracking):
     # Current time step's RK4 input from oxidegrowth function for each of InnerOx, InnerIronOx, OuterFe3O4, Co, and 
     # Ni at each node of current section 
 
@@ -519,7 +518,7 @@ def spall(Section, j, ElapsedTime, SpallTime, ElementTracking):
                 Section.InnerOxLoading[i] = Section.InnerIronOxLoading[i]
         
         
-        if j == 0:
+        if j == SimulationStart:
             # First time step call generate particle sizes and calc spalling times, respectively
             x = particle_size()
             # Amount of time it will take each node's particle to spall 

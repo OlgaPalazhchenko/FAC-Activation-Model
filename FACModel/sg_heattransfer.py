@@ -456,18 +456,18 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
         
     #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
     if Year_Month == (1988, 4):
-        Bundle.SludgeThickness[i] = 0.8 * Bundle.SludgeThickness[i]
+        Bundle.SludgeLoading[i] = 0.8 * Bundle.SludgeLoading[i]
         
     elif Year_Month == YearOutage:
-        Bundle.SludgeThickness[i] = Bundle.SludgeThickness[i] * 0.3
+        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.3
     
     elif Year_Month == YearRefurbishment:
-        Bundle.SludgeThickness[i] = 0#Bundle.SludgeThickness[i] * 0.05
+        Bundle.SludgeLoading[i] = 0#Bundle.SludgeLoading[i] * 0.05
          
     else:
-        Bundle.SludgeThickness[i] = Bundle.SludgeThickness[i] + Growth * TimeStep #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
+        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] + Growth * TimeStep #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
     
-    Thickness = Bundle.SludgeThickness[i] / nc.Fe3O4Density
+    Thickness = Bundle.SludgeLoading[i] / nc.Fe3O4Density
     
     Fouling = Thickness / thermal_conductivity(None, "outer magnetite", None)
     
@@ -1305,15 +1305,11 @@ def divider_plate(j, Year_Month, DividerPlateLeakage):
     
     # changes in overall leakage amount
     # replacement of divider plate
-    if YearOutage <= Year_Month < YearOutageRestart:
-        DividerPlateLeakage = 0
-    
-    # Leakage through the replaced welded divider plates immediately following replacement was estimated as 2% PHT flow
-    elif Year_Month == YearOutageRestart:
+    if Year_Month == YearOutage:
         DividerPlateLeakage = 0.025
     
     # Development of additional leak site
-    elif Year_Month == (1996, 2):
+    elif Year_Month == (1996, 3):
         DividerPlateLeakage = 0.035
         
     # Development of additional leak site
@@ -1386,6 +1382,9 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
 
     Selected_Tubes = tube_picker(Method, SteamGenerator)[0]
     
+    DefaultUncleanedInnerOxide = SteamGenerator[Default_Tube].InnerOxLoading
+    DefaultUncleanedOuterOxide = SteamGenerator[Default_Tube].OuterOxLoading
+    
     for Bundle in SteamGenerator:
         if SGFastMode == "yes":
 #             print (Year_Month, Selected_Tubes, Cleaned)
@@ -1396,9 +1395,6 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
                 OuterOx = Bundle.OuterOxLoading
             
             else:  # assumes same growth as in default passed tube for remaining tubes
-                
-                DefaultUncleanedInnerOxide = SteamGenerator[Default_Tube].InnerOxLoading
-                DefaultUncleanedOuterOxide = SteamGenerator[Default_Tube].OuterOxLoading
                 
                 InnerOx = DefaultUncleanedInnerOxide
                 OuterOx = DefaultUncleanedOuterOxide
@@ -1414,8 +1410,9 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
                 OuterOx = CleanedOuterOxide
             
             else:
-                None
-                
+               
+                InnerOx = DefaultUncleanedInnerOxide
+                OuterOx = DefaultUncleanedOuterOxide               
         # in non-fast-mode all tubes are passed through (all cleaned/uncleaned) through oxide growth functions
         else:
             

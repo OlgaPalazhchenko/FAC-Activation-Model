@@ -9,6 +9,7 @@ import sg_heattransfer as SGHX
 import numpy as np
 from datetime import date, timedelta
 import pandas as pd
+import csv
 
 
 Loop = "half"
@@ -40,6 +41,7 @@ def initial_conditions():
   
         
     for Section in Sections:
+        
         Section.KpFe3O4electrochem = [nc.KpFe3O4] * Section.NodeNumber
         Section.KdFe3O4electrochem = [nc.KdFe3O4] * Section.NodeNumber   
                
@@ -245,11 +247,13 @@ class PHTS():
 
         # RK4 oxide thickness calculation (no spalling)
         rk_4.oxide_layers(
-            self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, SGHX.SGFastMode)
+            self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j,
+            SGHX.SGFastMode
+            )
                 
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
-            self.Section1, j, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking
+            self.Section1, j, SimulationStart, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking
             )
 
 
@@ -290,8 +294,8 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
     # add RIHT_1 and delta_RIHT1 here later
     RIHT_by_phase = pd.DataFrame(
     {'Date': Years,
-     'RIHT_2': RIHT_InletFeeder2,
-     'Delta RIHT_2': RIHT2_delta,
+     'RIHT': RIHT_InletFeeder2,
+     'Delta RIHT': RIHT2_delta,
      'Steam quality': pht_SteamFraction,
      'DP leakage' : DP_leakage
     })
@@ -301,17 +305,23 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
 #     filters data to remove anything below 0.99 FP (except for phase 4, where power deratings took place to ~0.9 FP
     RIHT_outages_removed = RIHT_by_phase[RIHT_by_phase['Steam quality'] > 0]
      
-    RIHT_phase1 = RIHT_outages_removed['1983-4-8':'1992-9-8']
+    RIHT_phase1_preCPP = RIHT_outages_removed['1983-4-8':'1988-5-8']
+    RIHT_phase1_postCPP = RIHT_outages_removed['1988-5-8':'1992-9-8']
     RIHT_phase2 = RIHT_outages_removed['1992-10-8':'1995-12-8']
     RIHT_phase3 = RIHT_outages_removed['1996-1-8':'1998-10-8']
     RIHT_phase4 = RIHT_outages_removed['1998-11-8':'2008-3-8']
     RIHT_phase5_6 = RIHT_outages_removed['2008-4-8':'2017-8-8']
     RIHT_phase7 = RIHT_outages_removed['2017-9-8':'2018-6-8']
-     
+    
+    # removes some more artifically low RIHT's due to averaging being over entire month increments
+    RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['RIHT'] > 265]
+    RIHT_phase2 = RIHT_phase2[RIHT_phase2['RIHT'] > 265]
+    
     if j % (876 * 2) == 0: 
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
          
-        RIHT_phase1.to_excel(writer, sheet_name = 'Phase 1')
+        RIHT_phase1_preCPP.to_excel(writer, sheet_name = 'Phase 1 Pre CPP')
+        RIHT_phase1_postCPP.to_excel(writer, sheet_name = 'Phase 1 Post CPP')
         RIHT_phase2.to_excel(writer, sheet_name = 'Phase 2')
         RIHT_phase3.to_excel(writer, sheet_name = 'Phase 3')
         RIHT_phase4.to_excel(writer, sheet_name = 'Phase 4')
@@ -321,14 +331,15 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
          
         # sets spacing between columns A and B so date column (A) is more clear
         workbook  = writer.book
-        worksheet1 = writer.sheets['Phase 1']
-        worksheet2 = writer.sheets['Phase 2']
-        worksheet3 = writer.sheets['Phase 3']
-        worksheet4 = writer.sheets['Phase 4']
-        worksheet5 = writer.sheets['Phase 5_6']
-        worksheet6 = writer.sheets['Phase 7']
+        worksheet1 = writer.sheets['Phase 1 Pre CPP']
+        worksheet2 = writer.sheets['Phase 1 Post CPP']
+        worksheet3 = writer.sheets['Phase 2']
+        worksheet4 = writer.sheets['Phase 3']
+        worksheet5 = writer.sheets['Phase 4']
+        worksheet6 = writer.sheets['Phase 5_6']
+        worksheet7 = writer.sheets['Phase 7']
          
-        worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5]
+        worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7]
          
         for sheet in worksheets:
             sheet.set_column('A:B', 12)
@@ -339,7 +350,7 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
         writer.save()
     
     
-    return FACRate_OutletFeeder, OutletTemperature_Bundle_1, OutletTemperature_Bundle_2 
+    return FACRate_OutletFeeder, OutletTemperature_Bundle_1, OutletTemperature_Bundle_2, DividerPlateLeakage, x
 
 
 def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
@@ -368,9 +379,54 @@ def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
 
 # just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
-SimulationYears = 37 # years
+
+
+def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator,):
+    
+    if Inlet == ld.InletFeeder:
+        FileName = 'OutputSG2.csv'
+    else:
+        FileName = 'OutputSG1.csv'
+    # oxide thickness throughout system
+    # for each of selected SG tubes and for a default tube
+    # spalling time/particle size input
+    # divider plate leakage
+    # steam generator sludge
+    
+    SelectedTubes = SGHX.tube_picker(SGHX.Method, SG)[0]
+    
+    AllPipes = [InletFeeder, FuelChannel, OutletFeeder, SteamGenerator[pht_model.Default_Tube]] + SelectedTubes 
+    
+    InputParameters = open(FileName, 'r')
+    InputParametersReader = list(csv.reader(InputParameters, delimiter=','))  
+    
+    InnerIronOxRows = [12, 13, 14, 15, 16, 17]
+    OuterFe3O4Rows = [20, 21, 22, 23, 24, 25]
+    
+    for k, Pipe in zip(InnerIronOxRows, AllPipes):
+        Pipe.InnerIronOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
+        
+    for k, Pipe in zip(OuterFe3O4Rows, AllPipes):
+        Pipe.OuterFe3O4Loading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
+
+    for Bundle in SG:
+        Bundle.SludgeLoading = [float(InputParametersReader[66][i]) for i in range(0, Bundle.NodeNumber)]
+    
+    DividerPlateLeakage = [float(InputParametersReader[69][i]) for i in range(0)]
+    
+    x = [float(InputParametersReader[72][i]) for i in range(0)]
+    
+    return DividerPlateLeakage, x
+
+# print (system_input(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2))
+# print (ld.SteamGenerator_2[SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)[1][0]].OuterFe3O4Loading)
+
+
+SimulationYears = 1 # years
 SimulationHours = SimulationYears * 876 # 851
 
+SimulationStart = 876 * 11
+SimulationEnd = 876 * 13#SimulationHours
 
 import time
 start_time = time.time()
@@ -378,7 +434,7 @@ start_time = time.time()
 # load initial chemistry for full/half loop
 initial_conditions()
 
-for j in range(SimulationHours):
+for j in range(SimulationStart, SimulationEnd):
    
     if Loop == "full":
         InletInput = ld.InletFeeder_2
@@ -425,10 +481,23 @@ for j in range(SimulationHours):
 
     # parameters tracked/updated with time
     if j % (73) == 0:  # 73 h * 10 = 12 x a year
-        if j == 0:
+        if j == SimulationStart:
             x_pht = 0.01
-            DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)  
-        
+            DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
+            
+#             if SimulationStart == 0:
+#                 x_pht = 0.01
+#                 DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
+#             else:
+#                 DividerPlateLeakage, x_pht = system_input(
+#                     InletFeeder_1_Loop1, FuelChannel_1_Loop1, OutletFeeder_2_Loop1, SteamGeneratorTube_2_Loop1
+#                     )
+#                 
+#                 if Loop == "full":
+#                     DividerPlateLeakage, x_pht = system_input(
+#                         InletFeeder_2_Loop1, FuelChannel_2_Loop1, OutletFeeder_1_Loop1, SteamGeneratorTube_1_Loop1
+#                         )
+                                 
         start = SGHX.YearStartup
         delta = timedelta(hours = j * nc.TIME_STEP)
         CalendarYear = start + delta
@@ -474,7 +543,7 @@ for j in range(SimulationHours):
             
         # optional preview of RIHT and primary-side steam quality
         print (
-            Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100, ld.SteamGenerator_2[0].SludgeThickness[11],
+            Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100, ld.SteamGenerator_2[0].SludgeLoading[11],
             ld.SteamGenerator_2[SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)[1][0]].OuterOxLoading[20])#, RIHT_2)
 
         output = output_time_logging(
