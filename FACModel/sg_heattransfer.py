@@ -438,7 +438,7 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
     
     TimeStep = 1 / 12 # 12 months in a year
     # default values
-    ReducedTubeGrowth = 0.0003  # [g/cm^2] /year = 3.25 um/year
+    ReducedTubeGrowth = 0.0005  # [g/cm^2] /year = 3.25 um/year
     
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     
@@ -456,10 +456,10 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
         Bundle.SludgeLoading[i] = 0.75 * Bundle.SludgeLoading[i]
         
     elif Year_Month == YearOutage:
-        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.75
+        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.8
     
     elif Year_Month == YearRefurbishment:
-        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.15
+        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.1
          
     else:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] + Growth * TimeStep #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
@@ -1284,14 +1284,14 @@ def temperature_profile(
 def divider_plate(j, Year_Month, DividerPlateLeakage):
     
     Time_Step = 1 / 12 # 12 months in a year, monthly timestep through heat transfer package
-    PostOutageYearlyLeakage = 0.0005
+    PostOutageYearlyLeakage = 0.0002
     
     # changes to rate of leakage growth
     if Year_Month in OutageYearsMonths:
         LeakageRate = 0 
       
     elif Year_Month < YearOutage:
-        LeakageRate = 0.0045
+        LeakageRate = 0.004
     
     elif Year_Month >= YearOutageRestart:
         LeakageRate = PostOutageYearlyLeakage
@@ -1305,17 +1305,20 @@ def divider_plate(j, Year_Month, DividerPlateLeakage):
     
     # Leakage through the replaced welded divider plates immediately following replacement was estimated as 2% PHT flow
     if Year_Month == YearOutageRestart:
-        DividerPlateLeakage = 0.025
+        DividerPlateLeakage = 0.0225
     
     # Development of additional leak site
     elif Year_Month == (1996, 3):
-        DividerPlateLeakage = 0.04
+        DividerPlateLeakage = 0.042
         
-#     # Development of additional leak site
-#     elif Year_Month == (1999, 2):
-#         DividerPlateLeakage = 0.045
+    # Development of additional leak site
+    elif Year_Month == (1999, 2):
+        DividerPlateLeakage = 0.045
         
     DividerPlateLeakage = DividerPlateLeakage + Time_Step * LeakageRate
+    
+    if Year_Month >= (2008, 3):
+        DividerPlateLeakage = 0.046
 
     return DividerPlateLeakage
 

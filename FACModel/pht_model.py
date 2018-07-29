@@ -310,7 +310,7 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
     RIHT_phase3 = RIHT_by_phase['1996-1-8':'1998-10-8']
     RIHT_phase4 = RIHT_by_phase['1998-10-8':'2008-3-8']
     RIHT_phase5_6 = RIHT_by_phase['2012-5-8':'2017-8-8']
-    RIHT_phase7 = RIHT_by_phase['2017-9-8':'2018-9-8']
+    RIHT_phase7 = RIHT_by_phase['2017-9-8':'2018-10-8']
     
     
     RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Steam quality'] > 0]
