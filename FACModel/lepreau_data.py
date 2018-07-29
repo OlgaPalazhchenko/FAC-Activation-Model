@@ -124,7 +124,7 @@ class Section():  # Defining each primary heat transport section as a class
         self.OuterOxLoading = None
         self.CoLoading = None
         self.OxThickness = None
-        self.SludgeLoadingThickness = None
+        self.SludgeLoading = None
 
         self.StandardEqmPotentialFe = [float(SizingParametersReader[j + 13][i]) for i in range(self.RowStart, self.RowEnd)]
         self.StandardEqmPotentialFe3O4red = [float(SizingParametersReader[j + 14][i]) \

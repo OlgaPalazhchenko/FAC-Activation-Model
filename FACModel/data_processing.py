@@ -169,12 +169,12 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
         OutletCorrosionRate_um.append(x)
 
     Data = [
-        SGHX.TubeLengths, TotalDistance, InnerOxide, OuterOxide, TotalOxide, OutletCorrosionRate_um,
+        SGHX.TubeLengths, TotalDistance, InnerOxide, OuterOxide, TotalOxide,
         TemperatureProfile, kp_Tdependent
             ]
     Labels = [
         "U-bend length (cm)", "Distance (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Total Oxide (g/m^2)",
-        "Outlet Corrosion Rate (um/a)", "Temperature Profile (oC)", "kp (cm/s"]
+        "Temperature Profile (oC)", "kp (cm/s"]
       
     csvfile = FileName1
     with open(csvfile, "w") as output:
