@@ -75,6 +75,7 @@ def station_RIHT():
 
 
 def reactor_power():
+    OutageYearsMonths = []
     
     Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw.csv'
     
@@ -104,15 +105,15 @@ def reactor_power():
 
     EstimatedOutageYearsMonths = [
         (1984, 4), (1984, 5), (1986, 5), (1987, 4), (1988, 4), (1988, 7), (1988, 10), (1989, 6), (1990, 2), (1990, 4),
-        (1991, 3), (1991, 8), (1991, 9), (1992, 4), (1993, 9), (1994, 4) 
+        (1991, 3), (1991, 8), (1991, 9), (1992, 4), (1993, 9), (1994, 4), (1995, 5), (1995, 6), (1995, 7), (1995, 8),
+        (1995, 9), (1995, 10), (1995, 11), (1995, 12) 
         ]
-    OutageYearsMonths = EstimatedOutageYearsMonths + \
-    [(1995, 5), (1995, 6), (1995, 7), (1995, 8), (1995, 9), (1995, 10), (1995, 11), (1995, 12)]
 
     for date in Outages:
         x = (date.year, date.month)
         OutageYearsMonths.append(x)
-                                       
+    
+    OutageYearsMonths = EstimatedOutageYearsMonths + OutageYearsMonths                              
 #         if (date.year == 2008 and 3 <= date.month <= 12):
 #             CleaningYearsMonths.append((date.year, date.month))
 #         
@@ -310,16 +311,26 @@ def bundle_sizes(SteamGenerator, TotalSGTubeNumber):
    
 def primaryside_cleaned_tubes(SteamGenerator, Year_Month):
     
+    if SteamGenerator == ld.SteamGenerator:
+        TubesCleaned = 2093
+        Fraction_TubesCleaned = 0.969
+    elif SteamGenerator == ld.SteamGenerator_2:
+        TubesCleaned = 2105
+        Fraction_TubesCleaned = 0.987
+    else:
+        None
+    
     TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Year_Month)
     
     #amount of tubes cleaned per each cleaning will have to be custom
     if Year_Month == YearOutage:
         # siva blast in 1995 used on only 60% of tubes due to time/spacial constraints
-        PercentTubesCleaned = 0.6
+
+        PercentTubesCleaned = TubesCleaned / TotalSGTubeNumber
     
     elif Year_Month == YearRefurbishment:
 
-        PercentTubesCleaned = 0.96
+        PercentTubesCleaned = Fraction_TubesCleaned
     else:
         # none cleaned outside of outages, cleaned tubes list below has no appended bundles
         PercentTubesCleaned = 0
@@ -438,12 +449,12 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
     
     TimeStep = 1 / 12 # 12 months in a year
     # default values
-    ReducedTubeGrowth = 0.0005  # [g/cm^2] /year = 3.25 um/year
+    ReducedTubeGrowth = 0.0006  # [g/cm^2] /year = 3.25 um/year
     
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     
     if Year_Month <= YearCPP:
-        Growth = 0.0021#[g/cm^2]/yr
+        Growth = 0.002#[g/cm^2]/yr
     
     elif Year_Month in OutageYearsMonths:
         Growth = 0
@@ -453,13 +464,13 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
         
     #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
     if Year_Month == (1988, 4):
-        Bundle.SludgeLoading[i] = 0.75 * Bundle.SludgeLoading[i]
+        Bundle.SludgeLoading[i] = 0.7 * Bundle.SludgeLoading[i]
         
     elif Year_Month == YearOutage:
-        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.8
+        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.6
     
     elif Year_Month == YearRefurbishment:
-        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.1
+        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.05
          
     else:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] + Growth * TimeStep #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
@@ -695,8 +706,9 @@ def pht_steam_quality(Temperature, Year_Month, j):
 #     C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
 
     FullPower = 2061.4 * 1000 #CoreMassFlow * C_p_avg * Delta_T  # [kW]
-
+    
     difference = []
+
     
     # outages are accounted for in the 1996-01 to 2018-06 data via power derating (down to 0.01 or lower)
     if Year_Month in Year_Month_PowerTracked:
@@ -1284,7 +1296,7 @@ def temperature_profile(
 def divider_plate(j, Year_Month, DividerPlateLeakage):
     
     Time_Step = 1 / 12 # 12 months in a year, monthly timestep through heat transfer package
-    PostOutageYearlyLeakage = 0.0002
+    PostOutageYearlyLeakage = 0.0006
     
     # changes to rate of leakage growth
     if Year_Month in OutageYearsMonths:
@@ -1305,20 +1317,20 @@ def divider_plate(j, Year_Month, DividerPlateLeakage):
     
     # Leakage through the replaced welded divider plates immediately following replacement was estimated as 2% PHT flow
     if Year_Month == YearOutageRestart:
-        DividerPlateLeakage = 0.0225
+        DividerPlateLeakage = 0.025
     
     # Development of additional leak site
     elif Year_Month == (1996, 3):
-        DividerPlateLeakage = 0.042
+        DividerPlateLeakage = 0.048
         
-    # Development of additional leak site
-    elif Year_Month == (1999, 2):
-        DividerPlateLeakage = 0.045
+#     # Development of additional leak site
+#     elif Year_Month == (1999, 2):
+#         DividerPlateLeakage = 0.046
         
     DividerPlateLeakage = DividerPlateLeakage + Time_Step * LeakageRate
     
-    if Year_Month >= (2008, 3):
-        DividerPlateLeakage = 0.046
+    if Year_Month >= (1998, 11):
+        DividerPlateLeakage = 0.052
 
     return DividerPlateLeakage
 
@@ -1339,7 +1351,7 @@ def divider_plate(j, Year_Month, DividerPlateLeakage):
 def secondary_side_pressure(Year_Month):
     
     FirstPressureReduction = (1992, 11)
-    SecondPressureReduction = (1998, 12)
+    SecondPressureReduction = (1998, 11)
     
     if Year_Month < FirstPressureReduction:
         SecondarySidePressure = 4.593  # MPa

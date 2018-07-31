@@ -307,12 +307,10 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
     RIHT_phase1_preCPP = RIHT_by_phase['1983-4-8':'1988-5-8']
     RIHT_phase1_postCPP = RIHT_by_phase['1988-5-8':'1992-9-8']
     RIHT_phase2 = RIHT_by_phase['1992-9-8':'1995-12-8']
-    RIHT_phase3 = RIHT_by_phase['1996-1-8':'1998-10-8']
-    RIHT_phase4 = RIHT_by_phase['1998-10-8':'2008-3-8']
-    RIHT_phase5_6 = RIHT_by_phase['2012-5-8':'2017-8-8']
-    RIHT_phase7 = RIHT_by_phase['2017-9-8':'2018-10-8']
-    
-    
+    RIHT_phase3 = RIHT_by_phase['1996-1-8':'1998-9-8']
+    RIHT_phase4 = RIHT_by_phase['1998-9-8':'2008-3-8']
+    RIHT_phase5_6 = RIHT_by_phase['2012-5-8':'2019-3-8']
+   
     RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Steam quality'] > 0]
     RIHT_phase2 = RIHT_phase2[RIHT_phase2['Steam quality'] > 0]
     RIHT_phase3 = RIHT_phase3[RIHT_phase3['Steam quality'] > 0]
@@ -322,8 +320,7 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
     RIHT_phase2 = RIHT_phase2[RIHT_phase2['RIHT'] > 265]
     RIHT_phase3 = RIHT_phase3[RIHT_phase3['RIHT'] > 263.5]
     RIHT_phase4 = RIHT_phase4[RIHT_phase4['RIHT'] >= 263]
-    RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['RIHT'] >= 263.5]
-    RIHT_phase7 = RIHT_phase7[RIHT_phase7['RIHT'] >= 263]
+    RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['RIHT'] >= 263.8]
     
     if j % (876 * 2) == 0: 
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
@@ -334,7 +331,6 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
         RIHT_phase3.to_excel(writer, sheet_name = 'Phase 3')
         RIHT_phase4.to_excel(writer, sheet_name = 'Phase 4')
         RIHT_phase5_6.to_excel(writer, sheet_name = 'Phase 5_6')
-        RIHT_phase7.to_excel(writer, sheet_name = 'Phase 7')
          
          
         # sets spacing between columns A and B so date column (A) is more clear
@@ -345,9 +341,8 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
         worksheet4 = writer.sheets['Phase 3']
         worksheet5 = writer.sheets['Phase 4']
         worksheet6 = writer.sheets['Phase 5_6']
-        worksheet7 = writer.sheets['Phase 7']
          
-        worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7]
+        worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5, worksheet6]
          
         for sheet in worksheets:
             sheet.set_column('A:B', 12)
@@ -457,7 +452,7 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator,):
 # print (ld.SteamGenerator_2[SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)[1][0]].OuterFe3O4Loading)
 
 
-SimulationYears = 37 # years
+SimulationYears = 36 # years
 SimulationHours = SimulationYears * 876
 
 SimulationStart = 0
