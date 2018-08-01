@@ -197,7 +197,7 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, Year_Month_Day_Hour):
     if Year_Month_Day_Hour == (1995, 5, 8, 8):
         CleaningEfficiency = 0.6
     elif Year_Month_Day_Hour == (2008, 3, 1, 14):
-        CleaningEfficiency = 0.30 #(IR-33110-0039-001-A)
+        CleaningEfficiency = 0.22 #(IR-33110-0039-001-A)
     else:
         CleaningEfficiency = 0 # no cleaning, oxide layers returned without reduction in thickness
         

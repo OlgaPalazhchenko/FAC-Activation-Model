@@ -300,8 +300,8 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
      'DP leakage' : DP_leakage
     })
    
+   # add power as output to steam frac - can use to filter instead of steam quality
     RIHT_by_phase.set_index('Date', inplace=True)
-     
 #     filters data to remove anything below 0.99 FP (except for phase 4, where power deratings took place to ~0.9 FP
      
     RIHT_phase1_preCPP = RIHT_by_phase['1983-4-8':'1988-5-8']
@@ -319,8 +319,8 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
     RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['RIHT'] > 265]
     RIHT_phase2 = RIHT_phase2[RIHT_phase2['RIHT'] > 265]
     RIHT_phase3 = RIHT_phase3[RIHT_phase3['RIHT'] > 263.5]
-    RIHT_phase4 = RIHT_phase4[RIHT_phase4['RIHT'] >= 263]
-    RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['RIHT'] >= 263.8]
+    RIHT_phase4 = RIHT_phase4[RIHT_phase4['RIHT'] >= 263.25]
+    RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['RIHT'] >= 263]
     
     if j % (876 * 2) == 0: 
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
@@ -452,7 +452,7 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator,):
 # print (ld.SteamGenerator_2[SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)[1][0]].OuterFe3O4Loading)
 
 
-SimulationYears = 36 # years
+SimulationYears = 37 # years
 SimulationHours = SimulationYears * 876
 
 SimulationStart = 0
@@ -572,10 +572,7 @@ for j in range(SimulationStart, SimulationEnd):
             Temperature2 = None
             
         # optional preview of RIHT and primary-side steam quality
-#         print (
-#             Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100, ld.SteamGenerator_2[0].SludgeLoading[11],
-#             ld.SteamGenerator_2[SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)[1][0]].OuterOxLoading[20]
-#             )#, RIHT_2)
+        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
 
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Temperature1,

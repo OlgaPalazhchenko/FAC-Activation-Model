@@ -2,7 +2,7 @@ import lepreau_data as ld
 import numpy as np
 import thermochemistry_and_constants as nc
 import random
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt 
 import csv
 import pandas as pd
 from datetime import date, timedelta, datetime
@@ -449,7 +449,7 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
     
     TimeStep = 1 / 12 # 12 months in a year
     # default values
-    ReducedTubeGrowth = 0.0006  # [g/cm^2] /year = 3.25 um/year
+    ReducedTubeGrowth = 0.0005  # [g/cm^2] /year = 3.25 um/year
     
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     
@@ -464,13 +464,13 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
         
     #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
     if Year_Month == (1988, 4):
-        Bundle.SludgeLoading[i] = 0.7 * Bundle.SludgeLoading[i]
+        Bundle.SludgeLoading[i] = 0.75 * Bundle.SludgeLoading[i]
         
     elif Year_Month == YearOutage:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.6
     
     elif Year_Month == YearRefurbishment:
-        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.05
+        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.1
          
     else:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] + Growth * TimeStep #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
@@ -1330,7 +1330,7 @@ def divider_plate(j, Year_Month, DividerPlateLeakage):
     DividerPlateLeakage = DividerPlateLeakage + Time_Step * LeakageRate
     
     if Year_Month >= (1998, 11):
-        DividerPlateLeakage = 0.052
+        DividerPlateLeakage = 0.051
 
     return DividerPlateLeakage
 

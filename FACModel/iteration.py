@@ -234,7 +234,7 @@ def FAC_solver(Section, ConstantRate, j):
     
     Year_Month = (CalendarYear.year, CalendarYear.month)
     
-    if Year_Month < (2008, 2):
+    if Year_Month < (1983, 5):
         ACTIVATION_ENERGY_Fe = 264860.0725
         ACTIVATION_ENERGY_H2onFe = 262286.4165
     
