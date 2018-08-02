@@ -101,7 +101,7 @@ def reactor_power():
     worksheet1 = writer.sheets['Monthly Averaged FP']
     writer.save()
     
-    Outages = monthly_average.index[monthly_average['power'] < 0.4]
+    Outages = monthly_average.index[monthly_average['power'] < 0.1]
 
     EstimatedOutageYearsMonths = [
         (1984, 4), (1984, 5), (1986, 5), (1987, 4), (1988, 4), (1988, 7), (1988, 10), (1989, 6), (1990, 2), (1990, 4),
@@ -470,7 +470,7 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.6
     
     elif Year_Month == YearRefurbishment:
-        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.1
+        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.2
          
     else:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] + Growth * TimeStep #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
@@ -695,8 +695,6 @@ def outer_area(SteamGenerator):
     return [np.pi * x * y for x, y in zip(SteamGenerator.OuterDiameter, SteamGenerator.Length.magnitude)]
 
 
-# print (list(zip(Year_Month_PowerTracked, Operating_Power)))
-
 def pht_steam_quality(Temperature, Year_Month, j):
    
     CoreMassFlow =  7600  # [kg /s]
@@ -737,7 +735,7 @@ def pht_steam_quality(Temperature, Year_Month, j):
         
     # outside of data in the logs and the 1995 outage (1983-1995 data) 100 % full power is assumed
     else:
-        Fraction_of_FP = 1
+        Fraction_of_FP = 0.99
        
     P = FullPower * Fraction_of_FP
 
@@ -755,7 +753,7 @@ def pht_steam_quality(Temperature, Year_Month, j):
 #     print (Year_Month, Fraction_of_FP, x)
     if x < 0:
         x = 0
-    return x
+    return x, P
 
 # pht_steam_quality(264.8 +273.15, (2001,12), 0)
 

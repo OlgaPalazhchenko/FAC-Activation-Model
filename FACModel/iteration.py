@@ -234,15 +234,15 @@ def FAC_solver(Section, ConstantRate, j):
     
     Year_Month = (CalendarYear.year, CalendarYear.month)
     
-    if Year_Month < (1983, 5):
+    if Year_Month < SGHX.YearRefurbRestart:
         ACTIVATION_ENERGY_Fe = 264860.0725
         ACTIVATION_ENERGY_H2onFe = 262286.4165
     
     #higher Cr-content CS feeder replacement
     else:
         #Mid FAC (25-40 um/a):
-        ACTIVATION_ENERGY_Fe = 270812.6057
-        ACTIVATION_ENERGY_H2onFe = 268238.9496        
+        ACTIVATION_ENERGY_Fe = 273721.118
+        ACTIVATION_ENERGY_H2onFe = 271147.4619       
         
     # updates hydrolysis distribution of Fe species. Even if FAC rate kept constant, oxide thickness changes
     # M/O Fe total concentration changes w.r.t. thickness, so species cncentrations change too

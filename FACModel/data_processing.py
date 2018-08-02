@@ -123,8 +123,8 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
     kp_Tdependent = []
     OutletCorrosionRate_um = [] 
     
-#     FeSolubility_SteamGeneratorTubes = []
-#     FeConcentration_SteamGeneratorTubes = []
+    FeSolubility_SteamGeneratorTubes = []
+    FeConcentration_SteamGeneratorTubes = []
     Output = pht_model.output
         
     SelectedTubes = SGHX.tube_picker(SGHX.Method, SteamGenerator)[0]
@@ -197,6 +197,8 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
         writer.writerow(['SteamQuality'])
         writer.writerow([x_pht])
         
+        writer.writerow([''])
+        writer.writerows(OutletCorrosionRate_um)
 #         writer.writerow([''])
 #         writer.writerow(['Outlet Streams (oC)'])
 #         writer.writerow(OutletTemperatures1)

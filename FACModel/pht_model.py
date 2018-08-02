@@ -267,7 +267,7 @@ pht_SteamFraction = []
 DP_leakage = []
 Years = []
 
-def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temperature2, DividerPlateLeakage, j):
+def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, Temperature1, Temperature2, DividerPlateLeakage, j):
         
     FACRate_OutletFeeder.append(FACRate)
     RIHT_InletFeeder1.append(RIHT1)
@@ -297,12 +297,13 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
      'RIHT': RIHT_InletFeeder2,
      'Delta RIHT': RIHT2_delta,
      'Steam quality': pht_SteamFraction,
+     'Power' : Power,
      'DP leakage' : DP_leakage
     })
    
    # add power as output to steam frac - can use to filter instead of steam quality
     RIHT_by_phase.set_index('Date', inplace=True)
-#     filters data to remove anything below 0.99 FP (except for phase 4, where power deratings took place to ~0.9 FP
+
      
     RIHT_phase1_preCPP = RIHT_by_phase['1983-4-8':'1988-5-8']
     RIHT_phase1_postCPP = RIHT_by_phase['1988-5-8':'1992-9-8']
@@ -311,16 +312,13 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Temperature1, Temper
     RIHT_phase4 = RIHT_by_phase['1998-9-8':'2008-3-8']
     RIHT_phase5_6 = RIHT_by_phase['2012-5-8':'2019-3-8']
    
-    RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Steam quality'] > 0]
-    RIHT_phase2 = RIHT_phase2[RIHT_phase2['Steam quality'] > 0]
-    RIHT_phase3 = RIHT_phase3[RIHT_phase3['Steam quality'] > 0]
-    
-    # removes some more artifically low RIHT's due to averaging being over entire month increments
-    RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['RIHT'] > 265]
-    RIHT_phase2 = RIHT_phase2[RIHT_phase2['RIHT'] > 265]
-    RIHT_phase3 = RIHT_phase3[RIHT_phase3['RIHT'] > 263.5]
-    RIHT_phase4 = RIHT_phase4[RIHT_phase4['RIHT'] >= 263.25]
-    RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['RIHT'] >= 263]
+   # filters data to remove outages
+    RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Power'] > 0]
+    RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['Power'] > 0]
+    RIHT_phase2 = RIHT_phase2[RIHT_phase2['Power'] > 0]
+    RIHT_phase3 = RIHT_phase3[RIHT_phase3['Power'] > 0]
+    RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] >= 0]
+    RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['Power'] >= 0]
     
     if j % (876 * 2) == 0: 
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
@@ -384,67 +382,66 @@ def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
 
-def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator,):
+def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, SelectedTubes):
     
-    SelectedTubes = SGHX.tube_picker(SGHX.Method, SG)[0]
-    
-    SelectedTubes[0].InnerIronOxLoading = None
-    SelectedTubes[0].OuterFe3O4Loading = None
-    
-    SelectedTubes[1].InnerIronOxLoading = None
-    SelectedTubes[1].OuterFe3O4Loading = None
-    
-    SelectedTubes[2].InnerIronOxLoading = None
-    SelectedTubes[2].OuterFe3O4Loading = None
-    
-    SteamGenerator[Default_Tube].InnerIronOxLoading = None
-    SteamGenerator[Default_Tube].OuterFe3O4Loading = None
-    
-    for Bundle in SteamGenerator:
-        Bundle.SludgeLoading = [] * Bundle.NodeNumber
-    
-    InletFeeder.InnerIronOxLoading = None
-    InletFeeder.OuterFe3O4Loading = None
-    
-    OutletFeeder.InnerIronOxLoading = None
-    OutletFeeder.OuterFe3O4Loading = None
-    
-    FuelChannel.InnerIronOxLoading = None
-    FuelChannel.OuterFe3O4Loading = None
-    
-    DividerPlateLeakage = None
-#     if Inlet == ld.InletFeeder:
-#         FileName = 'OutputSG2.csv'
-#     else:
-#         FileName = 'OutputSG1.csv'
-#     # oxide thickness throughout system
-#     # for each of selected SG tubes and for a default tube
-#     # spalling time/particle size input
-#     # divider plate leakage
-#     # steam generator sludge
-#     
 #     SelectedTubes = SGHX.tube_picker(SGHX.Method, SG)[0]
 #     
-#     AllPipes = [InletFeeder, FuelChannel, OutletFeeder, SteamGenerator[pht_model.Default_Tube]] + SelectedTubes 
+#     SelectedTubes[0].InnerIronOxLoading = None
+#     SelectedTubes[0].OuterFe3O4Loading = None
 #     
-#     InputParameters = open(FileName, 'r')
-#     InputParametersReader = list(csv.reader(InputParameters, delimiter=','))  
+#     SelectedTubes[1].InnerIronOxLoading = None
+#     SelectedTubes[1].OuterFe3O4Loading = None
 #     
-#     InnerIronOxRows = [13, 14, 15, 16, 17, 18, 19]
-#     OuterFe3O4Rows = [22, 23, 24, 25, 26, 27, 28]
+#     SelectedTubes[2].InnerIronOxLoading = None
+#     SelectedTubes[2].OuterFe3O4Loading = None
 #     
-#     for k, Pipe in zip(InnerIronOxRows, AllPipes):
-#         Pipe.InnerIronOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
-#         
-#     for k, Pipe in zip(OuterFe3O4Rows, AllPipes):
-#         Pipe.OuterFe3O4Loading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
-# 
-#     for Bundle in SG:
-#         Bundle.SludgeLoading = [float(InputParametersReader[58][i]) for i in range(0, Bundle.NodeNumber)]
+#     SteamGenerator[Default_Tube].InnerIronOxLoading = None
+#     SteamGenerator[Default_Tube].OuterFe3O4Loading = None
 #     
-#     DividerPlateLeakage = [float(InputParametersReader[69][i]) for i in range(0)]
+#     for Bundle in SteamGenerator:
+#         Bundle.SludgeLoading = [] * Bundle.NodeNumber
 #     
-#     x = [float(InputParametersReader[61][i]) for i in range(0)]
+#     InletFeeder.InnerIronOxLoading = None
+#     InletFeeder.OuterFe3O4Loading = None
+#     
+#     OutletFeeder.InnerIronOxLoading = None
+#     OutletFeeder.OuterFe3O4Loading = None
+#     
+#     FuelChannel.InnerIronOxLoading = None
+#     FuelChannel.OuterFe3O4Loading = None
+#     
+#     DividerPlateLeakage = None
+    if InletFeeder == ld.InletFeeder:
+        FileName = 'SG2 Input Phase 2.csv'
+    else:
+        FileName = 'OutputSG1.csv'
+    # oxide thickness throughout system
+    # for each of selected SG tubes and for a default tube
+    # spalling time/particle size input
+    # divider plate leakage
+    # steam generator sludge
+     
+     
+    AllPipes = [InletFeeder, FuelChannel, OutletFeeder, SteamGenerator] + SelectedTubes 
+     
+    InputParameters = open(FileName, 'r')
+    InputParametersReader = list(csv.reader(InputParameters, delimiter=','))  
+     
+    InnerIronOxRows = [13, 14, 15, 16, 17, 18, 19]
+    OuterFe3O4Rows = [22, 23, 24, 25, 26, 27, 28]
+     
+    for k, Pipe in zip(InnerIronOxRows, AllPipes):
+        Pipe.InnerIronOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
+         
+    for k, Pipe in zip(OuterFe3O4Rows, AllPipes):
+        Pipe.OuterFe3O4Loading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
+ 
+    for Bundle in SG:
+        Bundle.SludgeLoading = [float(InputParametersReader[58][i]) for i in range(0, Bundle.NodeNumber)]
+     
+    DividerPlateLeakage = [float(InputParametersReader[61][i]) for i in range(0)]
+     
+    x = [float(InputParametersReader[64][i]) for i in range(0)]
     
     return DividerPlateLeakage, x
 
@@ -452,10 +449,10 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator,):
 # print (ld.SteamGenerator_2[SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)[1][0]].OuterFe3O4Loading)
 
 
-SimulationYears = 37 # years
-SimulationHours = SimulationYears * 876
+SimulationYears = 2 # years
+SimulationStart = 4307
 
-SimulationStart = 0
+SimulationHours = SimulationStart + SimulationYears * 876
 SimulationEnd = SimulationHours
 
 import time
@@ -520,12 +517,14 @@ for j in range(SimulationStart, SimulationEnd):
                 DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
             else:
                 DividerPlateLeakage, x_pht = system_input(
-                    InletFeeder_1_Loop1, FuelChannel_1_Loop1, OutletFeeder_2_Loop1, SteamGeneratorTube_2_Loop1
+                    InletFeeder_1_Loop1, FuelChannel_1_Loop1, OutletFeeder_2_Loop1, SteamGeneratorTube_2_Loop1,
+                    SelectedTubes
                     )
                  
                 if Loop == "full":
                     DividerPlateLeakage, x_pht = system_input(
-                        InletFeeder_2_Loop1, FuelChannel_2_Loop1, OutletFeeder_1_Loop1, SteamGeneratorTube_1_Loop1
+                        InletFeeder_2_Loop1, FuelChannel_2_Loop1, OutletFeeder_1_Loop1, SteamGeneratorTube_1_Loop1,
+                        SelectedTubes
                         )
                                  
         start = SGHX.YearStartup
@@ -550,7 +549,7 @@ for j in range(SimulationStart, SimulationEnd):
         
         # in half loop mode, these are equal, so avg = RIHT_1 = RIHT_2
         T_RIH_average = (RIHT_1 + RIHT_2) / 2
-        x_pht = SGHX.pht_steam_quality(T_RIH_average + 273.15, Year_Month, j)
+        x_pht, Power = SGHX.pht_steam_quality(T_RIH_average + 273.15, Year_Month, j)
         DividerPlateLeakage = SGHX.divider_plate(j, Year_Month, DividerPlateLeakage)
         
         # core and outlet temperatures currently not being updated, but all sections called for continuity
@@ -572,10 +571,10 @@ for j in range(SimulationStart, SimulationEnd):
             Temperature2 = None
             
         # optional preview of RIHT and primary-side steam quality
-        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
+        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100, ld.OutletFeeder_2.CorrRate[2], ld.OutletFeeder_2.SolutionOxide.FeTotal[2])
 
         output = output_time_logging(
-            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Temperature1,
+            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, Temperature1,
             Temperature2, DividerPlateLeakage, j
             )
             
