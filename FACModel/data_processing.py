@@ -21,24 +21,30 @@ rc('mathtext', default='regular')
 PlotOutput = "yes"
 
 
-def purification_csv():
+def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
+    Output = pht_model.output
+    
+    OutletCorrosionRate = Output[0]
+    Time = Output[6]
+    InletBulkConcentration = Output[7]
+    OutletSOConcentration = Output[8]
     
     OutletCorrosionRate_uma = []
     InletBulkConcentration_gcm3 = []
     OutletSOConcentration_gcm3 = []
     AvgCorrRate = []
-     
+    
     for Rate, Conc1, Conc2 in zip(OutletCorrosionRate, InletBulkConcentration, OutletSOConcentration):
         x = ld.UnitConverter(
-        Ou.Section1, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None
+        OutletFeeder, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None
         )
         y = ld.UnitConverter(
-            In.Section1, "Mol per Kg", "Grams per Cm Cubed", Conc1, None, None, None, nc.FeMolarMass, None)
+            InletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc1, None, None, None, nc.FeMolarMass, None)
          
         z = ld.UnitConverter(
-            Ou.Section1, "Mol per Kg", "Grams per Cm Cubed", Conc2, None, None, None, nc.FeMolarMass, None
+            OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc2, None, None, None, nc.FeMolarMass, None
             )
-        q = sum(x) / Ou.Section1.NodeNumber
+        q = sum(x) / OutletFeeder.NodeNumber
          
         OutletCorrosionRate_uma.append(x)
         InletBulkConcentration_gcm3.append(y)
@@ -46,26 +52,34 @@ def purification_csv():
         AvgCorrRate.append(q)
      
     OutletSolubility_gcm3 = ld.UnitConverter(
-            Ou.Section1, "Mol per Kg", "Grams per Cm Cubed", Ou.Section1.SolutionOxide.FeSatFe3O4, None, None, None,
+            OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", OutletFeeder.SolutionOxide.FeSatFe3O4, None, None, None,
             nc.FeMolarMass, None
             )
      
-    DissolutionRate = []
-    InnerOxideGrowth = []
-    DeltaOx = []
-    for Concentration, Rate in zip(OutletSOConcentration_gcm3, OutletCorrosionRate):
-        diss = [nc.KdFe3O4 * (x - y) for x, y in zip (OutletSolubility_gcm3, Concentration)]
-        growth = [i * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide for i in Rate]
-        delta = [x - y for x, y in zip(growth, diss)]
-        DissolutionRate.append(diss)
-        InnerOxideGrowth.append(growth)
-        DeltaOx.append(delta)
+    OutletCorrosionRate_uma.append(x)
+    InletBulkConcentration_gcm3.append(y)
+    OutletSOConcentration_gcm3.append(z)
+    AvgCorrRate.append(q)
+     
+    OutletSolubility_gcm3 = ld.UnitConverter(
+            OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", OutletFeeder.SolutionOxide.FeSatFe3O4, None, None, None,
+            nc.FeMolarMass, None
+            )
+     
+#     DissolutionRate = []
+#     InnerOxideGrowth = []
+#     DeltaOx = []
+#     for Concentration, Rate in zip(OutletSOConcentration_gcm3, OutletFeeder.CorrRate):
+#         diss = [nc.KdFe3O4 * (x - y) for x, y in zip (OutletSolubility_gcm3, Concentration)]
+#         growth = [i * it.Diffusion(Section, "Fe") / Section.FractionFeInnerOxide for i in Rate]
+#         delta = [x - y for x, y in zip(growth, diss)]
+#         DissolutionRate.append(diss)
+#         InnerOxideGrowth.append(growth)
+#         DeltaOx.append(delta)
      
     csvfile = "PurificationOutput.csv"
     with open(csvfile, "w") as output:
         writer = csv.writer(output, lineterminator='\n')
-        writer.writerow(['1.67 %'])
-        writer.writerow([''])
         writer.writerow(['Outlet Corrosion Rate (g/cm^2 s and um/a)'])
         writer.writerows(OutletCorrosionRate_uma)
     #     writer.writerows(OutletCorrosionRate)
@@ -91,26 +105,9 @@ def purification_csv():
         writer.writerows(OutletSOConcentration_gcm3)
         writer.writerow([''])
          
-    #     writer.writerow(['Outlet Solubility (g/cm^3)'])
-    #     writer.writerow(OutletSolubility_gcm3)
+        writer.writerow(['Outlet Solubility (g/cm^3)'])
+        writer.writerow(OutletSolubility_gcm3)
          
-    #     writer.writerow([''])
-        writer.writerow(['Dissolution Rate (g/cm^2 s)'])
-        writer.writerows(DissolutionRate)
-    #     writer.writerow([''])
-         
-    #     writer.writerow([''])
-    #     writer.writerow(['Inner Oxide Growth from Corrosion (g/cm^2 s)'])
-    #     writer.writerows(InnerOxideGrowth)
-         
-        writer.writerow([''])
-        writer.writerow(['Growth - Dissolution (g/cm^2 s)'])
-        writer.writerows(DeltaOx)
-        writer.writerow([''])
-    #     writer.writerow(['SG Oxide (g/cm2)'])
-    #     writer.writerows(SGOxide)
-    #     writer.writerow([''])
-    
 
 def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
     
@@ -206,9 +203,11 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
 
 # if loop run in half configuration, these will be identical
 RIHT_csv(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, "OutputSG2.csv")
+purification_csv(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2)
 if pht_model.Loop == "full":
     RIHT_csv(
-        ld.InletFeeder_2, ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator, "OutputSG1.csv")  
+        ld.InletFeeder_2, ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator, "OutputSG1.csv")
+    purification_csv(ld.InletFeeder_2, ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator) 
 
 
 LoopDistance = []

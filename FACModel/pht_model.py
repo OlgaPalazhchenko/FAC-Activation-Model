@@ -188,7 +188,7 @@ class PHTS():
             # Inlet header purification systemc comes off of only one inlet feeder header in a full figure-of-8 loop
             if self.Section1 == ld.InletFeeder and i == 2:
                 purificationfactor = 1900 / (1900 + 12)     
-                if j >= 168: 
+                if j >= 17: 
                     for x in BulkConcentrations:
                         x[i] =  purificationfactor * x[i - 1]
                 if Activation == "yes":
@@ -267,7 +267,14 @@ pht_SteamFraction = []
 DP_leakage = []
 Years = []
 
-def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, Temperature1, Temperature2, DividerPlateLeakage, j):
+Time = []
+InletBulkConcentration = []
+OutletSOConcentration = []
+
+
+def output_time_logging(
+        FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, Temperature1, Temperature2, DividerPlateLeakage, j,
+        InletBulkFe, OutletSOFe):
         
     FACRate_OutletFeeder.append(FACRate)
     RIHT_InletFeeder1.append(RIHT1)
@@ -275,6 +282,9 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, Temperature1,
     RIHT_average.append(RIHT_avg)
     pht_SteamFraction.append(x)
     DP_leakage.append(DividerPlateLeakage)
+    InletBulkConcentration.append(InletBulkFe)
+    OutletSOConcentration.append(OutletSOFe)
+    Time.append(j)
 #     OutletTemperature_Bundle_1.append(Temperature1)
 #     OutletTemperature_Bundle_2.append(Temperature2)
     
@@ -351,7 +361,10 @@ def output_time_logging(FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, Temperature1,
         writer.save()
     
     
-    return FACRate_OutletFeeder, OutletTemperature_Bundle_1, OutletTemperature_Bundle_2, DividerPlateLeakage, x
+    return (
+        FACRate_OutletFeeder, OutletTemperature_Bundle_1, OutletTemperature_Bundle_2, DividerPlateLeakage, x, j, Time,
+        InletBulkConcentration, OutletSOConcentration
+        ) 
 
 
 def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
@@ -414,7 +427,7 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, Selecte
     if InletFeeder == ld.InletFeeder:
         FileName = 'SG2 Input Phase 2.csv'
     else:
-        FileName = 'OutputSG1.csv'
+        FileName = 'SG1 Input Phase 2.csv'
     # oxide thickness throughout system
     # for each of selected SG tubes and for a default tube
     # spalling time/particle size input
@@ -422,7 +435,7 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, Selecte
     # steam generator sludge
      
      
-    AllPipes = [InletFeeder, FuelChannel, OutletFeeder, SteamGenerator] + SelectedTubes 
+    AllPipes = [InletFeeder, FuelChannel, OutletFeeder, SteamGenerator[Default_Tube]] + SelectedTubes 
      
     InputParameters = open(FileName, 'r')
     InputParametersReader = list(csv.reader(InputParameters, delimiter=','))  
@@ -436,23 +449,23 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, Selecte
     for k, Pipe in zip(OuterFe3O4Rows, AllPipes):
         Pipe.OuterFe3O4Loading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
  
-    for Bundle in SG:
+    for Bundle in SteamGenerator:
         Bundle.SludgeLoading = [float(InputParametersReader[58][i]) for i in range(0, Bundle.NodeNumber)]
      
-    DividerPlateLeakage = [float(InputParametersReader[61][i]) for i in range(0)]
+    DividerPlateLeakage = float(InputParametersReader[61][0])
      
-    x = [float(InputParametersReader[64][i]) for i in range(0)]
-    
+    x = float(InputParametersReader[64][0])
+    print (ld.SteamGenerator_2[Default_Tube].OuterFe3O4Loading[10], DividerPlateLeakage, x)
     return DividerPlateLeakage, x
 
-# print (system_input(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2))
+# print (system_input(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, [ld.SteamGenerator_2[2], ld.SteamGenerator_2[3]]))
 # print (ld.SteamGenerator_2[SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)[1][0]].OuterFe3O4Loading)
 
 
-SimulationYears = 2 # years
-SimulationStart = 4307
+SimulationYears = 1 # years
+SimulationStart = 0
 
-SimulationHours = SimulationStart + SimulationYears * 876
+SimulationHours = SimulationStart + SimulationYears * 10 #876
 SimulationEnd = SimulationHours
 
 import time
@@ -507,7 +520,7 @@ for j in range(SimulationStart, SimulationEnd):
         None
 
     # parameters tracked/updated with time
-    if j % (73) == 0:  # 73 h * 10 = 12 x a year
+    if j % (17) == 0:  # 73 h * 10 = 12 x a year
         if j == SimulationStart:
 #             x_pht = 0.01
 #             DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
@@ -517,16 +530,16 @@ for j in range(SimulationStart, SimulationEnd):
                 DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
             else:
                 DividerPlateLeakage, x_pht = system_input(
-                    InletFeeder_1_Loop1, FuelChannel_1_Loop1, OutletFeeder_2_Loop1, SteamGeneratorTube_2_Loop1,
-                    SelectedTubes
+                    ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, SelectedTubes
                     )
                  
                 if Loop == "full":
                     DividerPlateLeakage, x_pht = system_input(
-                        InletFeeder_2_Loop1, FuelChannel_2_Loop1, OutletFeeder_1_Loop1, SteamGeneratorTube_1_Loop1,
-                        SelectedTubes
+                        ld.InletFeeder_2,ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator, SelectedTubes
                         )
-                                 
+        else:
+            None
+                                   
         start = SGHX.YearStartup
         delta = timedelta(hours = j * nc.TIME_STEP)
         CalendarYear = start + delta
@@ -571,11 +584,12 @@ for j in range(SimulationStart, SimulationEnd):
             Temperature2 = None
             
         # optional preview of RIHT and primary-side steam quality
-        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100, ld.OutletFeeder_2.CorrRate[2], ld.OutletFeeder_2.SolutionOxide.FeTotal[2])
+        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
 
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, Temperature1,
-            Temperature2, DividerPlateLeakage, j
+            Temperature2, DividerPlateLeakage, j, InletFeeder_1_Loop1.Section1.Bulk.FeTotal,
+            OutletFeeder_2_Loop1.Section1.SolutionOxide.FeTotal
             )
             
     else:

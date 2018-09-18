@@ -1403,6 +1403,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
     
     MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude * DividerPlateLeakage
     # decreases as divider (bypass) flow increases
+    
     RemainingPHTMassFlow = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude
 
     Selected_Tubes = tube_picker(Method, SteamGenerator)[0]

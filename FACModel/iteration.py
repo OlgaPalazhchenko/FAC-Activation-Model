@@ -306,8 +306,8 @@ def FAC_solver(Section, ConstantRate, j):
     if Section in ld.FuelSections:
         rate = [0] * Section.NodeNumber
     # preset desired FAC rate
-#     elif Section in ld.OutletSections:
-#         rate = EmpiricalFAC_solver(Section)
+    elif Section in ld.OutletSections:
+        rate = EmpiricalFAC_solver(Section)
     
     # corrosion current calculation not required of rate has been set as constant
     else:
