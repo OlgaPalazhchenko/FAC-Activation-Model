@@ -187,8 +187,8 @@ class PHTS():
                 
             # Inlet header purification systemc comes off of only one inlet feeder header in a full figure-of-8 loop
             if self.Section1 == ld.InletFeeder and i == 2:
-                purificationfactor = 1900 / (1900 + 12)     
-                if j >= 17: 
+                purificationfactor = 1900 / (1900 + 24)     
+                if j > 20 : 
                     for x in BulkConcentrations:
                         x[i] =  purificationfactor * x[i - 1]
                 if Activation == "yes":
@@ -275,16 +275,18 @@ OutletSOConcentration = []
 def output_time_logging(
         FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, Temperature1, Temperature2, DividerPlateLeakage, j,
         InletBulkFe, OutletSOFe):
-        
+    
+       
     FACRate_OutletFeeder.append(FACRate)
     RIHT_InletFeeder1.append(RIHT1)
     RIHT_InletFeeder2.append(RIHT2)
     RIHT_average.append(RIHT_avg)
     pht_SteamFraction.append(x)
     DP_leakage.append(DividerPlateLeakage)
-    InletBulkConcentration.append(InletBulkFe)
+    InletBulkConcentration.append(InletBulkFe.copy())
     OutletSOConcentration.append(OutletSOFe)
     Time.append(j)
+    
 #     OutletTemperature_Bundle_1.append(Temperature1)
 #     OutletTemperature_Bundle_2.append(Temperature2)
     
@@ -465,7 +467,7 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, Selecte
 SimulationYears = 1 # years
 SimulationStart = 0
 
-SimulationHours = SimulationStart + SimulationYears * 10 #876
+SimulationHours = SimulationStart + SimulationYears * 100
 SimulationEnd = SimulationHours
 
 import time
@@ -520,7 +522,7 @@ for j in range(SimulationStart, SimulationEnd):
         None
 
     # parameters tracked/updated with time
-    if j % (17) == 0:  # 73 h * 10 = 12 x a year
+    if j % (5) == 0:  # 73 h * 10 = 12 x a year
         if j == SimulationStart:
 #             x_pht = 0.01
 #             DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
@@ -584,14 +586,13 @@ for j in range(SimulationStart, SimulationEnd):
             Temperature2 = None
             
         # optional preview of RIHT and primary-side steam quality
-        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
+#         print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
 
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, Temperature1,
             Temperature2, DividerPlateLeakage, j, InletFeeder_1_Loop1.Section1.Bulk.FeTotal,
             OutletFeeder_2_Loop1.Section1.SolutionOxide.FeTotal
             )
-            
     else:
         None
     

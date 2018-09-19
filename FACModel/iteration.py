@@ -73,7 +73,7 @@ def MetalOxideInterfaceConcentration(
                   for x, y in zip(InnerOxLoading, OuterOxLoading)] 
     
     # more oxide = longer path length
-    DiffusivityTerm = [x * nc.Fe3O4Porosity_inner / y for x, y in zip(Diffusivity, PathLength)]
+    DiffusivityTerm = [x * nc.Fe3O4Porosity_inner / (20 * y) for x, y in zip(Diffusivity, PathLength)]
     
     #longer path length = lower diffusivity term
     SolutionConcentration = ld.UnitConverter(
@@ -209,7 +209,7 @@ def SolutionOxide(
             
 
 def EmpiricalFAC_solver(Section):
-    k_FAC = 0.2 # cm/s
+    k_FAC = 0.19 # cm/s
     
     Saturation = ld.UnitConverter(
         Section, "Mol per Kg", "Grams per Cm Cubed", Section.SolutionOxide.FeSatFe3O4, None, None, None, nc.FeMolarMass,
@@ -235,8 +235,11 @@ def FAC_solver(Section, ConstantRate, j):
     Year_Month = (CalendarYear.year, CalendarYear.month)
     
     if Year_Month < SGHX.YearRefurbRestart:
-        ACTIVATION_ENERGY_Fe = 264860.0725
-        ACTIVATION_ENERGY_H2onFe = 262286.4165
+#         ACTIVATION_ENERGY_Fe = 264860.0725
+#         ACTIVATION_ENERGY_H2onFe = 262286.4165
+        
+        ACTIVATION_ENERGY_Fe = 271579.5272
+        ACTIVATION_ENERGY_H2onFe = 269005.8712
     
     #higher Cr-content CS feeder replacement
     else:

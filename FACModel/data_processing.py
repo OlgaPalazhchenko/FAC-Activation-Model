@@ -61,10 +61,6 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     OutletSOConcentration_gcm3.append(z)
     AvgCorrRate.append(q)
      
-    OutletSolubility_gcm3 = ld.UnitConverter(
-            OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", OutletFeeder.SolutionOxide.FeSatFe3O4, None, None, None,
-            nc.FeMolarMass, None
-            )
      
 #     DissolutionRate = []
 #     InnerOxideGrowth = []
@@ -91,11 +87,12 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
         writer.writerow(AvgCorrRate)
      
         writer.writerow([''])
-        writer.writerow(['Inlet Bulk Concentration (mol/kg and g/cm^3)'])
-    #     writer.writerows(InletBulkConcentration)
-    #     writer.writerow([''])
+        writer.writerow(['Inlet Bulk Concentration (g/cm^3)'])
         writer.writerows(InletBulkConcentration_gcm3)
-         
+        
+        writer.writerow([''])
+        writer.writerow(['Inlet Bulk Concentration (mol/kg)'])
+        writer.writerows(InletBulkConcentration)
     #     writer.writerow([''])
     #     writer.writerow(['Outlet Oxide (g/cm2)'])
     #     writer.writerows(OutletOxide)
@@ -104,9 +101,15 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
         writer.writerow(['Outlet S/O Concentration (g/cm^3)'])
         writer.writerows(OutletSOConcentration_gcm3)
         writer.writerow([''])
+        
+        writer.writerow(['Outlet S/O Concentration (mol/kg)'])
+        writer.writerows(OutletSOConcentration)
+        writer.writerow([''])
          
         writer.writerow(['Outlet Solubility (g/cm^3)'])
         writer.writerow(OutletSolubility_gcm3)
+        writer.writerow(['Outlet Solubility (mol/kg)'])
+        writer.writerow(OutletFeeder.SolutionOxide.FeSatFe3O4)
          
 
 def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
