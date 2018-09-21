@@ -150,6 +150,9 @@ def oxide_growth(
                     Dissolution = Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
                     
                     q = OxideGrowth + Dissolution
+#                     if Section in ld.OutletSections:
+#                         if j % (50) == 0:
+#                             print (OxideGrowth, Dissolution, q, i, j)
 
                 x = 0  # nothing to dissolve (no outer layer and dissolution conditions)
             
@@ -278,10 +281,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
         else:
             Section.InnerIronOxLoading = Section.InnerIronOxLoading
             Section.OuterFe3O4Loading = Section.OuterFe3O4Loading
-    
         
-            
-            
     else:
         None
     
@@ -554,7 +554,7 @@ def spall(Section, j, SimulationStart, ElapsedTime, SpallTime, ElementTracking):
             ElapsedTime = [0] * Section.NodeNumber  # No time has elapsed yet at first time step for all nodes
 
         else:  # after first time step
-#             if Section ==ld.OutletFeeder: print (Section.Particle[i], SpallTime[i], ElapsedTime[i], j, i)
+
             if ElapsedTime[i] >= SpallTime[i]:
                 # enough time elapsed for particle of that size (with respective spall time) to come off
                 if Section.OuterOxLoading[i] > 0:
@@ -606,9 +606,6 @@ def spall(Section, j, SimulationStart, ElapsedTime, SpallTime, ElementTracking):
     for i in range(Section.NodeNumber):
         
         if Section in ld.OutletSections:  # Outlet header spalling corrector 
-
-#             print (SpallTime, i)
-            
             
             if SpallTime[i] > 4000:
                 SpallTime[i] = 3000 

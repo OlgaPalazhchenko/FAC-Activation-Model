@@ -366,7 +366,7 @@ def iron_solubility_SB(Section):
         x + y + z + w for x, y, z, w in zip(SolubilityFe2, SolubilityFeOH, SolubilityFeOH2, SolubilityFeOH3)
         ]
     
-    AdjustmentFactor = 1.1 
+    AdjustmentFactor = 1 
     FeTotalSolubility = [i * AdjustmentFactor for i in FeTotalSolubility]
     # mol/kg
     return FeTotalSolubility
