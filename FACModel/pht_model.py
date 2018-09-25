@@ -476,7 +476,7 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, Selecte
 SimulationYears = 1 # years
 SimulationStart = 0
 
-SimulationHours = SimulationStart + SimulationYears * 876
+SimulationHours = SimulationStart + SimulationYears * 300
 SimulationEnd = SimulationHours
 
 import time
@@ -529,7 +529,7 @@ for j in range(SimulationStart, SimulationEnd):
       
 
     # parameters tracked/updated with time
-    if j % (73) == 0:  # 73 h * 10 = 12 x a year
+    if j % (10) == 0:  # 73 h * 10 = 12 x a year
         if j == SimulationStart:
 #             x_pht = 0.01
 #             DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
@@ -572,7 +572,7 @@ for j in range(SimulationStart, SimulationEnd):
         # in half loop mode, these are equal, so avg = RIHT_1 = RIHT_2
         T_RIH_average = (RIHT_1 + RIHT_2) / 2
         x_pht, Power = SGHX.pht_steam_quality(T_RIH_average + 273.15, Year_Month, j)
-        DividerPlateLeakage = SGHX.divider_plate(Year_Month, DividerPlateLeakage)
+        DividerPlateLeakage = SGHX.divider_plate(Year_Month, j, DividerPlateLeakage)
         
         # core and outlet temperatures currently not being updated, but all sections called for continuity
         for Section in Sections:
@@ -592,7 +592,7 @@ for j in range(SimulationStart, SimulationEnd):
         else:
             Temperature2 = None
         # optional preview of RIHT and primary-side steam quality
-        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
+#         print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
 
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, Temperature1,

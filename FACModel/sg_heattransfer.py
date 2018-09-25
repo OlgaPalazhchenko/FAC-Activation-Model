@@ -445,9 +445,9 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
         return None
 
 
-def sludge_fouling_resistance(Bundle, Year_Month, i):
+def sludge_fouling_resistance(Bundle, j, Year_Month, i):
     
-    Time_Step = nc.TIME_STEP / 24 / 365
+    Time_Step = j * nc.TIME_STEP / 24 / 365
     # default values
     ReducedTubeGrowth = 0.0005  # [g/cm^2] /year = 3.25 um/year
     
@@ -1020,7 +1020,7 @@ def outside_bundle_pool_boiling(
 
 
 def wall_temperature(
-        Bundle, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation,
+        Bundle, j, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation,
         Year_Month, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber):
     
     # i = each node of SG tube
@@ -1075,7 +1075,7 @@ def wall_temperature(
             # [cm^2 K/W]
             R_F_primary.magnitude = pht_fouling_resistance(i, InnerAccumulation[i], OuterAccumulation[i]) 
             
-            R_F_secondary.magnitude = sludge_fouling_resistance(Bundle, Year_Month, i)
+            R_F_secondary.magnitude = sludge_fouling_resistance(Bundle, j, Year_Month, i)
                         
             PCR = primary_convection_resistance(
                 Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, TotalSGTubeNumber
@@ -1120,7 +1120,7 @@ def total_area_per_node(SteamGenerator):
 # print (total_area_per_node(ld.SteamGenerator))
 
 def temperature_profile(
-        Bundle, InnerOxide, OuterOxide, m_h_leakagecorrection, SecondarySidePressure, x_pht, Year_Month, 
+        Bundle, j, InnerOxide, OuterOxide, m_h_leakagecorrection, SecondarySidePressure, x_pht, Year_Month, 
         TotalSGTubeNumber
         ):
     
@@ -1146,7 +1146,7 @@ def temperature_profile(
         Cp_c = nc.heatcapacityH2O_liquid(T_SecondaryBulkIn, SecondarySidePressure)
         
         T_wh, T_wc, U = wall_temperature(
-            Bundle, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerOxide, OuterOxide, Year_Month,
+            Bundle, j, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerOxide, OuterOxide, Year_Month,
             SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber)
         
         # [W/ cm^2 K] * [K] * [cm^2] = [W] = [J/s]
@@ -1291,9 +1291,9 @@ def temperature_profile(
     return PrimaryBulk, HeatFlux
 
 
-def divider_plate(Year_Month, DividerPlateLeakage):
+def divider_plate(Year_Month, j, DividerPlateLeakage):
     # time input (j) is in hours, converted to yearly
-    Time_Step = nc.TIME_STEP / 24 / 365
+    Time_Step = j * nc.TIME_STEP / 24 / 365
     PostOutageYearlyLeakage = 0.0006
     
     # changes to rate of leakage growth
@@ -1483,7 +1483,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
                        
         
         [Bundle.PrimaryBulkTemperature, Bundle.HeatFlux] = temperature_profile(
-            Bundle, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, Year_Month, TotalSGTubeNumber
+            Bundle, j, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, Year_Month, TotalSGTubeNumber
             )
         
         SteamGeneratorOutputNode = SteamGenerator[Default_Tube].NodeNumber - 1
