@@ -30,27 +30,37 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     OutletBulkConcentration = Output[8]
     FuelChannelBulkConcentration = Output[9]
     SteamGeneratorBulkConcentration = Output[10]
+    InletSolubility = Output[11]
     
     OutletCorrosionRate_uma = []
     InletBulkConcentration_gcm3 = []
-    OutletSOConcentration_gcm3 = []
+    OutletBulkConcentration_gcm3 = []
     FuelChannelBulkConcentration_gcm3 = []
     SteamGeneratorBulkConcentration_gm3 = []
+    InletSolubility_gm3 = []
     AvgCorrRate = []
     
-    for Rate, Conc1, Conc2, Conc3, Conc4 in zip(
-        OutletCorrosionRate, InletBulkConcentration, OutletSOConcentration, FuelChannelBulkConcentration,
-        SteamGeneratorBulkConcentration
-        ):
+    for Rate in OutletCorrosionRate:
         x = ld.UnitConverter(
         OutletFeeder, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None
         )
+        q = sum(x) / OutletFeeder.NodeNumber
+        
+        OutletCorrosionRate_uma.append(x)
+        AvgCorrRate.append(q)
+   
+    for Conc1, Conc2, Conc3, Conc4, Conc5 in zip(
+        InletBulkConcentration, OutletBulkConcentration, FuelChannelBulkConcentration, SteamGeneratorBulkConcentration,
+        InletSolubility):
+        
         y = ld.UnitConverter(
-            InletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc1, None, None, None, nc.FeMolarMass, None)
+            OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc1, None, None, None, nc.FeMolarMass, None
+            )
          
         z = ld.UnitConverter(
             OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc2, None, None, None, nc.FeMolarMass, None
             )
+    
         
         w = ld.UnitConverter(
             OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc3, None, None, None, nc.FeMolarMass, None
@@ -59,26 +69,20 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
         p = ld.UnitConverter(
             OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc4, None, None, None, nc.FeMolarMass, None
             )
-        q = sum(x) / OutletFeeder.NodeNumber
+        
+        u = ld.UnitConverter(
+            OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc5, None, None, None, nc.FeMolarMass, None
+            )
+        
          
-        OutletCorrosionRate_uma.append(x)
+        
         InletBulkConcentration_gcm3.append(y)
-        OutletSOConcentration_gcm3.append(z)
+        OutletBulkConcentration_gcm3.append(z)
         FuelChannelBulkConcentration_gcm3.append(w)
         SteamGeneratorBulkConcentration_gm3.append(p)
-        AvgCorrRate.append(q)
-     
-    OutletSolubility_gcm3 = ld.UnitConverter(
-            OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", OutletFeeder.SolutionOxide.FeSatFe3O4, None, None, None,
-            nc.FeMolarMass, None
-            )
-     
-    OutletCorrosionRate_uma.append(x)
-    InletBulkConcentration_gcm3.append(y)
-    OutletBulkConcentration_gcm3.append(z)
-    AvgCorrRate.append(q)
-     
-     
+        InletSolubility_gm3.append(u)
+        
+    
 #     DissolutionRate = []
 #     InnerOxideGrowth = []
 #     DeltaOx = []
@@ -124,8 +128,6 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
         writer.writerows(OutletBulkConcentration_gcm3)
         writer.writerow([''])
         
-        
-        writer.writerow([''])
         writer.writerow(['SG Bulk Concentration (g/cm^3)'])
         writer.writerows(SteamGeneratorBulkConcentration_gm3)
         writer.writerow([''])
@@ -134,10 +136,10 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
 #         writer.writerows(OutletBulkConcentration)
 #         writer.writerow([''])
          
-        writer.writerow(['Outlet Solubility (g/cm^3)'])
-        writer.writerow(OutletSolubility_gcm3)
-        writer.writerow(['Outlet Solubility (mol/kg)'])
-        writer.writerow(OutletFeeder.SolutionOxide.FeSatFe3O4)
+        writer.writerow(['Inlet Solubility (g/cm^3)'])
+        writer.writerows(InletSolubility_gm3)
+#         writer.writerow(['Outlet Solubility (mol/kg)'])
+#         writer.writerow(OutletFeeder.SolutionOxide.FeSatFe3O4)
          
 
 def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):

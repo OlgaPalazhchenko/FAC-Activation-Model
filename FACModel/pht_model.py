@@ -273,13 +273,14 @@ InletBulkConcentration = []
 OutletBulkConcentration = []
 FuelChannelBulkConcentration = []
 SteamGeneratorBulkConcentration = []
+InletSolubility = []
 
 
 def output_time_logging(
         FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, Temperature1, Temperature2, DividerPlateLeakage, j, InletBulkFe,
-        OutletBulkFe, FCBulkFe, SGBulkFe):
+        OutletBulkFe, FCBulkFe, SGBulkFe, InletFeSat):
     
-       
+    InletSolubility.append(InletFeSat)
     FACRate_OutletFeeder.append(FACRate)
     RIHT_InletFeeder1.append(RIHT1)
     RIHT_InletFeeder2.append(RIHT2)
@@ -368,10 +369,11 @@ def output_time_logging(
          
         writer.save()
     
-    
+
     return (
         FACRate_OutletFeeder, OutletTemperature_Bundle_1, OutletTemperature_Bundle_2, DividerPlateLeakage, x, j, Time,
-        InletBulkConcentration, OutletBulkConcentration, FuelChannelBulkConcentration, SteamGeneratorBulkConcentration
+        InletBulkConcentration, OutletBulkConcentration, FuelChannelBulkConcentration, SteamGeneratorBulkConcentration,
+        InletSolubility
         ) 
 
 
@@ -396,6 +398,7 @@ def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
         
         w = PHTS(Tube, Inlet, ElementTracking, Activation, ConstantRate, j)   
         Tubes.append(w)
+    
     return Tubes
 
 
@@ -473,7 +476,7 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, Selecte
 SimulationYears = 1 # years
 SimulationStart = 0
 
-SimulationHours = SimulationStart + SimulationYears * 400
+SimulationHours = SimulationStart + SimulationYears * 876
 SimulationEnd = SimulationHours
 
 import time
@@ -482,15 +485,7 @@ start_time = time.time()
 # load initial chemistry for full/half loop
 initial_conditions()
 
-for j in range(SimulationStart, SimulationEnd):
-   
-    if Loop == "full":
-        InletInput = ld.InletFeeder_2
-    # for 1/2 of single figure-of-eight loop, SG flow returned to same inlet header as that at start of loop
-    # for full loop, 
-    else:
-        InletInput = ld.InletFeeder
-    # half loop iterates through 4 sections (inlet feeder 1, fuel channel 1, outlet feeder 2, sg 2, back to inlet 1)        
+for j in range(SimulationStart, SimulationEnd):     
     
     InletFeeder_1_Loop1 = PHTS(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j)
     
@@ -500,15 +495,15 @@ for j in range(SimulationStart, SimulationEnd):
     ld.OutletFeeder_2, ld.SteamGenerator_2[Default_Tube], ElementTracking, Activation, ConstantRate, j
     )
     
-    SteamGeneratorTube_2_Loop1 = PHTS(
-        ld.SteamGenerator_2[Default_Tube], InletInput, ElementTracking, Activation, ConstantRate, j
-        )
-    
     SelectedTubes, SelectedTubeNumbers = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)
-    SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, InletInput, SelectedTubes, j)
     
     if Loop == "full":
-    
+        SteamGeneratorTube_2_Loop1 = PHTS(
+        ld.SteamGenerator_2[Default_Tube], ld.InletFeeder_2, ElementTracking, Activation, ConstantRate, j
+        )
+        SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, ld.InletFeeder_2, SelectedTubes, j)
+        
+        
         InletFeeder_2_Loop1 = PHTS(ld.InletFeeder_2, ld.FuelChannel_2, ElementTracking, Activation, ConstantRate, j)
         
         FuelChannel_2_Loop1 = PHTS(ld.FuelChannel_2, ld.OutletFeeder, ElementTracking, Activation, ConstantRate, j)
@@ -523,12 +518,18 @@ for j in range(SimulationStart, SimulationEnd):
         
         SelectedTubes, SelectedTubeNumbers = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator)
         SteamGeneratorTubes_1 = sg_heat_transfer(ld.OutletFeeder, ld.InletFeeder, SelectedTubes, j)
-    
+        
     else:
-        None
+         # for 1/2 of single figure-of-eight loop, SG flow returned to same inlet header as that at start of loop
+         # half loop iterates through 4 sections (inlet feeder 1, fuel channel 1, outlet feeder 2, sg 2, back to inlet 1) 
+        SteamGeneratorTube_2_Loop1 = PHTS(
+        ld.SteamGenerator_2[Default_Tube], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
+        )
+        SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, ld.InletFeeder, SelectedTubes, j)
+      
 
     # parameters tracked/updated with time
-    if j % (10) == 0:  # 73 h * 10 = 12 x a year
+    if j % (73) == 0:  # 73 h * 10 = 12 x a year
         if j == SimulationStart:
 #             x_pht = 0.01
 #             DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
@@ -571,7 +572,7 @@ for j in range(SimulationStart, SimulationEnd):
         # in half loop mode, these are equal, so avg = RIHT_1 = RIHT_2
         T_RIH_average = (RIHT_1 + RIHT_2) / 2
         x_pht, Power = SGHX.pht_steam_quality(T_RIH_average + 273.15, Year_Month, j)
-        DividerPlateLeakage = SGHX.divider_plate(j, Year_Month, DividerPlateLeakage)
+        DividerPlateLeakage = SGHX.divider_plate(Year_Month, DividerPlateLeakage)
         
         # core and outlet temperatures currently not being updated, but all sections called for continuity
         for Section in Sections:
@@ -591,13 +592,13 @@ for j in range(SimulationStart, SimulationEnd):
         else:
             Temperature2 = None
         # optional preview of RIHT and primary-side steam quality
-#         print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
+        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
 
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, Temperature1,
             Temperature2, DividerPlateLeakage, j, InletFeeder_1_Loop1.Section1.Bulk.FeTotal,
             OutletFeeder_2_Loop1.Section1.Bulk.FeTotal, FuelChannel_1_Loop1.Section1.Bulk.FeTotal,
-            SteamGeneratorTube_2_Loop1.Section1.Bulk.FeTotal
+            SteamGeneratorTube_2_Loop1.Section1.Bulk.FeTotal, InletFeeder_1_Loop1.Section1.Bulk.FeSatFe3O4
             )
     else:
         None

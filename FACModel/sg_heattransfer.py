@@ -447,7 +447,7 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Bundle, Year_Month, i):
     
-    TimeStep = 1 / 12 # 12 months in a year
+    Time_Step = nc.TIME_STEP / 24 / 365
     # default values
     ReducedTubeGrowth = 0.0005  # [g/cm^2] /year = 3.25 um/year
     
@@ -473,7 +473,7 @@ def sludge_fouling_resistance(Bundle, Year_Month, i):
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.2
          
     else:
-        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] + Growth * TimeStep #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
+        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] + Growth * Time_Step #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
     
     Thickness = Bundle.SludgeLoading[i] / nc.Fe3O4Density
     
@@ -1291,9 +1291,9 @@ def temperature_profile(
     return PrimaryBulk, HeatFlux
 
 
-def divider_plate(j, Year_Month, DividerPlateLeakage):
-    
-    Time_Step = 1 / 12 # 12 months in a year, monthly timestep through heat transfer package
+def divider_plate(Year_Month, DividerPlateLeakage):
+    # time input (j) is in hours, converted to yearly
+    Time_Step = nc.TIME_STEP / 24 / 365
     PostOutageYearlyLeakage = 0.0006
     
     # changes to rate of leakage growth
@@ -1382,6 +1382,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
     
     start = YearStartup
     delta = timedelta(hours = j * nc.TIME_STEP)
+    
     CalendarDate = start + delta
     Year_Month = (CalendarDate.year, CalendarDate.month)
     
@@ -1503,4 +1504,4 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
     return RIHT
 
              
-# print (energy_balance(ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.0325, j=876*0, SGFastMode="yes")- 273.15)
+# print (energy_balance(ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.0325, j=876, SGFastMode="yes")- 273.15)
