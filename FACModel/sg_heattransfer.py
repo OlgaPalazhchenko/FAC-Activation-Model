@@ -232,6 +232,7 @@ MassFlow_h.magnitude = 1900 * 1000
 MassFlow_preheater.magnitude = 239 * 1000
 MassFlow_ReheaterDrains = 0#72 * 1000 / 4
 MassFlow_downcomer.magnitude = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
+print (MassFlow_downcomer.magnitude)
 MassFlow_c_total.magnitude = MassFlow_downcomer.magnitude + MassFlow_preheater.magnitude + MassFlow_ReheaterDrains
 
 
@@ -445,9 +446,9 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
         return None
 
 
-def sludge_fouling_resistance(Bundle, j, Year_Month, i):
+def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Year_Month, i):
     
-    Time_Step = j * nc.TIME_STEP / 24 / 365
+    Time_Step = HeatTransferTimeStep / 24 / 365 #hr --> yr
     # default values
     ReducedTubeGrowth = 0.0005  # [g/cm^2] /year = 3.25 um/year
     
@@ -505,9 +506,12 @@ def conduction_resistance(Bundle, Twall, SecondarySidePressure, i):
     # l = length, k =thermal conductivity coefficient [W/cm K]
     
     k_w = thermal_conductivity(Twall, "Alloy-800", SecondarySidePressure)  # [W/cm K]
+    
+    r_o = Bundle.OuterDiameter[i] / 2
+    r_i = Bundle.Diameter[i] / 2
 
     # small conductivity = big resistance
-    Rcyl_numerator = np.log(Bundle.OuterDiameter[i] / Bundle.Diameter[i])
+    Rcyl_numerator = np.log(r_o / r_i)
     Rcyl_denominator = 2 * np.pi * k_w * Bundle.Length.magnitude[i]
 
     R_cond = Rcyl_numerator / Rcyl_denominator  # [K/W]
@@ -522,10 +526,10 @@ def primary_convection_resistance(
     # A = inner area (based on inner diameter)
     # [W/cm K]/ [cm] = [W/K cm^2]
     
-    Diameter = Bundle.Diameter[i]
     # T_PrimaryBulkIn used in place of Tavg (of in and out for that node)
     
-    MassFlux_h.magnitude = m_h_leakagecorrection / (TotalSGTubeNumber * (np.pi / 4) * (Diameter ** 2))
+    Area_CrossSection = TotalSGTubeNumber * (np.pi / 4) * (Bundle.Diameter[i] ** 2)
+    MassFlux_h.magnitude = m_h_leakagecorrection / Area_CrossSection
    
     Nu_D = nusseltnumber(Bundle, "PHT", T_PrimaryBulkIn, MassFlux_h.magnitude, i)
     
@@ -541,7 +545,7 @@ def primary_convection_resistance(
 
 
 def secondary_convection_resistance(
-        Bundle, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_sht, i
+        Bundle, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_sht, i, TotalSGTubeNumber
         ):
     
 #     print (T_SecondaryBulkIn-273.15, T_SecondaryWall-273.15, T_SecondaryFilm-273.15, SecondarySidePressure, x_sht,i)
@@ -695,7 +699,7 @@ def outer_area(SteamGenerator):
     return [np.pi * x * y for x, y in zip(SteamGenerator.OuterDiameter, SteamGenerator.Length.magnitude)]
 
 
-def pht_steam_quality(Temperature, Year_Month, j):
+def pht_steam_quality(Temperature, Year_Month):
    
     CoreMassFlow =  7600  # [kg /s]
 #     Delta_T = T_sat_primary - (262 + 273.15)  # [K]
@@ -707,7 +711,6 @@ def pht_steam_quality(Temperature, Year_Month, j):
     
     difference = []
 
-    
     # outages are accounted for in the 1996-01 to 2018-06 data via power derating (down to 0.01 or lower)
     if Year_Month in Year_Month_PowerTracked:
         
@@ -744,11 +747,9 @@ def pht_steam_quality(Temperature, Year_Month, j):
     H_pht = P / CoreMassFlow
 
     H_satliq_outlet = nc.enthalpyD2O_liquid(T_sat_primary)
-#     H_satliq_outlet = nc.enthalpyH2O_liquid(nc.PrimarySidePressure, T_sat_primary)
     
     # no quality in return primary flow
     H_current = nc.enthalpyD2O_liquid(Temperature) + H_pht
-#     H_current = nc.enthalpyH2O_liquid(nc.PrimarySidePressure, Temperature) + H_pht
     x = (H_current - H_satliq_outlet) / (EnthalpySaturatedSteam.magnitude - H_satliq_outlet)
 #     print (Year_Month, Fraction_of_FP, x)
     if x < 0:
@@ -935,8 +936,8 @@ def ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, Secondar
     enthalpy_v = nc.enthalpyH2O_vapour(SecondarySidePressure, T_sat_secondary) * 1000
     h_lg = (enthalpy_v - enthalpy_l) ** 0.24 
      
-    if T_SecondaryWall <= T_sat_secondary:
-        T_SecondaryWall = T_sat_secondary #+ 1
+#     if T_SecondaryWall <= T_sat_secondary:
+#         T_SecondaryWall = T_sat_secondary #+ 1
          
     deltaT_sat = (T_SecondaryWall - T_sat_secondary) ** 0.24 # K
     P_w = nc.saturation_pressureH2O(T_SecondaryWall) * 10 ** 6
@@ -1020,8 +1021,8 @@ def outside_bundle_pool_boiling(
 
 
 def wall_temperature(
-        Bundle, j, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation, OuterAccumulation,
-        Year_Month, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber):
+        Bundle, HeatTransferTimeStep, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation,
+        OuterAccumulation, Year_Month, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber):
     
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
@@ -1030,7 +1031,7 @@ def wall_temperature(
     A_i = inner_area(Bundle)[i]
     A_o = outer_area(Bundle)[i]
     
-    for k in range(50):
+    for k in range(100):
         
         WT_h = T_PrimaryWall
         WT_c = T_SecondaryWall
@@ -1043,14 +1044,16 @@ def wall_temperature(
             )))
         
         h_o.magnitude = (1 / (A_o * secondary_convection_resistance(
-                Bundle, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_in, i
+                Bundle, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_in, i,
+                TotalSGTubeNumber
             )))
         # R = 1/hA --> h=A*1/R
-#         print (A_i, h_i.magnitude, h_o.magnitude, A_o, i) 
+        
         U_h1 = A_i * conduction_resistance(Bundle, T_PrimaryWall, SecondarySidePressure, i)
         
         U_h2 = (A_i * secondary_convection_resistance(
-            Bundle, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_in, i
+            Bundle, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_in, i,
+            TotalSGTubeNumber
             ))
         U_h.magnitude = 1 / (U_h1 + U_h2)  # [W/ cm^2 K]
 
@@ -1060,8 +1063,8 @@ def wall_temperature(
         
         U_c.magnitude = 1 / (U_c1 + U_c2)  # [W/cm^2 K]
 
-        T_PrimaryWall = (T_PrimaryBulkIn * h_i.magnitude + T_SecondaryBulkIn * U_h.magnitude)\
-            / (h_i.magnitude + U_h.magnitude)
+        T_PrimaryWall = ((T_PrimaryBulkIn * h_i.magnitude + T_SecondaryBulkIn * U_h.magnitude)\
+            / (h_i.magnitude + U_h.magnitude))
         
         T_SecondaryWall = (T_SecondaryBulkIn * h_o.magnitude + T_PrimaryBulkIn * U_c.magnitude)\
             / (h_o.magnitude + U_c.magnitude)
@@ -1069,34 +1072,38 @@ def wall_temperature(
         RE1 = (T_PrimaryWall - WT_h)
         RE2 = (T_SecondaryWall - WT_c)
 
+        
         # if converged
         if abs(RE1) <= .05 and abs(RE2) <= .05:
 #             print (h_i.magnitude, h_o.magnitude, i)
             # [cm^2 K/W]
             R_F_primary.magnitude = pht_fouling_resistance(i, InnerAccumulation[i], OuterAccumulation[i]) 
             
-            R_F_secondary.magnitude = sludge_fouling_resistance(Bundle, j, Year_Month, i)
+            R_F_secondary.magnitude = sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Year_Month, i)
                         
             PCR = primary_convection_resistance(
                 Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, TotalSGTubeNumber
                 )
             
             SCR = secondary_convection_resistance(
-                Bundle, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_in, i
+                Bundle, T_SecondaryBulkIn, T_SecondaryWall, T_SecondaryFilm, SecondarySidePressure, x_in, i,
+                TotalSGTubeNumber
                )
             
-#             if i ==0:
-#                 print (PCR *100*100, "PCR", conduction_resistance(Bundle, T_PrimaryWall, SecondarySidePressure, i)*100*100,\
-#                         "cond", SCR*100*100, "SCR", R_F_primary.magnitude*100*100, "primary fouling", \
-#                         R_F_secondary.magnitude*100*100, "secondary fouling", i)
-              
             # [cm^2 K/W] all resistances (convective, conductive, and fouling)
+            CR = conduction_resistance(Bundle, T_PrimaryWall, SecondarySidePressure, i)
             
-            ConductionResistance = conduction_resistance(Bundle, T_PrimaryWall, SecondarySidePressure, i)
-            
-            inverseU_total = (PCR + ConductionResistance + SCR) * A_o + R_F_primary.magnitude + R_F_secondary.magnitude
+            inverseU_total = (PCR + CR + SCR) * A_o + R_F_primary.magnitude + R_F_secondary.magnitude
 
             U_total.magnitude = 1 / inverseU_total  # [W/ cm^2 K]
+            
+            
+#             UA_total = TotalSGTubeNumber / (PCR + CR + SCR  + R_F_primary.magnitude + R_F_secondary.magnitude)
+# 
+#             U_total.magnitude = 1 / inverseU_total  # [W/ K]
+#             
+#             return T_PrimaryWall, T_SecondaryWall, UA
+
             
             return T_PrimaryWall, T_SecondaryWall, U_total.magnitude
 
@@ -1114,19 +1121,14 @@ def total_area_per_node(SteamGenerator):
         TotalAreaBundles.append(B)
     return TotalAreaBundles
 
-# C = outer_area(ld.SteamGenerator[0])
-# D = [i * 3542 for i in C]
-# print (D)
-# print (total_area_per_node(ld.SteamGenerator))
 
 def temperature_profile(
-        Bundle, j, InnerOxide, OuterOxide, m_h_leakagecorrection, SecondarySidePressure, x_pht, Year_Month, 
-        TotalSGTubeNumber
+        Bundle, HeatTransferTimeStep, InnerOxide, OuterOxide, m_h_leakagecorrection, SecondarySidePressure, x_pht,
+        Year_Month, TotalSGTubeNumber
         ):
     
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
-    
     T_sat_secondary = nc.saturation_temperatureH2O(SecondarySidePressure)
     
     PrimaryWall = []
@@ -1146,16 +1148,15 @@ def temperature_profile(
         Cp_c = nc.heatcapacityH2O_liquid(T_SecondaryBulkIn, SecondarySidePressure)
         
         T_wh, T_wc, U = wall_temperature(
-            Bundle, j, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerOxide, OuterOxide, Year_Month,
-            SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber)
+            Bundle, HeatTransferTimeStep, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerOxide, OuterOxide,
+            Year_Month, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber)
         
-        # [W/ cm^2 K] * [K] * [cm^2] = [W] = [J/s]
-        Q = U * (T_PrimaryBulkIn - T_SecondaryBulkIn) * total_area_per_node(ld.SteamGenerator)[i]
-        #* outer_area(Bundle)[i] * TotalSGTubeNumber
+        # [W/ cm^2 K] * [K] * [cm^2] = [W] = [J/s]        
+        Q = U * (T_PrimaryBulkIn - T_SecondaryBulkIn) * outer_area(Bundle)[i] * TotalSGTubeNumber
+        
         # all nodes other than preheater
         
         q_Flux = (T_PrimaryBulkIn - T_SecondaryBulkIn) * U * 100 * 100 / 1000 #[kW/m^2]
-#         if Bundle == selected_tubes[0]: print (HeatFlux, T_PrimaryBulkIn - 273.15, T_SecondaryBulkIn - 273.15, i)
         
         if Bundle.Length.label[i] != "preheater start" and Bundle.Length.label[i] != "preheater" and \
             Bundle.Length.label[i] != "thermal plate":
@@ -1169,9 +1170,9 @@ def temperature_profile(
 
             if x_pht > 0:
                 DeltaH = EnthalpySaturatedSteam.magnitude - nc.enthalpyD2O_liquid(T_sat_primary)
-#                 DeltaH = EnthalpySaturatedSteam.magnitude - nc.enthalpyH2O_liquid(nc.PrimarySidePressure, T_sat_primary)
                 
                 LatentHeatAvailable = x_pht * DeltaH * m_h_leakagecorrection
+#                 print (i, x_pht, Q, LatentHeatAvailable)
                 # if x_pht = 0 (entire quality entering ith Bundle) is not enough to transfer all of heat need to SHT
                 if LatentHeatAvailable < Q:
                     # this much heat needs to be transferred from PHT fluid as sensible heat
@@ -1181,7 +1182,7 @@ def temperature_profile(
                     # no more latent heat/quality remains
                     x_pht = 0
                 else:    
-                    # latent heat being used for heat transfer, T doesn't change
+                    # latent heat being used for heat transfer, T doesn't change, PHT steam quality decreases
                     T_PrimaryBulkOut = T_sat_primary
                     x_pht = x_pht - Q / (m_h_leakagecorrection * DeltaH)
     
@@ -1191,6 +1192,7 @@ def temperature_profile(
             else:
                 # no latent heat available, only sensible heat used
                 T_PrimaryBulkOut = T_PrimaryBulkIn - Q / (Cp_h * m_h_leakagecorrection)
+#                 print (i, Q, Q / (Cp_h * m_h_leakagecorrection))
 #             Q = U * (T_PrimaryBulkOut - T_SecondaryBulkOut) * outer_area(Bundle)[i] * Bundle.TubeNumber
 #             x_out = (x_in + Q / (
 #                 MassFlow_c_total.magnitude * EnthalpySaturatedSteam.magnitude  * (Bundle.TubeNumber / TotalSGTubeNumber)
@@ -1257,7 +1259,6 @@ def temperature_profile(
                 
            
                 T_PrimaryBulkOut = T_PrimaryBulkIn - Q / (Cp_h * m_h_leakagecorrection)
-#                 print (i, T_SecondaryBulkIn-273.15, T_SecondaryBulkOut-273.15)
      
                 # end of preheater 
                 if i == Bundle.NodeNumber - 2:
@@ -1281,30 +1282,30 @@ def temperature_profile(
             SecondaryWall.append(T_wc)
             HeatFlux.append(q_Flux)
 
-#     print ([j - 273.15 for j in PrimaryBulk])
-#     print ([j-273.15 for j in PrimaryWall])
+#     print ("Primary Bulk)", [j - 273.15 for j in PrimaryBulk])
+#     print ("Primary Wall", [j-273.15 for j in PrimaryWall])
 #     print ()
-#     print ([j-273.15 for j in SecondaryWall])
-#     print ([j-273.15 for j in SecondaryBulk])
+#     print ("Secondary Wall", [j-273.15 for j in SecondaryWall])
+#     print ("Secondary Bulk", [j-273.15 for j in SecondaryBulk])
 #     print()
     
     return PrimaryBulk, HeatFlux
 
 
-def divider_plate(Year_Month, j, DividerPlateLeakage):
+def divider_plate(Year_Month, HeatTransferTimeStep, DividerPlateLeakage):
     # time input (j) is in hours, converted to yearly
-    Time_Step = j * nc.TIME_STEP / 24 / 365
-    PostOutageYearlyLeakage = 0.0006
+    Time_Step = HeatTransferTimeStep / 24 / 365 # hr --> yr
+    PostOutageYearlyLeakage = 0.0006 # per year rate
     
     # changes to rate of leakage growth
     if Year_Month in OutageYearsMonths:
-        LeakageRate = 0 
+        LeakageRate = 0 # per year rate
       
     elif Year_Month < YearOutage:
-        LeakageRate = 0.004
+        LeakageRate = 0.004 # per year rate
     
     elif Year_Month >= YearOutageRestart:
-        LeakageRate = PostOutageYearlyLeakage
+        LeakageRate = PostOutageYearlyLeakage # per year rate
     
     else:
         None 
@@ -1331,19 +1332,6 @@ def divider_plate(Year_Month, j, DividerPlateLeakage):
         DividerPlateLeakage = 0.051
 
     return DividerPlateLeakage
-
-# for j in range(15000):
-#     start = YearStartup
-#     delta = timedelta(hours = j * nc.TIME_STEP)
-#     CalendarDate = start + delta
-#     Year_Month = (CalendarDate.year, CalendarDate.month)
-#     
-#     if j % (73) == 0:
-#         if j ==0:
-#             DividerPlateLeakage = 0.03
-#         
-#         DividerPlateLeakage = divider_plate(Year_Month, DividerPlateLeakage, j)[2]
-#         print (Year_Month, DividerPlateLeakage * 100)
 
 
 def secondary_side_pressure(Year_Month):
@@ -1378,13 +1366,7 @@ CleanedRefurbishmentSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, YearRefur
 CleanedRefurbishmentSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, YearRefurbishment)
 
 
-def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
-    
-    start = YearStartup
-    delta = timedelta(hours = j * nc.TIME_STEP)
-    
-    CalendarDate = start + delta
-    Year_Month = (CalendarDate.year, CalendarDate.month)
+def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Year_Month, HeatTransferTimeStep, SGFastMode):
     
     if SteamGenerator == ld.SteamGenerator:
         CleanedOutage = Cleaned_OutageSG1
@@ -1405,6 +1387,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
     MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude * DividerPlateLeakage
     # decreases as divider (bypass) flow increases
     
+    # g / s
     RemainingPHTMassFlow = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude
 
     Selected_Tubes = tube_picker(Method, SteamGenerator)[0]
@@ -1483,7 +1466,8 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
                        
         
         [Bundle.PrimaryBulkTemperature, Bundle.HeatFlux] = temperature_profile(
-            Bundle, j, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht, Year_Month, TotalSGTubeNumber
+            Bundle, HeatTransferTimeStep, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht,
+            Year_Month, TotalSGTubeNumber
             )
         
         SteamGeneratorOutputNode = SteamGenerator[Default_Tube].NodeNumber - 1
@@ -1504,4 +1488,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, j, SGFastMode):
     return RIHT
 
              
-# print (energy_balance(ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.0325, j=876, SGFastMode="yes")- 273.15)
+print (energy_balance(
+    ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Year_Month= (1983, 4),
+    HeatTransferTimeStep = nc.TIME_STEP * 73, SGFastMode="yes"
+    )- 273.15)

@@ -30,13 +30,16 @@ def initial_conditions():
     
     # initial temperatures in steam generator(s)
     RIHT1 = SGHX.energy_balance(
-        ld.SteamGenerator, x_pht = 0.01, DividerPlateLeakage= 0.03, j = 0, SGFastMode = SGHX.SGFastMode
+        ld.SteamGenerator, x_pht = 0.01, DividerPlateLeakage= 0.03, Year_Month= (1983, 4),
+        HeatTransferTimeStep = nc.TIME_STEP * 73, SGFastMode = SGHX.SGFastMode
         )
     ld.InletFeeder.PrimaryBulkTemperature = [RIHT1] * ld.InletFeeder.NodeNumber
         
     RIHT2 = SGHX.energy_balance(
-        ld.SteamGenerator_2, x_pht = 0.01, DividerPlateLeakage=0.03, j = 0, SGFastMode = SGHX.SGFastMode
+        ld.SteamGenerator_2, x_pht = 0.01, DividerPlateLeakage= 0.03, Year_Month= (1983, 4),
+        HeatTransferTimeStep = nc.TIME_STEP * 73, SGFastMode = SGHX.SGFastMode
         )
+    
     ld.InletFeeder_2.PrimaryBulkTemperature = [RIHT2] * ld.InletFeeder_2.NodeNumber
   
         
@@ -189,10 +192,9 @@ class PHTS():
             if self.Section1 == ld.InletFeeder and i == 2:
                 purificationfactor = 1900 / (1900 + 12)     
                 if j > 168 :
-#                     print (ld.InletFeeder.Bulk.FeTotal[i], j, "before")
                     for x in BulkConcentrations:
                         x[i] =  purificationfactor * x[i - 1]
-#                         print (ld.InletFeeder.Bulk.FeTotal[i], j, "after")
+
                 if Activation == "yes":
                     for y in BulkActivities:
                         y[i] = purificationfactor * y[i - 1]
@@ -475,8 +477,9 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, Selecte
 
 SimulationYears = 1 # years
 SimulationStart = 0
+HoursinYear = 8760
 
-SimulationHours = SimulationStart + SimulationYears * 300
+SimulationHours = SimulationStart + 300#SimulationYears * (HoursinYear / nc.TIME_STEP)
 SimulationEnd = SimulationHours
 
 import time
@@ -529,11 +532,11 @@ for j in range(SimulationStart, SimulationEnd):
       
 
     # parameters tracked/updated with time
-    if j % (10) == 0:  # 73 h * 10 = 12 x a year
+    HeatTransferTimeStep = 10 * nc.TIME_STEP #hours, e.g., 73 h * 10 = hours in a month
+    
+    if j % (HeatTransferTimeStep) == 0:
         if j == SimulationStart:
-#             x_pht = 0.01
-#             DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
-            
+                        
             if SimulationStart == 0:
                 x_pht = 0.01
                 DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
@@ -556,13 +559,25 @@ for j in range(SimulationStart, SimulationEnd):
         Year_Month = (CalendarYear.year, CalendarYear.month)
 
         if Loop == "full":
-            RIHT_1 = SGHX.energy_balance(ld.SteamGenerator, x_pht, DividerPlateLeakage, j, SGHX.SGFastMode) - 273.15
-            RIHT_2 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, DividerPlateLeakage, j, SGHX.SGFastMode) - 273.15
+            RIHT_1 = (
+                SGHX.energy_balance(
+                    ld.SteamGenerator, x_pht, DividerPlateLeakage, Year_Month, HeatTransferTimeStep, SGHX.SGFastMode
+                    ) - 273.15
+                      )
+            RIHT_2 = (
+                SGHX.energy_balance(
+                    ld.SteamGenerator_2, x_pht, DividerPlateLeakage, Year_Month, HeatTransferTimeStep, SGHX.SGFastMode
+                    ) - 273.15
+                      )
             ld.InletFeeder_2.PrimaryBulkTemperature = [RIHT_2 + 273.15] * ld.InletFeeder_2.NodeNumber
         
         else:
             #SG 2 is in the half and full loop configurations (default steam generator)
-            RIHT_2 = SGHX.energy_balance(ld.SteamGenerator_2, x_pht, DividerPlateLeakage, j, SGHX.SGFastMode) - 273.15
+            RIHT_2 = (
+                SGHX.energy_balance(
+                    ld.SteamGenerator_2, x_pht, DividerPlateLeakage, Year_Month, HeatTransferTimeStep, SGHX.SGFastMode
+                    ) - 273.15
+                )
             RIHT_1 = RIHT_2 * 1  # output logging function needs value for both RIHT's and inlet header 1 needs input 
 
         # in full loop mode, this is calculated based on SG 1 output
@@ -571,8 +586,8 @@ for j in range(SimulationStart, SimulationEnd):
         
         # in half loop mode, these are equal, so avg = RIHT_1 = RIHT_2
         T_RIH_average = (RIHT_1 + RIHT_2) / 2
-        x_pht, Power = SGHX.pht_steam_quality(T_RIH_average + 273.15, Year_Month, j)
-        DividerPlateLeakage = SGHX.divider_plate(Year_Month, j, DividerPlateLeakage)
+        x_pht, Power = SGHX.pht_steam_quality(T_RIH_average + 273.15, Year_Month)
+        DividerPlateLeakage = SGHX.divider_plate(Year_Month, HeatTransferTimeStep, DividerPlateLeakage)
         
         # core and outlet temperatures currently not being updated, but all sections called for continuity
         for Section in Sections:
@@ -592,7 +607,7 @@ for j in range(SimulationStart, SimulationEnd):
         else:
             Temperature2 = None
         # optional preview of RIHT and primary-side steam quality
-#         print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
+        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
 
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, Temperature1,
