@@ -187,9 +187,9 @@ YearStartup = datetime(1983, 4, 8)
 
 
 YearCPP = (1987, 3)
-YearOutage = (1995, 5)
+YearOutage = (1983,7)#(1995, 5)
 YearOutageRestart = (1996, 1)#datetime(1996, 1, 1)
-YearRefurbishment = (2008, 3)#datetime(2008, 3, 29)
+YearRefurbishment = (1984,1)#(2008, 3)#datetime(2008, 3, 29)
 YearRefurbRestart = (2012, 12)#datetime(2012, 12, 10)
 
 FULLPOWER = 2061.4 * 1000
@@ -1406,15 +1406,15 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Year_Month, HeatT
         if SGFastMode == "yes":
             if Bundle in Selected_Tubes:
                 # tracks oxide growth for these tubes specifically
-                InnerOx = Bundle.InnerOxLoading
-                OuterOx = Bundle.OuterOxLoading
+                Bundle.InnerOxLoading = Bundle.InnerOxLoading
+                Bundle.OuterOxLoading = Bundle.OuterOxLoading
                 
             else:  # assumes same growth as in default passed tube for remaining tubes
-                InnerOx = DefaultUncleanedInnerOxide
-                OuterOx = DefaultUncleanedOuterOxide
+                Bundle.InnerOxLoading = DefaultUncleanedInnerOxide
+                Bundle.OuterOxLoading = DefaultUncleanedOuterOxide
             
             
-            if YearOutageRestart <= Year_Month < YearRefurbRestart:
+            if YearOutage <= Year_Month < YearRefurb:
                 if Bundle in CleanedOutage:   
                     CleanedOutageOnlyInnerOxide = Selected_Tubes[1].InnerOxLoading
                     CleanedOutageOnlyOuterOxide = Selected_Tubes[1].OuterOxLoading
@@ -1425,7 +1425,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Year_Month, HeatT
                 else:
                     None       
                 
-            elif YearRefurbRestart <= Year_Month:
+            elif YearRefurbishment <= Year_Month:
                 if Bundle in CleanedOutage and Bundle in CleanedRefurb:
                     # only the first of the selected tubes undergoes both cleanings
                     CleanedBothInnerOxide = Selected_Tubes[0].InnerOxLoading
@@ -1465,14 +1465,14 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Year_Month, HeatT
             
             if Bundle in Selected_Tubes:
                 # tracks oxide growth for all tubes
-                InnerOx = Bundle.InnerOxLoading
-                OuterOx = Bundle.OuterOxLoading
+                Bundle.InnerOxLoading = Bundle.InnerOxLoading
+                Bundle.OuterOxLoading = Bundle.OuterOxLoading
             else:
                 None               
         
         [Bundle.PrimaryBulkTemperature, Bundle.HeatFlux] = temperature_profile(
-            Bundle, HeatTransferTimeStep, InnerOx, OuterOx, RemainingPHTMassFlow, SecondarySidePressure, x_pht,
-            Year_Month, TotalSGTubeNumber
+            Bundle, HeatTransferTimeStep, Bundle.InnerOxLoading, Bundle.OuterOxLoading, RemainingPHTMassFlow,
+            SecondarySidePressure, x_pht, Year_Month, TotalSGTubeNumber
             )
         
         SteamGeneratorOutputNode = SteamGenerator[Default_Tube].NodeNumber - 1
