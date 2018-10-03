@@ -171,22 +171,22 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
 #                              nc.FeMolarMass, None)
 #         e = ld.UnitConverter(Tube, "Mol per Kg", "Grams per Cm Cubed", Tube.SolutionOxide.FeTotal, None, None, None,
 #                              nc.FeMolarMass, None)
-        f = Pipe.KpFe3O4electrochem
-        g = Pipe.CorrRate
+#         f = Pipe.KpFe3O4electrochem
+#         g = Pipe.CorrRate
             
         TotalDistance.append(z)
         InnerOxide.append(x)
         OuterOxide.append(y)
-        TotalOxide.append(q)
-        CorrosionRate.append(g)
+#         TotalOxide.append(q)
+#         CorrosionRate.append(g)
     #     FeSolubility_SteamGeneratorTubes.append(d) # Tube.SolutionOxide.FeSatFe3O4
     #     FeConcentration_SteamGeneratorTubes.append(e) # Tube.SolutionOxide.FeTotal
-        Temperature_C = [i - 273.15 for i in Pipe.PrimaryBulkTemperature]
-        TemperatureProfile.append(Temperature_C)
-        kp_Tdependent.append(f)
+#         Temperature_C = [i - 273.15 for i in Pipe.PrimaryBulkTemperature]
+#         TemperatureProfile.append(Temperature_C)
+#         kp_Tdependent.append(f)
 
-    OutletTemperatures1 = Output[1]
-    OutletTemperatures2 = Output[2]
+#     OutletTemperatures1 = Output[1]
+#     OutletTemperatures2 = Output[2]
     DividerPlateLeakage = Output[3]
     x_pht = Output[4]
     
@@ -197,14 +197,10 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
         )
         CorrosionRate_um.append(x)
 
-    Data = [
-        SGHX.TubeLengths, TotalDistance, InnerOxide, OuterOxide, TotalOxide, TemperatureProfile, kp_Tdependent,
-        CorrosionRate_um
-            ]
+    Data = [SGHX.TubeLengths, TotalDistance, InnerOxide, OuterOxide]
     
     Labels = [
-        "U-bend length (cm)", "Distance (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)", "Total Oxide (g/m^2)",
-        "Temperature Profile (oC)", "kp (cm/s", "Corrosion Rate (um/a)"]
+        "U-bend length (cm)", "Distance (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)"]
       
     csvfile = FileName1
     with open(csvfile, "w") as output:

@@ -234,14 +234,14 @@ def FAC_solver(Section, ConstantRate, j):
     Year_Month = (CalendarYear.year, CalendarYear.month)
     
     if Year_Month < SGHX.YearRefurbRestart:
-        ACTIVATION_ENERGY_Fe = 264860.0725
-        ACTIVATION_ENERGY_H2onFe = 262286.4165
+        ACTIVATION_ENERGY_Fe = 265219.2785
+        ACTIVATION_ENERGY_H2onFe = 262645.6224
 
     #higher Cr-content CS feeder replacement
     else:
         #Mid FAC (25-40 um/a):
         ACTIVATION_ENERGY_Fe = 273721.118
-        ACTIVATION_ENERGY_H2onFe = 271147.4619       
+        ACTIVATION_ENERGY_H2onFe = 271147.4619  
         
     # updates hydrolysis distribution of Fe species. Even if FAC rate kept constant, oxide thickness changes
     # M/O Fe total concentration changes w.r.t. thickness, so species cncentrations change too
@@ -305,8 +305,9 @@ def FAC_solver(Section, ConstantRate, j):
     if Section in ld.FuelSections:
         rate = [0] * Section.NodeNumber
     # preset desired FAC rate
-    elif Section in ld.OutletSections:
-        rate = EmpiricalFAC_solver(Section)
+    
+#     elif Section in ld.OutletSections:
+#         rate = EmpiricalFAC_solver(Section)
     
     # corrosion current calculation not required of rate has been set as constant
     else:

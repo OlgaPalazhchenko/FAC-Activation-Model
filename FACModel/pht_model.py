@@ -191,7 +191,7 @@ class PHTS():
             # Inlet header purification systemc comes off of only one inlet feeder header in a full figure-of-8 loop
             if self.Section1 == ld.InletFeeder and i == 2:
                 purificationfactor = 1900 / (1900 + 12)     
-                if j > 168 :
+                if j > 0 :
                     for x in BulkConcentrations:
                         x[i] =  purificationfactor * x[i - 1]
 
@@ -274,15 +274,16 @@ Time = []
 InletBulkConcentration = []
 OutletBulkConcentration = []
 FuelChannelBulkConcentration = []
-SteamGeneratorBulkConcentration = []
+SteamGeneratorInnerOx = []
+SteamGeneratorOuterOx = []
 InletSolubility = []
-
+Power_withtime = []
 
 def output_time_logging(
         FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, Temperature1, Temperature2, DividerPlateLeakage, j, InletBulkFe,
-        OutletBulkFe, FCBulkFe, SGBulkFe, InletFeSat):
+        OutletBulkFe, FCBulkFe, SGOuterOx, SGInnerOx):
     
-    InletSolubility.append(InletFeSat)
+#     InletSolubility.append(InletFeSat)
     FACRate_OutletFeeder.append(FACRate)
     RIHT_InletFeeder1.append(RIHT1)
     RIHT_InletFeeder2.append(RIHT2)
@@ -292,8 +293,9 @@ def output_time_logging(
     InletBulkConcentration.append(InletBulkFe.copy())
     OutletBulkConcentration.append(OutletBulkFe.copy())
     FuelChannelBulkConcentration.append(FCBulkFe.copy())
-    SteamGeneratorBulkConcentration.append(SGBulkFe.copy())
-    
+    SteamGeneratorInnerOx.append(SGInnerOx)
+    SteamGeneratorOuterOx.append(SGOuterOx)
+    Power_withtime.append(Power)
     Time.append(j)
     
 #     OutletTemperature_Bundle_1.append(Temperature1)
@@ -318,7 +320,7 @@ def output_time_logging(
      'RIHT': RIHT_InletFeeder2,
      'Delta RIHT': RIHT2_delta,
      'Steam quality': pht_SteamFraction,
-     'Power' : Power,
+     'Power' : Power_withtime,
      'DP leakage' : DP_leakage
     })
    
@@ -329,19 +331,20 @@ def output_time_logging(
     RIHT_phase1_preCPP = RIHT_by_phase['1983-4-8':'1988-5-8']
     RIHT_phase1_postCPP = RIHT_by_phase['1988-5-8':'1992-9-8']
     RIHT_phase2 = RIHT_by_phase['1992-9-8':'1995-12-8']
-    RIHT_phase3 = RIHT_by_phase['1996-1-8':'1998-9-8']
+    RIHT_phase3 = RIHT_by_phase['1996-1-1':'1998-9-8']
     RIHT_phase4 = RIHT_by_phase['1998-9-8':'2008-3-8']
-    RIHT_phase5_6 = RIHT_by_phase['2012-5-8':'2019-3-8']
+    RIHT_phase5_6 = RIHT_by_phase['2012-5-8':'2019-6-8']
    
    # filters data to remove outages
-    RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Power'] > 0]
-    RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['Power'] > 0]
-    RIHT_phase2 = RIHT_phase2[RIHT_phase2['Power'] > 0]
-    RIHT_phase3 = RIHT_phase3[RIHT_phase3['Power'] > 0]
-    RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] >= 0]
-    RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['Power'] >= 0]
+    Shutdown = SGHX.FULLPOWER * 0.05 #5% of full power
+    RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Power'] > Shutdown]
+    RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['Power'] > Shutdown]
+    RIHT_phase2 = RIHT_phase2[RIHT_phase2['Power'] > Shutdown]
+    RIHT_phase3 = RIHT_phase3[RIHT_phase3['Power'] > Shutdown]
+    RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] > Shutdown]
+    RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['Power'] > Shutdown]
     
-    if j % (876 * 2) == 0: 
+    if j % (876 * 4) == 0: #updates list in csv file (list itself appended to monthly)
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
          
         RIHT_phase1_preCPP.to_excel(writer, sheet_name = 'Phase 1 Pre CPP')
@@ -374,8 +377,7 @@ def output_time_logging(
 
     return (
         FACRate_OutletFeeder, OutletTemperature_Bundle_1, OutletTemperature_Bundle_2, DividerPlateLeakage, x, j, Time,
-        InletBulkConcentration, OutletBulkConcentration, FuelChannelBulkConcentration, SteamGeneratorBulkConcentration,
-        InletSolubility
+        InletBulkConcentration, OutletBulkConcentration, FuelChannelBulkConcentration, SGOuterOx, SGOuterOx
         ) 
 
 
@@ -463,23 +465,20 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, Selecte
         Pipe.OuterFe3O4Loading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
  
     for Bundle in SteamGenerator:
-        Bundle.SludgeLoading = [float(InputParametersReader[58][i]) for i in range(0, Bundle.NodeNumber)]
+        Bundle.SludgeLoading = [float(InputParametersReader[31][i]) for i in range(0, Bundle.NodeNumber)]
      
-    DividerPlateLeakage = float(InputParametersReader[61][0])
+    DividerPlateLeakage = float(InputParametersReader[34][0])
      
-    x = float(InputParametersReader[64][0])
-    print (ld.SteamGenerator_2[Default_Tube].OuterFe3O4Loading[10], DividerPlateLeakage, x)
+    x = float(InputParametersReader[37][0])
+#     print (ld.SteamGenerator_2[Default_Tube].OuterFe3O4Loading[10], ld.SteamGenerator_2[Default_Tube].SludgeLoading[10], DividerPlateLeakage, x)
     return DividerPlateLeakage, x
 
-# print (system_input(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, [ld.SteamGenerator_2[2], ld.SteamGenerator_2[3]]))
-# print (ld.SteamGenerator_2[SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)[1][0]].OuterFe3O4Loading)
 
-
-SimulationYears = 1 # years
+SimulationYears = 17 # years
 SimulationStart = 0
 HoursinYear = 8760
 
-SimulationHours = SimulationStart + 300#SimulationYears * (HoursinYear / nc.TIME_STEP)
+SimulationHours = SimulationStart + SimulationYears * 876#(HoursinYear / nc.TIME_STEP)
 SimulationEnd = SimulationHours
 
 import time
@@ -532,9 +531,9 @@ for j in range(SimulationStart, SimulationEnd):
       
 
     # parameters tracked/updated with time
-    HeatTransferTimeStep = 10 * nc.TIME_STEP #hours, e.g., 73 h * 10 = hours in a month
+    HeatTransferTimeStep = 73 * nc.TIME_STEP #hours, e.g., 73 h * 10 = hours in a month
     
-    if j % (HeatTransferTimeStep) == 0:
+    if j % (HeatTransferTimeStep / nc.TIME_STEP) == 0:
         if j == SimulationStart:
                         
             if SimulationStart == 0:
@@ -608,12 +607,13 @@ for j in range(SimulationStart, SimulationEnd):
             Temperature2 = None
         # optional preview of RIHT and primary-side steam quality
         print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
+            
 
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, Temperature1,
             Temperature2, DividerPlateLeakage, j, InletFeeder_1_Loop1.Section1.Bulk.FeTotal,
             OutletFeeder_2_Loop1.Section1.Bulk.FeTotal, FuelChannel_1_Loop1.Section1.Bulk.FeTotal,
-            SteamGeneratorTube_2_Loop1.Section1.Bulk.FeTotal, InletFeeder_1_Loop1.Section1.Bulk.FeSatFe3O4
+            SteamGeneratorTube_2_Loop1.Section1.OuterFe3O4Loading, SteamGeneratorTube_2_Loop1.Section1.InnerIronOxLoading
             )
     else:
         None

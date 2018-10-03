@@ -7,13 +7,27 @@ import electrochemistry as e
 import random
 import sg_heattransfer as SGHX
 from lepreau_data import SteamGeneratorSections
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 # Spalling thermochemistry_and_constants depend heavily on particle size distribution
 OUTLET_OUTER_SPALL_CONSTANT = 5
 OUTLET_INNER_SPALL_CONSTANT = 5
 INLET_OUTER_SPALL_CONSTANT = 5.00E+10  # Different units for inlet versus outlet (different functions)
 INLET_INNER_SPALL_CONSTANT = 1.00E+4
+
+a = SGHX.YearStartup
+# b = datetime(2008, 3, 29)
+b = datetime(1984, 1, 1)
+delta = b-a
+delta = (delta.days * 24) / nc.TIME_STEP
+Refurb_hours = round(delta)
+
+q = SGHX.YearStartup
+# t = datetime(1995, 12, 31)
+t = datetime(1983, 6, 1)
+delta = t-q
+delta = (delta.days * 24) / nc.TIME_STEP
+Outage_hours = round(delta)
 
 
 def oxide_composition(
@@ -194,12 +208,13 @@ def oxide_growth(
     return GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt
     
 
-def pht_cleaning(Section, InnerOxide, OuterOxide, Year_Month_Day_Hour):
+def pht_cleaning(Section, InnerOxide, OuterOxide, Shutdown):
     
     #need to change cleaning efficiency for each individual clean 
-    if Year_Month_Day_Hour == (1995, 5, 8, 8):
+    if Shutdown == Outage_hours:
         CleaningEfficiency = 0.6
-    elif Year_Month_Day_Hour == (2008, 3, 1, 14):
+        
+    elif Shutdown == Refurb_hours:
         CleaningEfficiency = 0.22 #(IR-33110-0039-001-A)
     else:
         CleaningEfficiency = 0 # no cleaning, oxide layers returned without reduction in thickness
@@ -216,7 +231,7 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, Year_Month_Day_Hour):
             
     Inner.append(InnerOxide)
     Outer.append(OuterOxide)
-    
+   
     return InnerOxide, OuterOxide
 
 
@@ -225,8 +240,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
     start = SGHX.YearStartup
     delta = timedelta(hours = j * nc.TIME_STEP)
     CalendarDate = start + delta
-        
-    Year_Month_Day_Hour = (CalendarDate.year, CalendarDate.month, CalendarDate.day, CalendarDate.hour) 
+    
     Year_Month = (CalendarDate.year, CalendarDate.month)
     
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
@@ -236,7 +250,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
         elif Section in ld.SteamGenerator_2:
             SteamGenerator = ld.SteamGenerator_2
         
-        TotalSGTubeNumber = SGHX.total_tubes_plugged(SteamGenerator, Year_Month_Day_Hour)
+        TotalSGTubeNumber = SGHX.total_tubes_plugged(SteamGenerator, Year_Month)
         
         # here Section = a bundle from the SG, but tube picker needs entire SG to be passed through
         if Section in ld.SteamGenerator: 
@@ -249,26 +263,27 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
         # second tube only outage cleaned
         # third tube only refurb cleaned
         
-        if Year_Month_Day_Hour == (1995, 5, 8, 8):
+        if j == Outage_hours:
             # first two selected tubes outage cleaned
             if SGHX.SGFastMode == "yes":
                 if Section in [SelectedTubes[0], SelectedTubes[1]]:
                     [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
-                Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Year_Month_Day_Hour)
+                Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Outage_hours)
             else:
+               
                 # function accessed just once at specific date/time stamp
                 Cleaned = SGHX.primaryside_cleaned_tubes(SteamGenerator, Year_Month)
                 if Section in Cleaned:
                     [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
-                Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Year_Month_Day_Hour)
+                Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Outage_hours)
         
         
-        elif Year_Month_Day_Hour == (2008, 3, 1, 14):
+        elif j == Refurb_hours:
             # first and third tubes refurbishment cleaned
             if SGHX.SGFastMode == "yes":
                 if Section in [SelectedTubes[0], SelectedTubes[2]]:
                     [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
-            Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Year_Month_Day_Hour)
+            Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Refurb_hours)
             
             else:
                 # function accessed just once at specific date/time stamp
@@ -276,7 +291,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
             
                 if Section in Cleaned:
                     [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
-                Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Year_Month_Day_Hour)
+                Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, Refurb_hours)
         
         else:
             Section.InnerIronOxLoading = Section.InnerIronOxLoading
@@ -504,8 +519,8 @@ def spall(Section, j, SimulationStart, ElapsedTime, SpallTime, ElementTracking):
     # Ni at each node of current section 
 
     # Silences spalling for desired sections
-#     if Section not in ld.OutletSections:
-    Section.Particle = [0] * Section.NodeNumber 
+    if Section not in ld.OutletSections:
+        Section.Particle = [0] * Section.NodeNumber 
 
     ConvertedConcentrations = []
     Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.SolutionOxide.FeTotal]
