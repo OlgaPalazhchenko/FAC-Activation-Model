@@ -187,7 +187,7 @@ YearStartup = datetime(1983, 4, 8)
 
 
 YearCPP = (1987, 3)
-YearOutage = (1983,7)#(1995, 5)
+YearOutage = (1983,6)#(1995, 5)
 YearOutageRestart = (1996, 1)#datetime(1996, 1, 1)
 YearRefurbishment = (1984,1)#(2008, 3)#datetime(2008, 3, 29)
 YearRefurbRestart = (2012, 12)#datetime(2012, 12, 10)
@@ -1305,7 +1305,7 @@ def divider_plate(Year_Month, HeatTransferTimeStep, DividerPlateLeakage):
     elif Year_Month < YearOutage:
         LeakageRate = 0.005 # per year rate
     
-    elif Year_Month >= YearOutageRestart:
+    elif Year_Month >= YearOutage:#YearOutageRestart:
         LeakageRate = PostOutageYearlyLeakage # per year rate
     
     else:
@@ -1397,64 +1397,87 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Year_Month, HeatT
     RemainingPHTMassFlow = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude
 
     Selected_Tubes = tube_picker(Method, SteamGenerator)[0]
-    
+#     print (Selected_Tubes)
     # undergone none of the cleanings, with regular growth
     DefaultUncleanedInnerOxide = SteamGenerator[Default_Tube].InnerOxLoading
     DefaultUncleanedOuterOxide = SteamGenerator[Default_Tube].OuterOxLoading
 
     for Bundle in SteamGenerator:
         if SGFastMode == "yes":
-            if Bundle in Selected_Tubes:
-                # tracks oxide growth for these tubes specifically
-                Bundle.InnerOxLoading = Bundle.InnerOxLoading
-                Bundle.OuterOxLoading = Bundle.OuterOxLoading
-                
-            else:  # assumes same growth as in default passed tube for remaining tubes
-                Bundle.InnerOxLoading = DefaultUncleanedInnerOxide
-                Bundle.OuterOxLoading = DefaultUncleanedOuterOxide
+            if Bundle in CleanedOutage and Bundle in CleanedRefurb:
+                Bundle.InnerOxLoading = Selected_Tubes[0].InnerOxLoading.copy()
+                Bundle.OuterOxLoading = Selected_Tubes[0].OuterOxLoading.copy()
             
+            elif Bundle in CleanedOutage and Bundle not in CleanedRefurb:
+                Bundle.InnerOxLoading = Selected_Tubes[1].InnerOxLoading.copy()
+                Bundle.OuterOxLoading = Selected_Tubes[1].OuterOxLoading.copy()
+                
+            elif Bundle in CleanedRefurb and Bundle not in CleanedOutage:
+                Bundle.InnerOxLoading = Selected_Tubes[2].InnerOxLoading.copy()
+                Bundle.OuterOxLoading = Selected_Tubes[2].OuterOxLoading.copy() 
             
-            if YearOutage <= Year_Month < YearRefurb:
-                if Bundle in CleanedOutage:   
-                    CleanedOutageOnlyInnerOxide = Selected_Tubes[1].InnerOxLoading
-                    CleanedOutageOnlyOuterOxide = Selected_Tubes[1].OuterOxLoading
-                    Bundle.InnerOxLoading = CleanedOutageOnlyInnerOxide
-                    Bundle.OuterOxLoading = CleanedOutageOnlyOuterOxide
-                
-                # reverts to above...either default tube or one of selected    
-                else:
-                    None       
-                
-            elif YearRefurbishment <= Year_Month:
-                if Bundle in CleanedOutage and Bundle in CleanedRefurb:
-                    # only the first of the selected tubes undergoes both cleanings
-                    CleanedBothInnerOxide = Selected_Tubes[0].InnerOxLoading
-                    CleanedBothOuterOxide = Selected_Tubes[0].OuterOxLoading
-                    Bundle.InnerOxLoading = CleanedBothInnerOxide
-                    Bundle.OuterOxLoading = CleanedBothOuterOxide
-                    
-                # not targetted in refurb, outage only    
-                elif Bundle in CleanedOutage:
-                    CleanedOutageOnlyInnerOxide = Selected_Tubes[1].InnerOxLoading
-                    CleanedOutageOnlyOuterOxide = Selected_Tubes[1].OuterOxLoading
-                    Bundle.InnerOxLoading = CleanedOutageOnlyInnerOxide
-                    Bundle.OuterOxLoading = CleanedOutageOnlyOuterOxide
-                
-                #only targetted in the refurb clean, but not in outage
-                elif Bundle in CleanedRefurb:
-                    CleanedRefurbOnlyInnerOxide = Selected_Tubes[2].InnerOxLoading
-                    CleanedRefurbOnlyOuterOxide = Selected_Tubes[2].OuterOxLoading
-                    Bundle.InnerOxLoading = CleanedRefurbOnlyInnerOxide
-                    Bundle.OuterOxLoading = CleanedRefurbOnlyOuterOxide
-                
-                # not cleaned in either outage
-                # reverts to above...either default tube or one of selected    
-                else:
-                    None
-                    
-            # before any cleanings --> reverts to above...either default tube or one of selected    
             else:
-                None
+                Bundle.InnerOxLoading = SteamGenerator[Default_Tube].InnerOxLoading.copy()
+                Bundle.OuterOxLoading = SteamGenerator[Default_Tube].OuterOxLoading.copy()
+#             if YearOutage <= Year_Month < YearRefurbishment:
+#                 if Bundle in CleanedOutage:   
+#                     CleanedOutageOnlyInnerOxide = Selected_Tubes[1].InnerOxLoading
+#                     CleanedOutageOnlyOuterOxide = Selected_Tubes[1].OuterOxLoading
+#                     Bundle.InnerOxLoading = CleanedOutageOnlyInnerOxide
+#                     Bundle.OuterOxLoading = CleanedOutageOnlyOuterOxide
+#                 
+#                 # reverts to above...either default tube or one of selected    
+#                 else:
+#                     if Bundle in Selected_Tubes:
+#                     # tracks oxide growth for these tubes specifically
+#                         Bundle.InnerOxLoading = Bundle.InnerOxLoading
+#                         Bundle.OuterOxLoading = Bundle.OuterOxLoading
+#                     else:
+#                         Bundle.InnerOxLoading = DefaultUncleanedInnerOxide
+#                         Bundle.OuterOxLoading = DefaultUncleanedOuterOxide       
+#                 
+#             
+#             elif YearRefurbishment <= Year_Month:
+#                 if Bundle in CleanedOutage and Bundle in CleanedRefurb:
+#                     # only the first of the selected tubes undergoes both cleanings
+#                     CleanedBothInnerOxide = Selected_Tubes[0].InnerOxLoading
+#                     CleanedBothOuterOxide = Selected_Tubes[0].OuterOxLoading
+#                     Bundle.InnerOxLoading = CleanedBothInnerOxide
+#                     Bundle.OuterOxLoading = CleanedBothOuterOxide
+#                     
+#                 # not targetted in refurb, outage only    
+#                 elif Bundle in CleanedOutage:
+#                     CleanedOutageOnlyInnerOxide = Selected_Tubes[1].InnerOxLoading
+#                     CleanedOutageOnlyOuterOxide = Selected_Tubes[1].OuterOxLoading
+#                     Bundle.InnerOxLoading = CleanedOutageOnlyInnerOxide
+#                     Bundle.OuterOxLoading = CleanedOutageOnlyOuterOxide
+#                 
+#                 #only targetted in the refurb clean, but not in outage
+#                 elif Bundle in CleanedRefurb:
+#                     CleanedRefurbOnlyInnerOxide = Selected_Tubes[2].InnerOxLoading
+#                     CleanedRefurbOnlyOuterOxide = Selected_Tubes[2].OuterOxLoading
+#                     Bundle.InnerOxLoading = CleanedRefurbOnlyInnerOxide
+#                     Bundle.OuterOxLoading = CleanedRefurbOnlyOuterOxide
+#                 
+#                 # not cleaned in either outage
+#                 # reverts to above...either default tube or one of selected    
+#                 else:
+#                     if Bundle in Selected_Tubes:
+#                         # tracks oxide growth for these tubes specifically
+#                         Bundle.InnerOxLoading = Bundle.InnerOxLoading
+#                         Bundle.OuterOxLoading = Bundle.OuterOxLoading
+#                     else:
+#                         Bundle.InnerOxLoading = DefaultUncleanedInnerOxide
+#                         Bundle.OuterOxLoading = DefaultUncleanedOuterOxide
+#                     
+#             else:
+#                 if Bundle in Selected_Tubes:
+#                     # tracks oxide growth for these tubes specifically
+#                     Bundle.InnerOxLoading = Bundle.InnerOxLoading
+#                     Bundle.OuterOxLoading = Bundle.OuterOxLoading
+#                 else:
+#                     Bundle.InnerOxLoading = DefaultUncleanedInnerOxide
+#                     Bundle.OuterOxLoading = DefaultUncleanedOuterOxide
                       
         # in non-fast-mode all tubes are passed through (all cleaned/uncleaned) through oxide growth functions
         else:
@@ -1486,27 +1509,31 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Year_Month, HeatT
 
         Enthalpy_dividerplate = Enthalpy_dp_sat_liq + x_pht * (EnthalpySaturatedSteam.magnitude - Enthalpy_dp_sat_liq)
 
-        Enthalpy = (sum(Energy) + MasssFlow_dividerplate.magnitude * Enthalpy_dividerplate) / MassFlow_h.magnitude 
-    
-    
-    for Bundle in ld.SteamGenerator_2[0:20]:
-        if Bundle in CleanedOutageSG2 and Bundle in CleanedRefurbishmentSG2:
-            Outage = "both"
-        elif Bundle in CleanedOutageSG2:
-            Outage = "outage"
-        elif Bundle in CleanedRefurbishmentSG2:
-            Outage = "refurb"
+        Enthalpy = (sum(Energy) + MasssFlow_dividerplate.magnitude * Enthalpy_dividerplate) / MassFlow_h.magnitude
         
-        else:
-            Outage = "none"
-        print (Bundle.Distance[21], Bundle.OuterOxLoading[15], Outage)
+#     print (Year_Month, Selected_Tubes[0].OuterOxLoading[15], 'both')
+#     print (Year_Month, Selected_Tubes[1].OuterOxLoading[15], 'outage only')
+#     print (Year_Month, Selected_Tubes[2].OuterOxLoading[15], 'refurb only') 
+    
+    
+#     for Bundle in ld.SteamGenerator_2[0:20]:
+#         if Bundle in CleanedOutageSG2 and Bundle in CleanedRefurbishmentSG2:
+#             Outage = "both"
+#         elif Bundle in CleanedOutageSG2:
+#             Outage = "outage"
+#         elif Bundle in CleanedRefurbishmentSG2:
+#             Outage = "refurb"
+#          
+#         else:
+#             Outage = "none"
+#         print (Bundle.Distance[21], Bundle.OuterOxLoading[15], Outage)
     
     
     RIHT = nc.temperature_from_enthalpyD2O_liquid(Enthalpy)
        
     return RIHT
 
-    
+     
 # print (energy_balance(
 #     ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Year_Month= (1983, 4),
 #     HeatTransferTimeStep = nc.TIME_STEP * 73, SGFastMode="yes"
