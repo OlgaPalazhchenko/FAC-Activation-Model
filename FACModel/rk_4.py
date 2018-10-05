@@ -16,15 +16,13 @@ INLET_OUTER_SPALL_CONSTANT = 5.00E+10  # Different units for inlet versus outlet
 INLET_INNER_SPALL_CONSTANT = 1.00E+4
 
 a = SGHX.YearStartup
-# b = datetime(2008, 3, 29)
-b = datetime(1984, 1, 1)
+b = datetime(2008, 3, 29)
 delta = b-a
 delta = (delta.days * 24) / nc.TIME_STEP
 Refurb_hours = round(delta)
 
 q = SGHX.YearStartup
-# t = datetime(1995, 12, 31)
-t = datetime(1983, 6, 1)
+t = datetime(1995, 12, 31)
 delta = t-q
 delta = (delta.days * 24) / nc.TIME_STEP
 Outage_hours = round(delta)
@@ -164,10 +162,7 @@ def oxide_growth(
                     Dissolution = Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
                     
                     q = OxideGrowth + Dissolution
-#                     if Section in ld.OutletSections:
-#                         if j % (50) == 0:
-#                             print (OxideGrowth, Dissolution, q, i, j)
-
+                                        
                 x = 0  # nothing to dissolve (no outer layer and dissolution conditions)
             
         GrowthOuterMagnetite.append(x)
@@ -208,28 +203,31 @@ def oxide_growth(
     return GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt
     
 
-def pht_cleaning(Section, InnerOxide, OuterOxide, SelectedTubes, j):
+def pht_cleaning(Bundle, InnerOxide, OuterOxide, j):
     
-    # first tube cleaned in all
-    # second tube only outage cleaned
-    # third tube only refurb cleaned
-    
+    # tubes cleaned/efficiency depends on which boiler bundle is in
+    if Bundle in ld.SteamGenerator:
+        CleanedOutage = SGHX.Cleaned_OutageSG1
+        CleanedRefurb = SGHX.CleanedRefurbishmentSG1
+    else:
+        CleanedOutage = SGHX.CleanedOutageSG2
+        CleanedRefurb = SGHX.CleanedRefurbishmentSG2
+
     #need to change cleaning efficiency for each individual clean 
     if j == Outage_hours:
-        if Section in [SelectedTubes[0], SelectedTubes[1]]:
+        if Bundle in CleanedOutage:
             CleaningEfficiency = 0.6
         else:
             CleaningEfficiency = 0
         
     elif j == Refurb_hours:
-        if Section in [SelectedTubes[0], SelectedTubes[2]]:
+        if Bundle in Refurb_hours:
             CleaningEfficiency = 0.22 #(IR-33110-0039-001-A)
     else:
         CleaningEfficiency = 0 # no cleaning, oxide layers returned without reduction in thickness
-        
-    print (j, Outage_hours, OuterOxide[15], 'pre in function', Section)
     
-    for i in range(Section.NodeNumber):
+        
+    for i in range(Bundle.NodeNumber):
         if OuterOxide[i] > 0:
             OuterOxide[i] = OuterOxide[i] * (1 - CleaningEfficiency)
             InnerOxide[i] = InnerOxide[i]
@@ -237,8 +235,6 @@ def pht_cleaning(Section, InnerOxide, OuterOxide, SelectedTubes, j):
             InnerOxide[i] = InnerOxide[i] * (1 - CleaningEfficiency) #inner layer reduced in thickness instead
             OuterOxide[i] = OuterOxide[i] # remains zero
             
-   
-    print (j, Outage_hours, OuterOxide[15], 'post in function', Section)
     return InnerOxide, OuterOxide
 
 
@@ -251,41 +247,11 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
     Year_Month = (CalendarDate.year, CalendarDate.month)
     
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
-        
-        if Section in ld.SteamGenerator:
-            SteamGenerator = ld.SteamGenerator
-        elif Section in ld.SteamGenerator_2:
-            SteamGenerator = ld.SteamGenerator_2
-        
-        TotalSGTubeNumber = SGHX.total_tubes_plugged(SteamGenerator, Year_Month)
-        
-        # here Section = a bundle from the SG, but tube picker needs entire SG to be passed through
-        if Section in ld.SteamGenerator: 
-            SteamGenerator = ld.SteamGenerator
-        else:
-            SteamGenerator = ld.SteamGenerator_2
-        
-        SelectedTubes = SGHX.tube_picker(SGHX.Method, SteamGenerator)[0]
-        print (j, SelectedTubes)
-        
-        # first two selected tubes outage cleaned
-        if SGHX.SGFastMode == "yes":
-            print (j, Section.OuterFe3O4Loading[15], 'out function pre', Section)
-            [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
-            Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, SelectedTubes, j)
-            
-            print (j, Section.OuterFe3O4Loading[15], 'out function post', Section)   
-        else:
-           
-            # function accessed just once at specific date/time stamp
-            Cleaned = SGHX.primaryside_cleaned_tubes(SteamGenerator, Year_Month)
-            if Section in Cleaned:
-                [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
-            Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, SelectedTubes, j)
-        
+      
+        [Section.InnerIronOxLoading, Section.OuterFe3O4Loading] = pht_cleaning(
+            Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, j)  
     else:
         None
-    
     
     if Year_Month in SGHX.OutageYearsMonths:
          # no oxide growth anywhere in the PHT system

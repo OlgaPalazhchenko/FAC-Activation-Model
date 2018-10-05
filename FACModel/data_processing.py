@@ -25,19 +25,19 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     Output = pht_model.output
     
     OutletCorrosionRate = Output[0]
-    Time = Output[6]
-    InletBulkConcentration = Output[7]
-    OutletBulkConcentration = Output[8]
-    FuelChannelBulkConcentration = Output[9]
-    SteamGeneratorBulkConcentration = Output[10]
-    InletSolubility = Output[11]
+    Time = Output[4]
+    InletBulkConcentration = Output[5]
+    OutletBulkConcentration = Output[6]
+    FuelChannelBulkConcentration = Output[7]
+#     SteamGeneratorBulkConcentration = Output[8]
+#     InletSolubility = Output[9]
     
     OutletCorrosionRate_uma = []
     InletBulkConcentration_gcm3 = []
     OutletBulkConcentration_gcm3 = []
     FuelChannelBulkConcentration_gcm3 = []
-    SteamGeneratorBulkConcentration_gm3 = []
-    InletSolubility_gm3 = []
+#     SteamGeneratorBulkConcentration_gm3 = []
+#     InletSolubility_gm3 = []
     AvgCorrRate = []
     
     for Rate in OutletCorrosionRate:
@@ -49,9 +49,8 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
         OutletCorrosionRate_uma.append(x)
         AvgCorrRate.append(q)
    
-    for Conc1, Conc2, Conc3, Conc4, Conc5 in zip(
-        InletBulkConcentration, OutletBulkConcentration, FuelChannelBulkConcentration, SteamGeneratorBulkConcentration,
-        InletSolubility):
+    for Conc1, Conc2, Conc3 in zip(
+        InletBulkConcentration, OutletBulkConcentration, FuelChannelBulkConcentration):
         
         y = ld.UnitConverter(
             OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc1, None, None, None, nc.FeMolarMass, None
@@ -66,21 +65,21 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
             OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc3, None, None, None, nc.FeMolarMass, None
             )
         
-        p = ld.UnitConverter(
-            OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc4, None, None, None, nc.FeMolarMass, None
-            )
-        
-        u = ld.UnitConverter(
-            OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc5, None, None, None, nc.FeMolarMass, None
-            )
+#         p = ld.UnitConverter(
+#             OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc4, None, None, None, nc.FeMolarMass, None
+#             )
+#         
+#         u = ld.UnitConverter(
+#             OutletFeeder, "Mol per Kg", "Grams per Cm Cubed", Conc5, None, None, None, nc.FeMolarMass, None
+#             )
         
          
         
         InletBulkConcentration_gcm3.append(y)
         OutletBulkConcentration_gcm3.append(z)
         FuelChannelBulkConcentration_gcm3.append(w)
-        SteamGeneratorBulkConcentration_gm3.append(p)
-        InletSolubility_gm3.append(u)
+#         SteamGeneratorBulkConcentration_gm3.append(p)
+#         InletSolubility_gm3.append(u)
         
     
 #     DissolutionRate = []
@@ -128,21 +127,21 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
         writer.writerows(OutletBulkConcentration_gcm3)
         writer.writerow([''])
         
-        writer.writerow(['SG Bulk Concentration (g/cm^3)'])
-        writer.writerows(SteamGeneratorBulkConcentration_gm3)
-        writer.writerow([''])
+#         writer.writerow(['SG Bulk Concentration (g/cm^3)'])
+#         writer.writerows(SteamGeneratorBulkConcentration_gm3)
+#         writer.writerow([''])
         
 #         writer.writerow(['Outlet Bulk Concentration (mol/kg)'])
 #         writer.writerows(OutletBulkConcentration)
 #         writer.writerow([''])
          
-        writer.writerow(['Inlet Solubility (g/cm^3)'])
-        writer.writerows(InletSolubility_gm3)
+#         writer.writerow(['Inlet Solubility (g/cm^3)'])
+#         writer.writerows(InletSolubility_gm3)
 #         writer.writerow(['Outlet Solubility (mol/kg)'])
 #         writer.writerow(OutletFeeder.SolutionOxide.FeSatFe3O4)
          
 
-def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
+def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
     
     #would have to select tubes from SG2 as well (in SG module)
     InnerOxide = []
@@ -150,52 +149,29 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
     TotalOxide = []
     TotalDistance = []
     CorrosionRate = []
-    TemperatureProfile = []
     kp_Tdependent = []
     CorrosionRate_um = [] 
     
     FeSolubility_SteamGeneratorTubes = []
     FeConcentration_SteamGeneratorTubes = []
     Output = pht_model.output
-        
-    SelectedTubes = SGHX.tube_picker(SGHX.Method, SteamGenerator)[0]
-    
-    AllPipes = [InletFeeder, FuelChannel, OutletFeeder, SteamGenerator[pht_model.Default_Tube]] + SelectedTubes
+            
+    AllPipes = [InletFeeder, FuelChannel, OutletFeeder] + SteamGenerator
     
     for Pipe in AllPipes:
         x = Pipe.InnerIronOxLoading
         y = Pipe.OuterFe3O4Loading
         z = [i / 100 for i in Pipe.Distance]
         q = [i + j for i, j in zip(x, y)]
-#         d = ld.UnitConverter(Tube, "Mol per Kg", "Grams per Cm Cubed", Tube.SolutionOxide.FeSatFe3O4, None, None, None,
-#                              nc.FeMolarMass, None)
-#         e = ld.UnitConverter(Tube, "Mol per Kg", "Grams per Cm Cubed", Tube.SolutionOxide.FeTotal, None, None, None,
-#                              nc.FeMolarMass, None)
-#         f = Pipe.KpFe3O4electrochem
-#         g = Pipe.CorrRate
-            
+
         TotalDistance.append(z)
         InnerOxide.append(x)
         OuterOxide.append(y)
-#         TotalOxide.append(q)
-#         CorrosionRate.append(g)
-    #     FeSolubility_SteamGeneratorTubes.append(d) # Tube.SolutionOxide.FeSatFe3O4
-    #     FeConcentration_SteamGeneratorTubes.append(e) # Tube.SolutionOxide.FeTotal
-#         Temperature_C = [i - 273.15 for i in Pipe.PrimaryBulkTemperature]
-#         TemperatureProfile.append(Temperature_C)
-#         kp_Tdependent.append(f)
 
-#     OutletTemperatures1 = Output[1]
-#     OutletTemperatures2 = Output[2]
-    DividerPlateLeakage = Output[3]
-    x_pht = Output[4]
+
+    DividerPlateLeakage = Output[1]
+    x_pht = Output[2]
     
-    # for outlet feeder that connects to current steam generator
-    for Rate in CorrosionRate:
-        x = ld.UnitConverter(
-        OutletFeeder, "Corrosion Rate Grams", "Corrosion Rate Micrometers", None, Rate, None, None, None, None
-        )
-        CorrosionRate_um.append(x)
 
     Data = [SGHX.TubeLengths, TotalDistance, InnerOxide, OuterOxide]
     
@@ -223,17 +199,13 @@ def RIHT_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
         writer.writerow(['SteamQuality'])
         writer.writerow([x_pht])
         
-       
-#         writer.writerow([''])
-#         writer.writerow(['Outlet Streams (oC)'])
-#         writer.writerow(OutletTemperatures1)
-#         writer.writerow(OutletTemperatures2)
 
 # if loop run in half configuration, these will be identical
-RIHT_csv(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, "OutputSG2.csv")
+for_input_file_csv(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, "OutputSG2.csv")
 purification_csv(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2)
+
 if pht_model.Loop == "full":
-    RIHT_csv(
+    for_input_file_csv(
         ld.InletFeeder_2, ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator, "OutputSG1.csv")
     purification_csv(ld.InletFeeder_2, ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator) 
 

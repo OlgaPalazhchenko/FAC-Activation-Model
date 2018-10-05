@@ -280,8 +280,8 @@ InletSolubility = []
 Power_withtime = []
 
 def output_time_logging(
-        FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, Temperature1, Temperature2, DividerPlateLeakage, j, InletBulkFe,
-        OutletBulkFe, FCBulkFe, SGOuterOx, SGInnerOx):
+        FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, DividerPlateLeakage, j, InletBulkFe, OutletBulkFe, FCBulkFe,
+        SGOuterOx, SGInnerOx):
     
 #     InletSolubility.append(InletFeSat)
     FACRate_OutletFeeder.append(FACRate)
@@ -376,12 +376,16 @@ def output_time_logging(
     
 
     return (
-        FACRate_OutletFeeder, OutletTemperature_Bundle_1, OutletTemperature_Bundle_2, DividerPlateLeakage, x, j, Time,
-        InletBulkConcentration, OutletBulkConcentration, FuelChannelBulkConcentration, SGOuterOx, SGOuterOx
+        FACRate_OutletFeeder, DividerPlateLeakage, x, j, Time, InletBulkConcentration, OutletBulkConcentration,
+        FuelChannelBulkConcentration, SGInnerOx, SGOuterOx
         ) 
 
 
-def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
+# just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
+Default_Tube = SGHX.closest_ubend(1.52 * 100)
+
+
+def sg_heat_transfer(Outlet, Inlet, SteamGenerator, j):
     Tubes = []
     # Set input concentrations for all SG zones to be same as output of outlet feeder
     BulkOutletActivityOutput = [
@@ -391,66 +395,36 @@ def sg_heat_transfer(Outlet, Inlet, SelectedTubes, j):
     
     BulkOutletOutput = [Outlet.Bulk.FeTotal, Outlet.Bulk.NiTotal, Outlet.Bulk.CoTotal, Outlet.Bulk.CrTotal]
     
-    for Tube in SelectedTubes:
-        BulkSGInput = [Tube.Bulk.FeTotal, Tube.Bulk.NiTotal, Tube.Bulk.CoTotal, Tube.Bulk.CrTotal]
-        BulkSGActivityInput = [
-        Tube.Bulk.Co60, Tube.Bulk.Co58, Tube.Bulk.Fe59, Tube.Bulk.Fe55, Tube.Bulk.Cr51, Tube.Bulk.Mn54, Tube.Bulk.Ni63
-        ]
-        for x, y, z, q in zip(BulkSGInput, BulkOutletOutput, BulkSGActivityInput, BulkOutletActivityOutput):
-            x[0] = y[Outlet.NodeNumber - 1]
-            z[0] = q[Outlet.NodeNumber - 1]
+
+    for Bundle in SteamGenerator:
         
-        w = PHTS(Tube, Inlet, ElementTracking, Activation, ConstantRate, j)   
-        Tubes.append(w)
+        if Bundle == SteamGenerator[Default_Tube]:
+            None
+        else:
+            BulkSGInput = [Bundle.Bulk.FeTotal, Bundle.Bulk.NiTotal, Bundle.Bulk.CoTotal, Bundle.Bulk.CrTotal]
+            BulkSGActivityInput = [
+            Bundle.Bulk.Co60, Bundle.Bulk.Co58, Bundle.Bulk.Fe59, Bundle.Bulk.Fe55, Bundle.Bulk.Cr51, Bundle.Bulk.Mn54,
+            Bundle.Bulk.Ni63
+            ]
+            for x, y, z, q in zip(BulkSGInput, BulkOutletOutput, BulkSGActivityInput, BulkOutletActivityOutput):
+                x[0] = y[Outlet.NodeNumber - 1]
+                z[0] = q[Outlet.NodeNumber - 1]
+            
+            w = PHTS(Bundle, Inlet, ElementTracking, Activation, ConstantRate, j)   
+            Tubes.append(w)
     
     return Tubes
 
 
-# just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
-Default_Tube = SGHX.closest_ubend(1.52 * 100)
-
-
-def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, SelectedTubes):
+def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     
-#     SelectedTubes = SGHX.tube_picker(SGHX.Method, SG)[0]
-#     
-#     SelectedTubes[0].InnerIronOxLoading = None
-#     SelectedTubes[0].OuterFe3O4Loading = None
-#     
-#     SelectedTubes[1].InnerIronOxLoading = None
-#     SelectedTubes[1].OuterFe3O4Loading = None
-#     
-#     SelectedTubes[2].InnerIronOxLoading = None
-#     SelectedTubes[2].OuterFe3O4Loading = None
-#     
-#     SteamGenerator[Default_Tube].InnerIronOxLoading = None
-#     SteamGenerator[Default_Tube].OuterFe3O4Loading = None
-#     
-#     for Bundle in SteamGenerator:
-#         Bundle.SludgeLoading = [] * Bundle.NodeNumber
-#     
-#     InletFeeder.InnerIronOxLoading = None
-#     InletFeeder.OuterFe3O4Loading = None
-#     
-#     OutletFeeder.InnerIronOxLoading = None
-#     OutletFeeder.OuterFe3O4Loading = None
-#     
-#     FuelChannel.InnerIronOxLoading = None
-#     FuelChannel.OuterFe3O4Loading = None
-#     
-#     DividerPlateLeakage = None
+
     if InletFeeder == ld.InletFeeder:
         FileName = 'SG2 Input Phase 2.csv'
     else:
         FileName = 'SG1 Input Phase 2.csv'
-    # oxide thickness throughout system
-    # for each of selected SG tubes and for a default tube
-    # spalling time/particle size input
-    # divider plate leakage
-    # steam generator sludge
-     
-     
-    AllPipes = [InletFeeder, FuelChannel, OutletFeeder, SteamGenerator[Default_Tube]] + SelectedTubes 
+
+    AllPipes = [InletFeeder, FuelChannel, OutletFeeder] + SteamGenerator 
      
     InputParameters = open(FileName, 'r')
     InputParametersReader = list(csv.reader(InputParameters, delimiter=','))  
@@ -474,7 +448,7 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, Selecte
     return DividerPlateLeakage, x
 
 
-SimulationYears = 17 # years
+SimulationYears = 1 # years
 SimulationStart = 0
 HoursinYear = 8760
 
@@ -497,14 +471,11 @@ for j in range(SimulationStart, SimulationEnd):
     ld.OutletFeeder_2, ld.SteamGenerator_2[Default_Tube], ElementTracking, Activation, ConstantRate, j
     )
     
-    SelectedTubes, SelectedTubeNumbers = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator_2)
-    
     if Loop == "full":
         SteamGeneratorTube_2_Loop1 = PHTS(
         ld.SteamGenerator_2[Default_Tube], ld.InletFeeder_2, ElementTracking, Activation, ConstantRate, j
         )
-        SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, ld.InletFeeder_2, SelectedTubes, j)
-        
+        SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, ld.InletFeeder_2, ld.SteamGenerator_2, j)
         
         InletFeeder_2_Loop1 = PHTS(ld.InletFeeder_2, ld.FuelChannel_2, ElementTracking, Activation, ConstantRate, j)
         
@@ -518,8 +489,7 @@ for j in range(SimulationStart, SimulationEnd):
             ld.SteamGenerator[Default_Tube], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
             )
         
-        SelectedTubes, SelectedTubeNumbers = SGHX.tube_picker(SGHX.Method, ld.SteamGenerator)
-        SteamGeneratorTubes_1 = sg_heat_transfer(ld.OutletFeeder, ld.InletFeeder, SelectedTubes, j)
+        SteamGeneratorTubes_1 = sg_heat_transfer(ld.OutletFeeder, ld.InletFeeder, ld.SteamGenerator, j)
         
     else:
          # for 1/2 of single figure-of-eight loop, SG flow returned to same inlet header as that at start of loop
@@ -527,7 +497,7 @@ for j in range(SimulationStart, SimulationEnd):
         SteamGeneratorTube_2_Loop1 = PHTS(
         ld.SteamGenerator_2[Default_Tube], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
         )
-        SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, ld.InletFeeder, SelectedTubes, j)
+        SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, ld.InletFeeder, ld.SteamGenerator_2, j)
       
 
     # parameters tracked/updated with time
@@ -541,12 +511,12 @@ for j in range(SimulationStart, SimulationEnd):
                 DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
             else:
                 DividerPlateLeakage, x_pht = system_input(
-                    ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, SelectedTubes
+                    ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2
                     )
                  
                 if Loop == "full":
                     DividerPlateLeakage, x_pht = system_input(
-                        ld.InletFeeder_2,ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator, SelectedTubes
+                        ld.InletFeeder_2,ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator
                         )
         else:
             None
@@ -593,27 +563,16 @@ for j in range(SimulationStart, SimulationEnd):
             # update solubility based on new temperatures in steam generators and inlet heades/feeders
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
-        #final node temperature of first 2 of selected bundles (first two bundles from all 87 if not run in "fast mode")
-        # currently tracking only one steam generator...second set of Temp1 and Temp2 can be added for SG1 if needed
-        Temperature1 = (
-            ld.SteamGenerator_2[SelectedTubeNumbers[0]].PrimaryBulkTemperature[21] - 273.15
-                       )
-
-        if len(SelectedTubes) > 1: # provided that the selected bundle array is not just one element
-            Temperature2 = (
-                ld.SteamGenerator_2[SelectedTubeNumbers[1]].PrimaryBulkTemperature[21] - 273.15
-                           )
-        else:
-            Temperature2 = None
+       
         # optional preview of RIHT and primary-side steam quality
         print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
             
 
         output = output_time_logging(
-            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, Temperature1,
-            Temperature2, DividerPlateLeakage, j, InletFeeder_1_Loop1.Section1.Bulk.FeTotal,
-            OutletFeeder_2_Loop1.Section1.Bulk.FeTotal, FuelChannel_1_Loop1.Section1.Bulk.FeTotal,
-            SteamGeneratorTube_2_Loop1.Section1.OuterFe3O4Loading, SteamGeneratorTube_2_Loop1.Section1.InnerIronOxLoading
+            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, DividerPlateLeakage, j,
+            InletFeeder_1_Loop1.Section1.Bulk.FeTotal, OutletFeeder_2_Loop1.Section1.Bulk.FeTotal, 
+            FuelChannel_1_Loop1.Section1.Bulk.FeTotal, SteamGeneratorTube_2_Loop1.Section1.OuterFe3O4Loading,
+            SteamGeneratorTube_2_Loop1.Section1.InnerIronOxLoading
             )
     else:
         None
