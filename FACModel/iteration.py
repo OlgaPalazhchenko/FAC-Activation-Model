@@ -233,84 +233,93 @@ def FAC_solver(Section, ConstantRate, j):
     
     Year_Month = (CalendarYear.year, CalendarYear.month)
     
-    if Year_Month < SGHX.YearRefurbRestart:
-        ACTIVATION_ENERGY_Fe = 265219.2785
-        ACTIVATION_ENERGY_H2onFe = 262645.6224
-
-    #higher Cr-content CS feeder replacement
-    else:
-        #Mid FAC (25-40 um/a):
-        ACTIVATION_ENERGY_Fe = 273721.118
-        ACTIVATION_ENERGY_H2onFe = 271147.4619  
-        
-    # updates hydrolysis distribution of Fe species. Even if FAC rate kept constant, oxide thickness changes
-    # M/O Fe total concentration changes w.r.t. thickness, so species cncentrations change too
-    [ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2] = c.hydrolysis(
-        Section, Section.MetalOxide.FeTotal, Section.MetalOxide.ConcentrationH
-        )
-    ProductConcentration = Section.MetalOxide.ConcentrationH2
-    
-    EqmPotentialH2 = []  # x
-    EqmPotentialFe = []  # y
-    ExchangeCurrentFe = []  # z
-    ExchangeCurrentH2onFe = []  # w
-    
-    for i in range(Section.NodeNumber):
-        
-        x = e.potential(
-            Section, Section.StandardEqmPotentialH2[i], ProductConcentration[i], 1, 1,
-            Section.MetalOxide.ConcentrationH[i], ActivityCoefficient1[i], 2, Section.DensityH2O[i],
-            Section.NernstConstant[i], "gas"
-            )
-        
-        y = e.potential(
-            Section, Section.StandardEqmPotentialFe[i], 1, 1, 1, ConcentrationFe2[i], ActivityCoefficient2[i], 1,
-            Section.DensityH2O[i], Section.NernstConstant[i], "aqueous"
-            )
-        
-        if Section in ld.InletSections or Section in ld.OutletSections:
-            w = e.exchangecurrentdensity(
-                Section, ACTIVATION_ENERGY_H2onFe, Section.MetalOxide.ConcentrationH[i], x, Section.DensityH2O[i],
-                Section.PrimaryBulkTemperature[i], "Acceptor"
-                )
-            z = e.exchangecurrentdensity(
-                Section, ACTIVATION_ENERGY_Fe, ConcentrationFe2[i], y, Section.DensityH2O[i],
-                Section.PrimaryBulkTemperature[i], "Acceptor"
-                )
-            
-        if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
-            # EqmPotentialNi = e.potential(
-            # Section, Section.StandardEqmPotentialNi, [1]*Section.NodeNumber, 1, 1, composition.ConcentrationNi2,
-            # composition.ActivityCoefficient2, 1, "aqueous"
-            # )
-            
-            # assumed that different activation energies for half-cells if redox occurs on Alloy-800 vs. carbon steel
-            w = e.exchangecurrentdensity(
-                Section, ACTIVATION_ENERGYH2onALLOY800, Section.MetalOxide.ConcentrationH[i], x,
-                Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor"
-                )
-            
-            z = e.exchangecurrentdensity(
-                Section, ACTIVATION_ENERGY_ALLOY800, ConcentrationFe2[i], y, Section.DensityH2O[i],
-                Section.PrimaryBulkTemperature[i], "Acceptor"
-                )
-            
-        EqmPotentialH2.append(x)
-        EqmPotentialFe.append(y)
-        ExchangeCurrentFe.append(z)
-        ExchangeCurrentH2onFe.append(w)
-        
-    MixedECP = e.mixed_potential(Section, ExchangeCurrentH2onFe, EqmPotentialH2, ExchangeCurrentFe, EqmPotentialFe)
-    
     if Section in ld.FuelSections:
         rate = [0] * Section.NodeNumber
-    # preset desired FAC rate
+        MixedECP = None
     
-#     elif Section in ld.OutletSections:
-#         rate = EmpiricalFAC_solver(Section)
+    #         rate = EmpiricalFAC_solver(Section)
+    #         corrosion current calculation not required of rate has been set as constant
+    elif Section in ld.OutletSections and ConstantRate == "yes":
+        rate = [1.8e-09, 2.6e-09, 1.8e-09, 1.60e-09, 1.50e-09, 1.60e-09, 1.60e-09, 9.00e-10, 1.6e-09] # [g/cm^2*s]
+        
+        if Year_Month > SGHX.YearRefurbishment:
+            rate = [0.39 * i for i in rate]
+        MixedECP = None
     
-    # corrosion current calculation not required of rate has been set as constant
+    # predictive FAC rate
+    # any other section than outlet or outlet and not constant corr rate setting
     else:
+        
+        if Year_Month < SGHX.YearRefurbishment:
+            ACTIVATION_ENERGY_Fe = 266029
+            ACTIVATION_ENERGY_H2onFe = 263455.3439
+    
+        #higher Cr-content CS feeder replacement
+        else:
+            #Mid FAC (25-40 um/a):
+            ACTIVATION_ENERGY_Fe = 273721.118
+            ACTIVATION_ENERGY_H2onFe = 271147.4619  
+            
+        # updates hydrolysis distribution of Fe species. Even if FAC rate kept constant, oxide thickness changes
+        # M/O Fe total concentration changes w.r.t. thickness, so species cncentrations change too
+        [ConcentrationFe2, ConcentrationFeOH2, ActivityCoefficient1, ActivityCoefficient2] = c.hydrolysis(
+            Section, Section.MetalOxide.FeTotal, Section.MetalOxide.ConcentrationH
+            )
+        ProductConcentration = Section.MetalOxide.ConcentrationH2
+        
+        EqmPotentialH2 = []  # x
+        EqmPotentialFe = []  # y
+        ExchangeCurrentFe = []  # z
+        ExchangeCurrentH2onFe = []  # w
+        
+        for i in range(Section.NodeNumber):
+            
+            x = e.potential(
+                Section, Section.StandardEqmPotentialH2[i], ProductConcentration[i], 1, 1,
+                Section.MetalOxide.ConcentrationH[i], ActivityCoefficient1[i], 2, Section.DensityH2O[i],
+                Section.NernstConstant[i], "gas"
+                )
+            
+            y = e.potential(
+                Section, Section.StandardEqmPotentialFe[i], 1, 1, 1, ConcentrationFe2[i], ActivityCoefficient2[i], 1,
+                Section.DensityH2O[i], Section.NernstConstant[i], "aqueous"
+                )
+            
+            if Section in ld.InletSections or Section in ld.OutletSections:
+                w = e.exchangecurrentdensity(
+                    Section, ACTIVATION_ENERGY_H2onFe, Section.MetalOxide.ConcentrationH[i], x, Section.DensityH2O[i],
+                    Section.PrimaryBulkTemperature[i], "Acceptor"
+                    )
+                z = e.exchangecurrentdensity(
+                    Section, ACTIVATION_ENERGY_Fe, ConcentrationFe2[i], y, Section.DensityH2O[i],
+                    Section.PrimaryBulkTemperature[i], "Acceptor"
+                    )
+                
+            if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
+                # EqmPotentialNi = e.potential(
+                # Section, Section.StandardEqmPotentialNi, [1]*Section.NodeNumber, 1, 1, composition.ConcentrationNi2,
+                # composition.ActivityCoefficient2, 1, "aqueous"
+                # )
+                
+                # assumed that different activation energies for half-cells if redox occurs on Alloy-800 vs. carbon steel
+                w = e.exchangecurrentdensity(
+                    Section, ACTIVATION_ENERGYH2onALLOY800, Section.MetalOxide.ConcentrationH[i], x,
+                    Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor"
+                    )
+                
+                z = e.exchangecurrentdensity(
+                    Section, ACTIVATION_ENERGY_ALLOY800, ConcentrationFe2[i], y, Section.DensityH2O[i],
+                    Section.PrimaryBulkTemperature[i], "Acceptor"
+                    )
+                
+            EqmPotentialH2.append(x)
+            EqmPotentialFe.append(y)
+            ExchangeCurrentFe.append(z)
+            ExchangeCurrentH2onFe.append(w)
+            
+        MixedECP = e.mixed_potential(Section, ExchangeCurrentH2onFe, EqmPotentialH2, ExchangeCurrentFe, EqmPotentialFe)
+        
+
         CorrosionCurrent = [x * (np.exp((nc.Beta * nc.n * nc.F * (y - z)) / (nc.R * q))
                                - np.exp((-(1 - nc.Beta) * nc.n * nc.F * (y - z)) / (nc.R * q))) for x, y, z, q in
                             zip(ExchangeCurrentFe, MixedECP, EqmPotentialFe, Section.PrimaryBulkTemperature)]
@@ -380,7 +389,7 @@ def interface_concentrations(Section, ConstantRate, BulkConcentrations, Saturati
 #         Section, "Co", SolutionOxideCoTotal, InnerOxLoading, OuterOxLoading, CorrRate
 #         )
     
-    # This part needs to go
+
     [
         Section.KpFe3O4electrochem, Section.KdFe3O4electrochem, Section.SolutionOxide.FeSatFe3O4,
         Section.MetalOxide.ConcentrationH

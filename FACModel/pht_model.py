@@ -344,7 +344,7 @@ def output_time_logging(
     RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] > Shutdown]
     RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['Power'] > Shutdown]
     
-    if j % (87 * 4) == 0: #updates list in csv file (list itself appended to monthly)
+    if j % (7 * 10) == 0: #updates list in csv file (list itself appended to monthly)
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
          
         RIHT_phase1_preCPP.to_excel(writer, sheet_name = 'Phase 1 Pre CPP')
