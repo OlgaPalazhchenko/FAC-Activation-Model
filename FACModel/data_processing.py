@@ -173,10 +173,9 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
     x_pht = Output[2]
     
 
-    Data = [SGHX.TubeLengths, TotalDistance, InnerOxide, OuterOxide]
+    Data = [TotalDistance, InnerOxide, OuterOxide]
     
-    Labels = [
-        "U-bend length (cm)", "Distance (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)"]
+    Labels = ["Distance (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)"]
       
     csvfile = FileName1
     with open(csvfile, "w") as output:
@@ -184,10 +183,7 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
          
         for i, j in zip(Labels, Data):
             writer.writerow([i])
-            if i == "U-bend length (cm)":
-                writer.writerow(j)
-            else:
-                writer.writerows(j)
+            writer.writerows(j)
             writer.writerow([''])
         
         writer.writerow(['Sludge Loading (g/cm^2)'])

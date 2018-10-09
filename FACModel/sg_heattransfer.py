@@ -257,7 +257,9 @@ TubePitch.magnitude = 2.413
 UBends = [1.49, 0.685, 2.31, 3.09]
 UBends = [i * 100 for i in UBends]
 # select desired tubes to be run by total tube length
-TubeLengths = [1887, 1895, 1900]# 2046]
+TubeLengths = []
+for i in ld.SteamGenerator_2:
+    TubeLengths.append(i.Distance[21])
 
 
 def total_tubes_plugged(SteamGenerator, Year_Month):
@@ -466,7 +468,7 @@ def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Year_Month, i):
         
     #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
     if Year_Month == (1988, 4):
-        Bundle.SludgeLoading[i] = 0.8 * Bundle.SludgeLoading[i]
+        Bundle.SludgeLoading[i] = 0.75 * Bundle.SludgeLoading[i]
         
     elif Year_Month == YearOutage:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.8
@@ -1302,8 +1304,11 @@ def divider_plate(Year_Month, HeatTransferTimeStep, DividerPlateLeakage):
     if Year_Month in OutageYearsMonths:
         LeakageRate = 0 # per year rate
       
+    elif Year_Month == (1983, 4):
+        LeakageRate = 0
+        
     elif Year_Month < YearOutage:
-        LeakageRate = 0.005 # per year rate
+        LeakageRate = 0.0045 # per year rate
     
     elif Year_Month >= YearOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate
@@ -1317,11 +1322,11 @@ def divider_plate(Year_Month, HeatTransferTimeStep, DividerPlateLeakage):
     
     # Leakage through the replaced welded divider plates immediately following replacement was estimated as 2% PHT flow
     if Year_Month == YearOutageRestart:
-        DividerPlateLeakage = 0.0275
+        DividerPlateLeakage = 0.025
     
     # Development of additional leak site
     elif Year_Month == (1996, 3):
-        DividerPlateLeakage = 0.048
+        DividerPlateLeakage = 0.05
         
 #     # Development of additional leak site
 #     elif Year_Month == (1999, 2):
@@ -1330,7 +1335,7 @@ def divider_plate(Year_Month, HeatTransferTimeStep, DividerPlateLeakage):
     DividerPlateLeakage = DividerPlateLeakage + Time_Step * LeakageRate
     
     if Year_Month >= (1998, 11):
-        DividerPlateLeakage = 0.05
+        DividerPlateLeakage = 0.051
 
     return DividerPlateLeakage
 
@@ -1425,7 +1430,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Year_Month, HeatT
        
     return RIHT
 
-       
+        
 # print (energy_balance(
 #     ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Year_Month= (1983, 4),
 #     HeatTransferTimeStep = nc.TIME_STEP * 73, SGFastMode="yes"

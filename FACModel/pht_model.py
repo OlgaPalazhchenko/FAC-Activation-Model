@@ -344,7 +344,7 @@ def output_time_logging(
     RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] > Shutdown]
     RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['Power'] > Shutdown]
     
-    if j % (876 * 4) == 0: #updates list in csv file (list itself appended to monthly)
+    if j % (87 * 4) == 0: #updates list in csv file (list itself appended to monthly)
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
          
         RIHT_phase1_preCPP.to_excel(writer, sheet_name = 'Phase 1 Pre CPP')
@@ -448,11 +448,11 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     return DividerPlateLeakage, x
 
 
-SimulationYears = 1 # years
+SimulationYears = 16 # years
 SimulationStart = 0
 HoursinYear = 8760
 
-SimulationHours = SimulationStart + SimulationYears * 876#(HoursinYear / nc.TIME_STEP)
+SimulationHours = SimulationStart + SimulationYears * 88#(HoursinYear / nc.TIME_STEP)
 SimulationEnd = SimulationHours
 
 import time
@@ -501,7 +501,7 @@ for j in range(SimulationStart, SimulationEnd):
       
 
     # parameters tracked/updated with time
-    HeatTransferTimeStep = 73 * nc.TIME_STEP #hours, e.g., 73 h * 10 = hours in a month
+    HeatTransferTimeStep = 7 * nc.TIME_STEP #hours, e.g., 73 h * 10 = hours in a month
     
     if j % (HeatTransferTimeStep / nc.TIME_STEP) == 0:
         if j == SimulationStart:
