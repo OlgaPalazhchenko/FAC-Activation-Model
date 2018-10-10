@@ -102,7 +102,7 @@ def plngs_precipitation_kinetics(Section, j):
     ActivationEnergy = 1908 * nc.R  
     A = np.exp(.2817)    
     kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
-  
+   
     return kp
 
 

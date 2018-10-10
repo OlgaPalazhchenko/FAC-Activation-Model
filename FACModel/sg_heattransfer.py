@@ -75,66 +75,78 @@ def station_RIHT():
 
 
 def reactor_power():
-    OutageYearsMonths = []
+    TrackedOutageDays = []
+    EstimatedOutageDays = []
+    AllStationDataDates = []
     
-    Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw.csv'
+    Filename_stationpower = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw.csv'
+    Filename_power_estimated = "C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw_estimated (pre 1996).csv"
     
-    df = pd.read_csv(Filename, header=None)
+    df = pd.read_csv(Filename_stationpower, header=None)
     df.columns = ['date','power']
 
     # converts from string object to time series  
     df.date = pd.to_datetime(df.date)
     df.set_index('date', inplace=True)
     
-    # frequency of power data changed from every few minutes to monthly average
-    monthly_average = df.resample('M').mean().copy()
+    # frequency of power data changed from every few minutes to daily average
+    daily_average = df.resample('D').mean().copy()
     
-    # for months that are blank, e.g, 1996-8, forward filled, i.e., power from 1996-7 applied forward to 1996-8
-    monthly_average = monthly_average.fillna(method='ffill')
+    # for days that are blank, e.g, 1996-8, forward filled, i.e., power from 1996-7 applied forward to 1996-8
+    daily_average = daily_average.fillna(method='ffill')
 #     monthly_average = monthly_average.dropna(how = "any")
 
-    # secondary side pressure wil be added here eventually (maybe also primary side pressure)
-    writer = pd.ExcelWriter('PLNGS_Power.xlsx', engine='xlsxwriter', datetime_format='mm-yyyy')
-    monthly_average.to_excel(writer, sheet_name = 'Monthly Averaged FP')
+    for date in daily_average.index:
+        x = (date.year, date.month, date.day)
+        AllStationDataDates.append(x)
     
-    workbook  = writer.book
-    worksheet1 = writer.sheets['Monthly Averaged FP']
+    # secondary side pressure wil be added here eventually (maybe also primary side pressure)
+    writer = pd.ExcelWriter('PLNGS_Power.xlsx', engine='xlsxwriter', datetime_format='dd-mm-yyyy')
+    daily_average.to_excel(writer, sheet_name = 'Daily Averaged FP')
+    
+    workbook = writer.book
+    worksheet1 = writer.sheets['Daily Averaged FP']
     writer.save()
     
-    Outages = monthly_average.index[monthly_average['power'] < 0.1]
-
-    EstimatedOutageYearsMonths = [
-        (1984, 4), (1984, 5), (1986, 5), (1987, 4), (1988, 4), (1988, 7), (1988, 10), (1989, 6), (1990, 2), (1990, 4),
-        (1991, 3), (1991, 8), (1991, 9), (1992, 4), (1993, 9), (1994, 4), (1995, 5), (1995, 6), (1995, 7), (1995, 8),
-        (1995, 9), (1995, 10), (1995, 11), (1995, 12) 
-        ]
-
-    for date in Outages:
-        x = (date.year, date.month)
-        OutageYearsMonths.append(x)
-#         y = (date.year, date.month, date.day)
-#         print (y)
+    TrackedOutages = daily_average.index[daily_average['power'] < 0.1]
     
-    OutageYearsMonths = EstimatedOutageYearsMonths + OutageYearsMonths                              
-#         if (date.year == 2008 and 3 <= date.month <= 12):
-#             CleaningYearsMonths.append((date.year, date.month))
-#         
-#         elif date.year in [2009, 2010, 2011, 2012]:
-#             CleaningYearsMonths.append((date.year, date.month))
-#         
-#         elif (date.year == 2013 and date.month <2):
-#             CleaningYearsMonths.append((date.year, date.month))
-#         
-#         else:
-#             None
+    for date in TrackedOutages:
+        x = (date.year, date.month, date.day)
+        TrackedOutageDays.append(x)
+   
+   
+    StationPower = daily_average.as_matrix(['power']).flatten()
     
-    # converts dates from datetime (dd-mm-yyyy) to tuples with just (yy, mm) indices  
-    Year_Month = []
-    for date in monthly_average.index:
-        x = (date.year, date.month)
-        Year_Month.append(x)
 
-    OperatingPower = monthly_average.as_matrix(['power']).flatten()
+    df2 = pd.read_csv(Filename_power_estimated, header=None)
+    df2.columns = ['date','power']
+    
+    df2.date = pd.to_datetime(df2.date)
+    df2.set_index('date', inplace=True)
+    
+    daily_average_2 = df2.resample('D').mean().copy()
+    daily_average_2 = daily_average_2.fillna(method='ffill')
+    
+    writer = pd.ExcelWriter('PLNGS_Power_Estimated (Pre 1996).xlsx', engine='xlsxwriter', datetime_format='dd-mm-yyyy')
+    daily_average_2.to_excel(writer, sheet_name = 'Daily Averaged FP')
+    
+    workbook = writer.book
+    worksheet1 = writer.sheets['Daily Averaged FP']
+    writer.save()
+    
+    EstimatedOutages = daily_average_2.index[daily_average_2['power'] < 0.1]
+    
+    
+    for date in EstimatedOutages:
+        x = (date.year, date.month, date.day)
+        EstimatedOutageDays.append(x)
+    
+    # Estimated operating power (from estimates in spreadsheet)
+    EstimatedPower = daily_average_2.as_matrix(['power']).flatten()
+    
+    # All outage days, estimated and from station data
+    TrackedOutageDays = EstimatedOutageDays + TrackedOutageDays
+
 #     plt.plot(df)
 #     plt.xlabel('Year')
 #     plt.ylabel('Power')
@@ -142,10 +154,15 @@ def reactor_power():
 ##     prints first 5 rows to check everything is assigned properly
 #     print (df.head())
 
-    return Year_Month, OperatingPower, OutageYearsMonths, EstimatedOutageYearsMonths
+    # all dates for which station data available (1996-June 2018)
+    # all outage days (estimated + station data), where power is < 0.1
+    # only the estimated outage days pre 1996 station data
+    # estimated operating power during the outage days
+    # station power for dates where station data available (1996- June 2018)
+    return AllStationDataDates, TrackedOutageDays, EstimatedOutageDays, EstimatedPower, StationPower
 
 
-Year_Month_PowerTracked, Operating_Power, OutageYearsMonths, EstimatedOutageYearsMonths = reactor_power()
+AllStationDataDates, TrackedOutageDays, EstimatedOutageDays, EstimatedPower, StationPower = reactor_power()
 # print (len(OutageYearsMonths))
 
 def RIHT_plots():
@@ -175,24 +192,15 @@ Method = "tube length"
 
 FullTubeComplement = 3542
 
+# April 8, 1983
 YearStartup = datetime(1983, 4, 8)
-# print (YearStartup, YearStartup.year, YearStartup.month, YearStartup.day, YearStartup.hour)
 
 
-# for j in range(10000,14000):
-#     start = YearStartup
-#     delta = timedelta(hours = j * nc.TIME_STEP)
-#     CalendarDate = start + delta
-#          
-#     Year_Month_Day_Hour = (CalendarDate.year, CalendarDate.month, CalendarDate.day, CalendarDate.hour) 
-#     print (Year_Month_Day_Hour,j)
-
-
-YearCPP = (1987, 3)
-YearOutage = (1995, 5)
-YearOutageRestart = (1996, 1)#datetime(1996, 1, 1)
-YearRefurbishment = (2008, 3)#datetime(2008, 3, 29)
-YearRefurbRestart = (2012, 12)#datetime(2012, 12, 10)
+YearCPP = (1987, 3, 1)
+YearOutage = (1995, 4, 13)
+YearOutageRestart = (1996, 1, 1)
+YearRefurbishment = (2008, 3, 29)
+YearRefurbRestart = (2012, 12, 10)
 
 FULLPOWER = 2061.4 * 1000
 
@@ -451,31 +459,31 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
         return None
 
 
-def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Year_Month, i):
+def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
     
     Time_Step = HeatTransferTimeStep / 24 / 365 #hr --> yr
     # default values
-    ReducedTubeGrowth = 0.0004  # [g/cm^2] /year = 3.25 um/year
+    ReducedTubeGrowth = 0.0003  # [g/cm^2] /year = 3.25 um/year
     
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     
-    if Year_Month <= YearCPP:
-        Growth = 0.0014#[g/cm^2]/yr
+    if Date <= YearCPP:
+        Growth = 0.0013#[g/cm^2]/yr
     
-    elif Year_Month in OutageYearsMonths:# or Year_Month in EstimatedOutageYearsMonths:
+    elif Date in TrackedOutageDays:
         Growth = 0
     
     else:
         Growth = ReducedTubeGrowth 
         
     #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
-    if Year_Month == (1988, 4):
+    if (1988, 4, 1) <= Year_Month <= (1988, 4, 3):
         Bundle.SludgeLoading[i] = 0.75 * Bundle.SludgeLoading[i]
         
-    elif Year_Month == YearOutage:
+    elif Date == YearOutage:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.8
     
-    elif Year_Month == YearRefurbishment:
+    elif Date == YearRefurbishment:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.25
          
     else:
@@ -704,7 +712,8 @@ def outer_area(SteamGenerator):
     return [np.pi * x * y for x, y in zip(SteamGenerator.OuterDiameter, SteamGenerator.Length.magnitude)]
 
 
-def pht_steam_quality(Temperature, Year_Month):
+
+def pht_steam_quality(Temperature, Date):
    
     CoreMassFlow =  7600  # [kg /s]
 #     Delta_T = T_sat_primary - (262 + 273.15)  # [K]
@@ -717,11 +726,11 @@ def pht_steam_quality(Temperature, Year_Month):
     difference = []
 
     # outages are accounted for in the 1996-01 to 2018-06 data via power derating (down to 0.01 or lower)
-    if Year_Month in Year_Month_PowerTracked:
+    if Date in AllStationDataDates:
         
-        for x in Year_Month_PowerTracked:
+        for x in AllStationDataDates:
             
-            delta_time = [x1 - x2 for (x1, x2) in zip(Year_Month, x)] 
+            delta_time = [x1 - x2 for (x1, x2) in zip(Date, x)] 
             
             delta_time = [abs(number) for number in delta_time]
             
@@ -729,19 +738,19 @@ def pht_steam_quality(Temperature, Year_Month):
 
         # min function --> smallest difference between first index in all lists in tuple compared, followed by second     
         # index = location of list with this minimum difference relative to that of current (year, month) input 
-        ClosestYear_Month = difference.index(min(difference))
+        ClosestDay = difference.index(min(difference))
         
-        Fraction_of_FP = Operating_Power[ClosestYear_Month]
+        Fraction_of_FP = StationOperatingPower[ClosestDay]
     
     # the outage in 1995 precedes the station log data available, so this is manually set to 0 % FP here in addition
     # to the other approximated outage dates
     
     # many of these estimated outages are not the entire month (so a recovery power is taken into account)
-    elif Year_Month in EstimatedOutageYearsMonths:
+    elif Date in EstimatedOutageDays:
         Fraction_of_FP = 0
     
         
-    # outside of data in the logs and the 1995 outage (1983-1995 data) 100 % full power is assumed
+    # outside of data in the logs and the 1995 outage (1983-1995 data) 99 % full power is assumed
     else:
         Fraction_of_FP = 0.99
        
@@ -964,7 +973,7 @@ def outside_bundle_pool_boiling(
         i
         ):
     
-    F = .25 # bundle boiling factor (empirical)
+    F = .27 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -1269,6 +1278,7 @@ def temperature_profile(
   
                 #from end of first preheater node
                 T_PrimaryBulkIn = T_PrimaryBulkOut
+                Cp_h = nc.heatcapacityD2O_liquid(T_PrimaryBulkIn)
                 # Guessing cold-side temperatures for remaining nodes inside preheater
                 T_SecondaryBulkOut = T_SecondaryBulkIn - (T_sat_secondary - T_PreheaterIn) / 5
                 
@@ -1308,22 +1318,22 @@ def temperature_profile(
     return PrimaryBulk, HeatFlux
 
 
-def divider_plate(Year_Month, HeatTransferTimeStep, DividerPlateLeakage):
+def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
     # time input (j) is in hours, converted to yearly
     Time_Step = HeatTransferTimeStep / 24 / 365 # hr --> yr
-    PostOutageYearlyLeakage = 0.0006 # per year rate
+    PostOutageYearlyLeakage = 0.00035 # per year rate
     
     # changes to rate of leakage growth
-    if Year_Month in OutageYearsMonths:
+    if Date in TrackedOutageDays:
         LeakageRate = 0 # per year rate
       
-    elif Year_Month == (1983, 4):
+    elif Date == YearStartup:
         LeakageRate = 0
         
-    elif Year_Month < YearOutage:
-        LeakageRate = 0.003 # per year rate
+    elif Date < YearOutage:
+        LeakageRate = 0.0018 # per year rate
     
-    elif Year_Month >= YearOutage:
+    elif Date >= YearOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate
     
     else:
@@ -1334,15 +1344,15 @@ def divider_plate(Year_Month, HeatTransferTimeStep, DividerPlateLeakage):
     # replacement of divider plate
     
     # Leakage through the replaced welded divider plates immediately following replacement was estimated as 2% PHT flow
-    if Year_Month == (1983, 5):
-        DividerPlateLeakage = 0.042
+    if (1983, 5, 1) < Date < (1983, 5, 8):
+        DividerPlateLeakage = 0.043
     
-    elif Year_Month == YearOutageRestart:
+    elif Date == YearOutageRestart:
         DividerPlateLeakage = 0.025
     
     # Development of additional leak site
-    elif Year_Month == (1996, 3):
-        DividerPlateLeakage = 0.05
+    elif Date == (1996, 3):
+        DividerPlateLeakage = 0.0325
         
 #     # Development of additional leak site
 #     elif Year_Month == (1999, 2):
@@ -1350,30 +1360,31 @@ def divider_plate(Year_Month, HeatTransferTimeStep, DividerPlateLeakage):
         
     DividerPlateLeakage = DividerPlateLeakage + Time_Step * LeakageRate
     
-    if Year_Month >= (1998, 11):
-        DividerPlateLeakage = 0.051
+    if Date >= (1998, 11, 1):
+        DividerPlateLeakage = 0.048
 
     return DividerPlateLeakage
 
 
-def secondary_side_pressure(Year_Month):
+def secondary_side_pressure(Date):
     
-    FirstPressureReduction = (1992, 11)
-    SecondPressureReduction = (1998, 11)
+    #CHECK THESE ###############################################################################################
+    FirstPressureReduction = (1992, 11, 1)
+    SecondPressureReduction = (1998, 11, 1)
     
-    if Year_Month < FirstPressureReduction:
+    if Date < FirstPressureReduction:
         SecondarySidePressure = 4.593  # MPa
     
     # PLNGS pressure reduction in 1992 (september) by 125 kPa
-    elif FirstPressureReduction <= Year_Month <= YearOutageRestart:
+    elif FirstPressureReduction <= Date <= YearOutageRestart:
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     
     # return to full boiler secondary side pressure, 4.593 MPa
     # pressure restored shortly after reactor back online from refurb.
-    elif YearOutageRestart < Year_Month < SecondPressureReduction:
+    elif YearOutageRestart < Date < SecondPressureReduction:
         SecondarySidePressure = 4.593
     
-    elif Year_Month >= SecondPressureReduction:
+    elif Date >= SecondPressureReduction:
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     else:
         None
@@ -1388,16 +1399,16 @@ CleanedRefurbishmentSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, YearRefur
 CleanedRefurbishmentSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, YearRefurbishment)
 
 
-def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Year_Month, HeatTransferTimeStep, SGFastMode):
+def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransferTimeStep, SGFastMode):
    
     Energy = []
 
-    TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Year_Month)
+    TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Date)
     
     # adjusts how many tubes per bundle to account for tubes plugged
     bundle_sizes(SteamGenerator, TotalSGTubeNumber)
     
-    SecondarySidePressure = secondary_side_pressure(Year_Month)
+    SecondarySidePressure = secondary_side_pressure(Date)
     
     MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude * DividerPlateLeakage
     # decreases as divider (bypass) flow increases
@@ -1409,7 +1420,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Year_Month, HeatT
         
         [Bundle.PrimaryBulkTemperature, Bundle.HeatFlux] = temperature_profile(
             Bundle, HeatTransferTimeStep, Bundle.InnerOxLoading, Bundle.OuterOxLoading, RemainingPHTMassFlow,
-            SecondarySidePressure, x_pht, Year_Month, TotalSGTubeNumber
+            SecondarySidePressure, x_pht, Date, TotalSGTubeNumber
             )
         
         SteamGeneratorOutputNode = SteamGenerator[Default_Tube].NodeNumber - 1
@@ -1426,25 +1437,12 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Year_Month, HeatT
         Enthalpy = (sum(Energy) + MasssFlow_dividerplate.magnitude * Enthalpy_dividerplate) / MassFlow_h.magnitude
     
     
-#     for Bundle in ld.SteamGenerator_2[0:5]:
-#         if Bundle in CleanedOutageSG2 and Bundle in CleanedRefurbishmentSG2:
-#             Outage = "both"
-#         elif Bundle in CleanedOutageSG2:
-#             Outage = "outage"
-#         elif Bundle in CleanedRefurbishmentSG2:
-#             Outage = "refurb"
-#           
-#         else:
-#             Outage = "none"
-#         print (Bundle, Bundle.OuterOxLoading[15], Outage)
-    
-    
     RIHT = nc.temperature_from_enthalpyD2O_liquid(Enthalpy)
        
     return RIHT
 
         
-print (energy_balance(
-    ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Year_Month= (1983, 4),
-    HeatTransferTimeStep = nc.TIME_STEP * 73, SGFastMode="yes"
-    )- 273.15)
+# print (energy_balance(
+#     ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Year_Month= (1983, 4),
+#     HeatTransferTimeStep = nc.TIME_STEP * 73, SGFastMode="yes"
+#     )- 273.15)

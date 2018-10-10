@@ -525,17 +525,17 @@ for j in range(SimulationStart, SimulationEnd):
         delta = timedelta(hours = j * nc.TIME_STEP)
         CalendarYear = start + delta
         
-        Year_Month = (CalendarYear.year, CalendarYear.month)
+        Date = (CalendarYear.year, CalendarYear.month, CalendarYear.day)
 
         if Loop == "full":
             RIHT_1 = (
                 SGHX.energy_balance(
-                    ld.SteamGenerator, x_pht, DividerPlateLeakage, Year_Month, HeatTransferTimeStep, SGHX.SGFastMode
+                    ld.SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransferTimeStep, SGHX.SGFastMode
                     ) - 273.15
                       )
             RIHT_2 = (
                 SGHX.energy_balance(
-                    ld.SteamGenerator_2, x_pht, DividerPlateLeakage, Year_Month, HeatTransferTimeStep, SGHX.SGFastMode
+                    ld.SteamGenerator_2, x_pht, DividerPlateLeakage, Date, HeatTransferTimeStep, SGHX.SGFastMode
                     ) - 273.15
                       )
             ld.InletFeeder_2.PrimaryBulkTemperature = [RIHT_2 + 273.15] * ld.InletFeeder_2.NodeNumber
@@ -544,7 +544,7 @@ for j in range(SimulationStart, SimulationEnd):
             #SG 2 is in the half and full loop configurations (default steam generator)
             RIHT_2 = (
                 SGHX.energy_balance(
-                    ld.SteamGenerator_2, x_pht, DividerPlateLeakage, Year_Month, HeatTransferTimeStep, SGHX.SGFastMode
+                    ld.SteamGenerator_2, x_pht, DividerPlateLeakage, Date, HeatTransferTimeStep, SGHX.SGFastMode
                     ) - 273.15
                 )
             RIHT_1 = RIHT_2 * 1  # output logging function needs value for both RIHT's and inlet header 1 needs input 
@@ -555,8 +555,8 @@ for j in range(SimulationStart, SimulationEnd):
         
         # in half loop mode, these are equal, so avg = RIHT_1 = RIHT_2
         T_RIH_average = (RIHT_1 + RIHT_2) / 2
-        x_pht, Power = SGHX.pht_steam_quality(T_RIH_average + 273.15, Year_Month)
-        DividerPlateLeakage = SGHX.divider_plate(Year_Month, HeatTransferTimeStep, DividerPlateLeakage)
+        x_pht, Power = SGHX.pht_steam_quality(T_RIH_average + 273.15, Date)
+        DividerPlateLeakage = SGHX.divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage)
         
         # core and outlet temperatures currently not being updated, but all sections called for continuity
         for Section in Sections:

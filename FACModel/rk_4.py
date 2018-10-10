@@ -16,13 +16,13 @@ INLET_OUTER_SPALL_CONSTANT = 5.00E+10  # Different units for inlet versus outlet
 INLET_INNER_SPALL_CONSTANT = 1.00E+4
 
 a = SGHX.YearStartup
-b = datetime(2008, 3, 29)
+b = datetime(SGHX.YearRefurbishment)
 delta = b-a
 delta = (delta.days * 24) / nc.TIME_STEP
 Refurb_hours = round(delta)
 
 q = SGHX.YearStartup
-t = datetime(1995, 12, 31)
+t = datetime(SGHX.YearStartup)
 delta = t-q
 delta = (delta.days * 24) / nc.TIME_STEP
 Outage_hours = round(delta)
@@ -244,7 +244,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
     delta = timedelta(hours = j * nc.TIME_STEP)
     CalendarDate = start + delta
     
-    Year_Month = (CalendarDate.year, CalendarDate.month)
+    Date = (CalendarDate.year, CalendarDate.month, CalendarDate.day)
     
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
       
@@ -253,7 +253,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
     else:
         None
     
-    if Year_Month in SGHX.OutageYearsMonths:
+    if Date in SGHX.TrackedOutageDays:
          # no oxide growth anywhere in the PHT system
         Section.InnerIronOxLoading = Section.InnerIronOxLoading
         Section.OuterFe3O4Loading = Section.OuterFe3O4Loading
