@@ -477,7 +477,7 @@ def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
         Growth = ReducedTubeGrowth 
         
     #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
-    if (1988, 4, 1) <= Year_Month <= (1988, 4, 3):
+    if (1988, 4, 1) <= Date <= (1988, 4, 3):
         Bundle.SludgeLoading[i] = 0.75 * Bundle.SludgeLoading[i]
         
     elif Date == YearOutage:
@@ -765,12 +765,12 @@ def pht_steam_quality(Temperature, Date):
     # no quality in return primary flow
     H_current = nc.enthalpyD2O_liquid(Temperature) + H_pht
     x = (H_current - H_satliq_outlet) / (EnthalpySaturatedSteam.magnitude - H_satliq_outlet)
-#     print (Year_Month, Fraction_of_FP, x)
+    
     if x < 0:
         x = 0
     return x, P
 
-# pht_steam_quality(264.8 +273.15, (2001,12), 0)
+pht_steam_quality(261.8 +273.15, (1983, 5, 13))
 
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
         
@@ -1321,13 +1321,18 @@ def temperature_profile(
 def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
     # time input (j) is in hours, converted to yearly
     Time_Step = HeatTransferTimeStep / 24 / 365 # hr --> yr
+    
     PostOutageYearlyLeakage = 0.00035 # per year rate
+    
+    # (year, week number in the year, day number in the week) 
+    CalendarDate = datetime(*Date).isocalendar() 
+    WeeklyDate = (CalendarDate[0], CalendarDate[1])
     
     # changes to rate of leakage growth
     if Date in TrackedOutageDays:
         LeakageRate = 0 # per year rate
       
-    elif Date == YearStartup:
+    elif Date == (1983, 4, 8):
         LeakageRate = 0
         
     elif Date < YearOutage:
@@ -1344,7 +1349,8 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
     # replacement of divider plate
     
     # Leakage through the replaced welded divider plates immediately following replacement was estimated as 2% PHT flow
-    if (1983, 5, 1) < Date < (1983, 5, 8):
+    if Date == (1983, 5, 1) or WeeklyDate == (1983, 17):
+        print ('lol')
         DividerPlateLeakage = 0.043
     
     elif Date == YearOutageRestart:
@@ -1364,7 +1370,7 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
         DividerPlateLeakage = 0.048
 
     return DividerPlateLeakage
-
+divider_plate((1983,5,2), 7*24, 0.03)
 
 def secondary_side_pressure(Date):
     
@@ -1442,7 +1448,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransfe
     return RIHT
 
         
-# print (energy_balance(
-#     ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Year_Month= (1983, 4),
-#     HeatTransferTimeStep = nc.TIME_STEP * 73, SGFastMode="yes"
-#     )- 273.15)
+print (energy_balance(
+    ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Date= (1983, 4, 8), HeatTransferTimeStep = nc.TIME_STEP * 1,
+    SGFastMode="yes"
+    )- 273.15)

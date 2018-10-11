@@ -30,13 +30,13 @@ def initial_conditions():
     
     # initial temperatures in steam generator(s)
     RIHT1 = SGHX.energy_balance(
-        ld.SteamGenerator, x_pht = 0.01, DividerPlateLeakage= 0.03, Year_Month= (1983, 4),
+        ld.SteamGenerator, x_pht = 0.01, DividerPlateLeakage= 0.03, Date= (1983, 4, 8),
         HeatTransferTimeStep = nc.TIME_STEP * 73, SGFastMode = SGHX.SGFastMode
         )
     ld.InletFeeder.PrimaryBulkTemperature = [RIHT1] * ld.InletFeeder.NodeNumber
         
     RIHT2 = SGHX.energy_balance(
-        ld.SteamGenerator_2, x_pht = 0.01, DividerPlateLeakage= 0.03, Year_Month= (1983, 4),
+        ld.SteamGenerator_2, x_pht = 0.01, DividerPlateLeakage= 0.03, Date= (1983, 4, 8),
         HeatTransferTimeStep = nc.TIME_STEP * 73, SGFastMode = SGHX.SGFastMode
         )
     
@@ -344,7 +344,7 @@ def output_time_logging(
     RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] > Shutdown]
     RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['Power'] > Shutdown]
     
-    if j % (7 * 10) == 0: #updates list in csv file (list itself appended to monthly)
+    if j % (100) == 0: #updates list in csv file (list itself appended to monthly)
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
          
         RIHT_phase1_preCPP.to_excel(writer, sheet_name = 'Phase 1 Pre CPP')
@@ -452,7 +452,7 @@ SimulationYears = 16 # years
 SimulationStart = 0
 HoursinYear = 8760
 
-SimulationHours = SimulationStart + SimulationYears * 88#(HoursinYear / nc.TIME_STEP)
+SimulationHours = SimulationStart + SimulationYears * 365#(HoursinYear / nc.TIME_STEP)
 SimulationEnd = SimulationHours
 
 import time
@@ -564,8 +564,7 @@ for j in range(SimulationStart, SimulationEnd):
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
        
-        # optional preview of RIHT and primary-side steam quality
-        print (Year_Month, x_pht, RIHT_1, DividerPlateLeakage * 100)
+        print (Date, x_pht, RIHT_1, DividerPlateLeakage * 100)
             
 
         output = output_time_logging(
@@ -576,6 +575,10 @@ for j in range(SimulationStart, SimulationEnd):
             )
     else:
         None
+    
+#     if j % (HeatTransferTimeStep * 168 / nc.TIME_STEP) == 0:
+#         # optional preview of RIHT and primary-side steam quality
+#         print (Date, x_pht, RIHT_1, DividerPlateLeakage * 100)
     
     
 end_time = time.time()

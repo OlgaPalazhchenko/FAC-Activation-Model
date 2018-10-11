@@ -2,7 +2,7 @@ import csv
 import numpy as np
 
 
-TIME_STEP = 100  # hr
+TIME_STEP = 24  # hr
 TIME_INCREMENT = 3600 * TIME_STEP  # [s] Based on desired time step (e.g., 3600s/h for 1h time step)
 
 
@@ -83,7 +83,7 @@ class SGParameters():
         self.unit = None
         self.steam_quality = None
 
-PrimarySidePressure = 9.86  # MPa
+PrimarySidePressure = 9.98  # MPa
 # SecondarySidePressure = 4.593  # MPa
 
 

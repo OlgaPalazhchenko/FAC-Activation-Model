@@ -15,14 +15,15 @@ OUTLET_INNER_SPALL_CONSTANT = 5
 INLET_OUTER_SPALL_CONSTANT = 5.00E+10  # Different units for inlet versus outlet (different functions)
 INLET_INNER_SPALL_CONSTANT = 1.00E+4
 
+
 a = SGHX.YearStartup
-b = datetime(SGHX.YearRefurbishment)
+b = datetime(2008, 3, 29)
 delta = b-a
 delta = (delta.days * 24) / nc.TIME_STEP
 Refurb_hours = round(delta)
 
 q = SGHX.YearStartup
-t = datetime(SGHX.YearStartup)
+t = datetime(1995, 4, 13)
 delta = t-q
 delta = (delta.days * 24) / nc.TIME_STEP
 Outage_hours = round(delta)
