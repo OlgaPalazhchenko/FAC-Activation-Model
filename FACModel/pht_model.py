@@ -7,7 +7,7 @@ import electrochemistry as e
 import iteration as it
 import sg_heattransfer as SGHX
 import numpy as np
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import pandas as pd
 import csv
 
@@ -308,7 +308,7 @@ def output_time_logging(
     RIHT1_delta.append(0)   
     RIHT2_delta.append(0)
     
-    start = SGHX.YearStartup
+    start = datetime(*SGHX.DayStartup)
     delta = timedelta(hours = j * nc.TIME_STEP)
     CalendarDate = start + delta
     
@@ -344,7 +344,7 @@ def output_time_logging(
     RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] > Shutdown]
     RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['Power'] > Shutdown]
     
-    if j % (100) == 0: #updates list in csv file (list itself appended to monthly)
+    if j % (7 * 4 * 12) == 0: #updates list in csv file (list itself appended to monthly)
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
          
         RIHT_phase1_preCPP.to_excel(writer, sheet_name = 'Phase 1 Pre CPP')
@@ -501,7 +501,7 @@ for j in range(SimulationStart, SimulationEnd):
       
 
     # parameters tracked/updated with time
-    HeatTransferTimeStep = 7 * nc.TIME_STEP #hours, e.g., 73 h * 10 = hours in a month
+    HeatTransferTimeStep = 7 * nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
     
     if j % (HeatTransferTimeStep / nc.TIME_STEP) == 0:
         if j == SimulationStart:
@@ -521,7 +521,7 @@ for j in range(SimulationStart, SimulationEnd):
         else:
             None
                                    
-        start = SGHX.YearStartup
+        start = datetime(*SGHX.DayStartup)
         delta = timedelta(hours = j * nc.TIME_STEP)
         CalendarYear = start + delta
         

@@ -16,14 +16,14 @@ INLET_OUTER_SPALL_CONSTANT = 5.00E+10  # Different units for inlet versus outlet
 INLET_INNER_SPALL_CONSTANT = 1.00E+4
 
 
-a = SGHX.YearStartup
-b = datetime(2008, 3, 29)
+a = datetime(*SGHX.DayStartup)
+b = datetime(*SGHX.DayRefurbishment)
 delta = b-a
 delta = (delta.days * 24) / nc.TIME_STEP
 Refurb_hours = round(delta)
 
-q = SGHX.YearStartup
-t = datetime(1995, 4, 13)
+q = datetime(*SGHX.DayStartup)
+t = datetime(*SGHX.DayOutage)
 delta = t-q
 delta = (delta.days * 24) / nc.TIME_STEP
 Outage_hours = round(delta)
@@ -241,7 +241,7 @@ def pht_cleaning(Bundle, InnerOxide, OuterOxide, j):
 
 def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, SGFastMode):  
     
-    start = SGHX.YearStartup
+    start = datetime(*SGHX.DayStartup)
     delta = timedelta(hours = j * nc.TIME_STEP)
     CalendarDate = start + delta
     

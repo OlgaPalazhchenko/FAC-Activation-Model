@@ -4,7 +4,7 @@ import thermochemistry_and_constants as nc
 import composition as c
 import electrochemistry as e
 import sg_heattransfer as SGHX
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 # Activation Energies [J/mol]
 
@@ -227,11 +227,11 @@ def EmpiricalFAC_solver(Section):
 
 def FAC_solver(Section, ConstantRate, j):
     
-    start = SGHX.YearStartup
+    start = datetime(*SGHX.DayStartup)
     delta = timedelta(hours = j * nc.TIME_STEP)
-    CalendarYear = start + delta
+    CalendarDate = start + delta
     
-    Year_Month = (CalendarYear.year, CalendarYear.month)
+    Date = (CalendarDate.year, CalendarDate.month, CalendarDate.day)
     
     if Section in ld.FuelSections:
         rate = [0] * Section.NodeNumber
@@ -242,7 +242,7 @@ def FAC_solver(Section, ConstantRate, j):
     elif Section in ld.OutletSections and ConstantRate == "yes":
         rate = [1.8e-09, 2.6e-09, 1.8e-09, 1.60e-09, 1.50e-09, 1.60e-09, 1.60e-09, 9.00e-10, 1.6e-09] # [g/cm^2*s]
         
-        if Year_Month > SGHX.YearRefurbishment:
+        if Date > SGHX.DayRefurbishment:
             rate = [0.39 * i for i in rate]
         MixedECP = None
     
@@ -250,7 +250,7 @@ def FAC_solver(Section, ConstantRate, j):
     # any other section than outlet or outlet and not constant corr rate setting
     else:
         
-        if Year_Month < SGHX.YearRefurbishment:
+        if Date < SGHX.DayRefurbishment:
             ACTIVATION_ENERGY_Fe = 266029
             ACTIVATION_ENERGY_H2onFe = 263455.3439
     

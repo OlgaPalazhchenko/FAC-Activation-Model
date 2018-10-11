@@ -192,15 +192,21 @@ Method = "tube length"
 
 FullTubeComplement = 3542
 
-# April 8, 1983
-YearStartup = datetime(1983, 4, 8)
+DayStartup = (1983, 4, 8)
+DayCPP = (1987, 3, 1)
+DayOutage = (1995, 4, 13)
+DayOutageRestart = (1996, 1, 1)
+DayRefurbishment = (2008, 3, 29)
+DayRefurbishmentRestart = (2012, 12, 10)
 
+EventWeeks = []
+EventDays = (DayStartup, DayCPP, DayOutage, DayOutageRestart, DayRefurbishment, DayRefurbishmentRestart) 
+for x in EventDays:
+    y = (datetime(*x).isocalendar()[0], datetime(*x).isocalendar()[1]) 
+    EventWeeks.append(y)
 
-YearCPP = (1987, 3, 1)
-YearOutage = (1995, 4, 13)
-YearOutageRestart = (1996, 1, 1)
-YearRefurbishment = (2008, 3, 29)
-YearRefurbRestart = (2012, 12, 10)
+WeekStartup, WeekCPP, WeekOutage, WeekOutageRestart, WeekRefurbishment, WeekRefurbishmentRestart = EventWeeks
+
 
 FULLPOWER = 2061.4 * 1000
 
@@ -263,42 +269,43 @@ EnthalpySaturatedSteam.unit = "J/g"
 
 TubePitch.magnitude = 2.413
 
-# select desired SG tubes to be run by arc length
-UBends = [1.49, 0.685, 2.31, 3.09]
-UBends = [i * 100 for i in UBends]
-# select desired tubes to be run by total tube length
-TubeLengths = []
-for i in ld.SteamGenerator_2:
-    TubeLengths.append(i.Distance[21])
+# # select desired SG tubes to be run by arc length
+# UBends = [1.49, 0.685, 2.31, 3.09]
+# UBends = [i * 100 for i in UBends]
+# # select desired tubes to be run by total tube length
+# TubeLengths = []
+# for i in ld.SteamGenerator_2:
+#     TubeLengths.append(i.Distance[21])
 
 
-def total_tubes_plugged(SteamGenerator, Year_Month):
+def total_tubes_plugged(SteamGenerator, Date):
     
     #plug events arbitrarily assumed to happen at the start of each year (no month/quarter granularity currently used) 
     if SteamGenerator == ld.SteamGenerator:
-        YearPlugged = [
-            (1983, 4), (1988, 1), (1992, 1), (1993, 1), (1994, 1), (1996, 1), (1999, 1), (2002, 1), (2009, 1)
+        DatePlugged = [
+            (1983, 4, 8), (1988, 1, 8), (1992, 1, 8), (1993, 1, 8), (1994, 1, 8), (1996, 1, 8), (1999, 1, 8),
+            (2002, 1, 8), (2009, 1, 8)
             ]
         AmountPlugged = [1, 1, 10, 6, 6, 1, 8, 1, 2]
         
     
     elif SteamGenerator == ld.SteamGenerator_2:
-        YearPlugged = [(1983, 4), (1996, 1), (1999, 1)]
+        DatePlugged = [(1983, 4, 8), (1996, 1, 8), (1999, 1, 8)]
         AmountPlugged = [6, 5, 11]
 
 
-    if Year_Month < YearPlugged[0]:
+    if Date < DatePlugged[0]:
         NumberPluggedTubes = 0
     
-    elif Year_Month >= YearPlugged[len(YearPlugged) - 1]:
+    elif Date >= DatePlugged[len(DatePlugged) - 1]:
         NumberPluggedTubes = sum(AmountPlugged)
     
     else:
-        for i in range(len(YearPlugged) - 1):
+        for i in range(len(DatePlugged) - 1):
 
-            if YearPlugged[i] <= Year_Month < YearPlugged[i + 1]:
+            if DatePlugged[i] <= Date < DatePlugged[i + 1]:
                 # last tube in range not included, hence the + 1
-                # e.g., SG 1: if date 1989-4, Year_Month is <= i =1, so amount plugged summed from 0 to 1 --> 1 + 1 =2 
+                # e.g., SG 1: if date 1989-4, Date is <= i =1, so amount plugged summed from 0 to 1 --> 1 + 1 =2 
                 NumberPluggedTubes = sum(AmountPlugged[0:(i + 1)])
         
     TotalSGTubeNumber = 3542 - NumberPluggedTubes
@@ -323,7 +330,10 @@ def bundle_sizes(SteamGenerator, TotalSGTubeNumber):
     return None
 
    
-def primaryside_cleaned_tubes(SteamGenerator, Year_Month):
+def primaryside_cleaned_tubes(SteamGenerator, Date):
+    
+    CalendarDate = datetime(*Date).isocalendar() 
+    WeeklyDate = (CalendarDate[0], CalendarDate[1])
     
     if SteamGenerator == ld.SteamGenerator:
         TubesCleaned = 2093
@@ -334,15 +344,15 @@ def primaryside_cleaned_tubes(SteamGenerator, Year_Month):
     else:
         None
     
-    TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Year_Month)
+    TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Date)
     
     #amount of tubes cleaned per each cleaning will have to be custom
-    if Year_Month == YearOutage:
+    if Date == DayOutage or WeeklyDate == WeekOutage:
         # siva blast in 1995 used on only 60% of tubes due to time/spacial constraints
 
         PercentTubesCleaned = TubesCleaned / TotalSGTubeNumber
     
-    elif Year_Month == YearRefurbishment:
+    elif Date == DayRefurbishment or WeeklyDate == WeekRefurbishment:
 
         PercentTubesCleaned = Fraction_TubesCleaned
     else:
@@ -461,13 +471,16 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
 
 def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
     
+    CalendarDate = datetime(*Date).isocalendar() 
+    WeeklyDate = (CalendarDate[0], CalendarDate[1])
+    
     Time_Step = HeatTransferTimeStep / 24 / 365 #hr --> yr
     # default values
     ReducedTubeGrowth = 0.0003  # [g/cm^2] /year = 3.25 um/year
     
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     
-    if Date <= YearCPP:
+    if Date <= DayCPP:
         Growth = 0.0013#[g/cm^2]/yr
     
     elif Date in TrackedOutageDays:
@@ -477,13 +490,13 @@ def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
         Growth = ReducedTubeGrowth 
         
     #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
-    if (1988, 4, 1) <= Date <= (1988, 4, 3):
+    if  Date == (1988, 4, 1) or WeeklyDate == (1988, 13):
         Bundle.SludgeLoading[i] = 0.75 * Bundle.SludgeLoading[i]
         
-    elif Date == YearOutage:
+    elif Date == DayOutage or WeeklyDate == (1995, 15):
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.8
     
-    elif Date == YearRefurbishment:
+    elif Date == DayRefurbishment:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.25
          
     else:
@@ -567,7 +580,7 @@ def secondary_convection_resistance(
         
         # Based on PLGS data and Silpsrikul calculations
         f_b = 0.2119  # fraction of cross-Bundleal area of shell occupied by a baffle window
-        N_b = f_b * FullTubeComplement  # number of tubes in baffle window
+        N_b = f_b * TotalSGTubeNumber  # number of tubes in baffle window
         D_s = ((4 * 0.5 * np.pi / 4) * (ShellDiameter.magnitude / 100) ** 2) \
             / (0.5 * np.pi * (ShellDiameter.magnitude / 100) + ShellDiameter.magnitude / 100)  # [m]
 
@@ -580,7 +593,7 @@ def secondary_convection_resistance(
         # First two (raised to exponent) terms are unitless
         # [W/cm K]/[cm] = [W/cm^2 K]
         k = nc.thermal_conductivityH2O_liquid(T_SecondaryFilm, SecondarySidePressure)
-#         k = thermal_conductivity(T_SecondaryFilm, "water", SecondarySidePressure)
+
         h_o = (k * 0.2 / Bundle.OuterDiameter[i]) \
             * ((Bundle.OuterDiameter[i] * G_e / nc.viscosityH2O_liquid(T_SecondaryFilm, SecondarySidePressure)) ** 0.6) \
             * (
@@ -595,42 +608,7 @@ def secondary_convection_resistance(
         h_o = outside_bundle_pool_boiling(
             "FZ", Bundle, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
             )
-#         print (h_o, i)
-#         h_1 = outside_bundle_pool_boiling(
-#             "lol", Bundle, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
-#             )
-#         h_2 = outside_bundle_pool_boiling(
-#             "None", Bundle, x_sht, T_sat_secondary, T_SecondaryWall, T_SecondaryBulkIn, SecondarySidePressure, i
-#             )
-        
-#         print (h_o, h_1, h_2, i)
-        # outside_bundle_pool_boiling(None, T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
-        
-        # Zukasuskas correlation-based heat transfer coefficient for a bundle, non boiling, not in pre-heater
-        # [cm]
-        
-#         EquivalentDiameter.magnitude = 4 * ((TubePitch.magnitude ** 2) \
-#                                             - (np.pi / 4) * (Bundle.OuterDiameter[i] ** 2))\
-#                                             / (np.pi * Bundle.OuterDiameter[i])
-#          
-#         Nu_D_l = nusseltnumber(
-#             Bundle, "SHT", T_PrimaryBulkIn, T_SecondaryBulkIn, T_SecondaryWall, SecondarySidePressure, i, None,
-#             None
-#             )
-#      
-#         h_l = nc.thermal_conductivityH2O("SHT", T_SecondaryBulkIn, SecondarySidePressure) * Nu_D_l \
-#         / EquivalentDiameter.magnitude
-#          
-#         if x_in > 0:
-#             MassFlux_c.magnitude = MassFlux_c(Bundle, i)
-#              
-#             h_o = boiling_heat_transfer(
-#                 x_in, "SHT", MassFlux_c.magnitude, T_SecondaryWall, Bundle.OuterDiameter[i],
-#                 SecondarySidePressure, i, h_l)
-#         
-#         else:
-#             h_o = h_l
-    
+  
     return 1 / (h_o * outer_area(Bundle)[i])  # [K/W]
 
 
@@ -973,7 +951,7 @@ def outside_bundle_pool_boiling(
         i
         ):
     
-    F = .27 # bundle boiling factor (empirical)
+    F = .25 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -1037,7 +1015,7 @@ def outside_bundle_pool_boiling(
 
 def wall_temperature(
         Bundle, HeatTransferTimeStep, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation,
-        OuterAccumulation, Year_Month, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber):
+        OuterAccumulation, Date, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber):
     
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
@@ -1093,7 +1071,7 @@ def wall_temperature(
             # [cm^2 K/W]
             R_F_primary.magnitude = pht_fouling_resistance(i, InnerAccumulation[i], OuterAccumulation[i]) 
             
-            R_F_secondary.magnitude = sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Year_Month, i)
+            R_F_secondary.magnitude = sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i)
                         
             PCR = primary_convection_resistance(
                 Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, TotalSGTubeNumber
@@ -1131,7 +1109,7 @@ def wall_temperature(
 
 def temperature_profile(
         Bundle, HeatTransferTimeStep, InnerOxide, OuterOxide, m_h_leakagecorrection, SecondarySidePressure, x_pht,
-        Year_Month, TotalSGTubeNumber
+        Date, TotalSGTubeNumber
         ):
     
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
@@ -1145,6 +1123,7 @@ def temperature_profile(
     HeatFlux = []
 
     for i in range(Bundle.NodeNumber):
+    
         if i == 0:
             # Temperatures entering SG (0 m of SG)--> not first "node" temp (several m into SG hot leg)
             T_PrimaryBulkIn = T_sat_primary  # [K]
@@ -1156,7 +1135,7 @@ def temperature_profile(
         
         T_wh, T_wc, U, h_i = wall_temperature(
             Bundle, HeatTransferTimeStep, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerOxide, OuterOxide,
-            Year_Month, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber)
+            Date, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber)
         
         
         # [W/ cm^2 K] * [K] * [cm^2] = [W] = [J/s]        
@@ -1246,20 +1225,21 @@ def temperature_profile(
                 Cp_c = nc.heatcapacityH2O_liquid(T_PreheaterIn, SecondarySidePressure)
                 
                 T_PrimaryBulkOut = T_PrimaryBulkIn - Q / (Cp_h * m_h_leakagecorrection)
-#                 T_PrimaryBulkIn = T_PrimaryBulkOut
                 
                 C_min = Cp_c * MassFlow_preheater.magnitude  # [J/g K]*[g/s] = [J/Ks] ] [W/K]
                 C_max = Cp_h * m_h_leakagecorrection
                 C_r = C_min / C_max
                 
+                #needs to change to bulk out
                 Q_max = C_min * (T_PrimaryBulkIn - T_PreheaterIn)
                 
                 # total area of only preheater area
                 TotalArea = sum(outer_area(Bundle)[(i + 1):(Bundle.NodeNumber - 1)])
                 NTU = U * TotalArea * TotalSGTubeNumber / C_min
 
-#                 eta = (1 - np.exp(-NTU * (1 - C_r))) / (1 - C_r * np.exp(-NTU * (1 - C_r)))
-                eta = 1 - np.exp(((NTU ** 0.28) / C_r) * (np.exp(-C_r * (NTU ** 0.78)) - 1))
+#                 eta = 1 - np.exp(((NTU ** 0.22) / C_r) * (np.exp(-C_r * (NTU ** 0.78)) - 1))
+                eta = 1 - np.exp(-(1 / C_r) * (1 - np.exp(-C_r * NTU)))
+                
                 Q_NTU = eta * Q_max
 
                 # 2 known temperatures at opposite ends (preheater in and PHT in at the top)
@@ -1332,13 +1312,13 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
     if Date in TrackedOutageDays:
         LeakageRate = 0 # per year rate
       
-    elif Date == (1983, 4, 8):
+    elif Date == DayStartup:
         LeakageRate = 0
         
-    elif Date < YearOutage:
+    elif Date < DayOutage:
         LeakageRate = 0.0018 # per year rate
     
-    elif Date >= YearOutage:
+    elif Date >= DayOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate
     
     else:
@@ -1349,28 +1329,26 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
     # replacement of divider plate
     
     # Leakage through the replaced welded divider plates immediately following replacement was estimated as 2% PHT flow
+    # impulse input of leak site
     if Date == (1983, 5, 1) or WeeklyDate == (1983, 17):
-        print ('lol')
         DividerPlateLeakage = 0.043
     
-    elif Date == YearOutageRestart:
+    elif Date == DayOutageRestart or WeeklyDate == WeekOutageRestart:
         DividerPlateLeakage = 0.025
     
     # Development of additional leak site
-    elif Date == (1996, 3):
+    # impulse input of leak site
+    elif Date == (1996, 3, 1) or WeeklyDate == (1996, 9):
         DividerPlateLeakage = 0.0325
-        
-#     # Development of additional leak site
-#     elif Year_Month == (1999, 2):
-#         DividerPlateLeakage = 0.046
-        
+ 
     DividerPlateLeakage = DividerPlateLeakage + Time_Step * LeakageRate
     
+    # impulse input of leak site plateau
     if Date >= (1998, 11, 1):
         DividerPlateLeakage = 0.048
 
     return DividerPlateLeakage
-divider_plate((1983,5,2), 7*24, 0.03)
+
 
 def secondary_side_pressure(Date):
     
@@ -1382,12 +1360,12 @@ def secondary_side_pressure(Date):
         SecondarySidePressure = 4.593  # MPa
     
     # PLNGS pressure reduction in 1992 (september) by 125 kPa
-    elif FirstPressureReduction <= Date <= YearOutageRestart:
+    elif FirstPressureReduction <= Date <= DayOutageRestart:
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     
     # return to full boiler secondary side pressure, 4.593 MPa
     # pressure restored shortly after reactor back online from refurb.
-    elif YearOutageRestart < Date < SecondPressureReduction:
+    elif DayOutageRestart < Date < SecondPressureReduction:
         SecondarySidePressure = 4.593
     
     elif Date >= SecondPressureReduction:
@@ -1398,11 +1376,11 @@ def secondary_side_pressure(Date):
     return SecondarySidePressure
 
 
-Cleaned_OutageSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, YearOutage)
-CleanedOutageSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, YearOutage)
+Cleaned_OutageSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayOutage)
+CleanedOutageSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayOutage)
 
-CleanedRefurbishmentSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, YearRefurbishment)
-CleanedRefurbishmentSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, YearRefurbishment)
+CleanedRefurbishmentSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayRefurbishment)
+CleanedRefurbishmentSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayRefurbishment)
 
 
 def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransferTimeStep, SGFastMode):
@@ -1447,8 +1425,8 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransfe
        
     return RIHT
 
-        
+         
 print (energy_balance(
-    ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Date= (1983, 4, 8), HeatTransferTimeStep = nc.TIME_STEP * 1,
+    ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Date= (1984, 4, 8), HeatTransferTimeStep = nc.TIME_STEP * 1,
     SGFastMode="yes"
     )- 273.15)
