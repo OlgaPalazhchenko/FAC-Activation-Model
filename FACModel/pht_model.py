@@ -326,7 +326,6 @@ def output_time_logging(
    
    # add power as output to steam frac - can use to filter instead of steam quality
     RIHT_by_phase.set_index('Date', inplace=True)
-
      
     RIHT_phase1_preCPP = RIHT_by_phase['1983-4-8':'1988-5-8']
     RIHT_phase1_postCPP = RIHT_by_phase['1988-5-8':'1992-9-8']
@@ -373,7 +372,6 @@ def output_time_logging(
             sheet.set_column('E:F', 13)
          
         writer.save()
-    
 
     return (
         FACRate_OutletFeeder, DividerPlateLeakage, x, j, Time, InletBulkConcentration, OutletBulkConcentration,
@@ -444,7 +442,7 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     DividerPlateLeakage = float(InputParametersReader[34][0])
      
     x = float(InputParametersReader[37][0])
-#     print (ld.SteamGenerator_2[Default_Tube].OuterFe3O4Loading[10], ld.SteamGenerator_2[Default_Tube].SludgeLoading[10], DividerPlateLeakage, x)
+
     return DividerPlateLeakage, x
 
 
@@ -563,8 +561,8 @@ for j in range(SimulationStart, SimulationEnd):
             # update solubility based on new temperatures in steam generators and inlet heades/feeders
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
-       
-        print (Date, x_pht, RIHT_1, DividerPlateLeakage * 100)
+    elif j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
+        print (Date, x_pht, Power, RIHT_1, DividerPlateLeakage * 100)
             
 
         output = output_time_logging(
@@ -575,11 +573,7 @@ for j in range(SimulationStart, SimulationEnd):
             )
     else:
         None
-    
-#     if j % (HeatTransferTimeStep * 168 / nc.TIME_STEP) == 0:
-#         # optional preview of RIHT and primary-side steam quality
-#         print (Date, x_pht, RIHT_1, DividerPlateLeakage * 100)
-    
+
     
 end_time = time.time()
 delta_time = end_time - start_time

@@ -14,13 +14,14 @@ def station_RIHT():
     
     Header1 = 'RIHT 2'
     Header2 = 'RIHT 4'
+    Header3 = 'RIHT 6'
     Header4 = 'RIHT 8'
     
     df.columns = ['date', 'power', Header1, Header2, Header3, Header4]
 
     # converts from string object to time series  
     df.date = pd.to_datetime(df.date)
-    df.set_index('Date', inplace=True)
+    df.set_index('date', inplace=True)
     
     # average of all 4 
     df['mean'] = df.iloc[:, 1:5].mean(axis = 1)
@@ -35,12 +36,11 @@ def station_RIHT():
     
     
     # separate sub dataframes based on PLNGS 'Phases' of operation
-    daily_average_phase3 = daily_average_no_missing['1996-1-26':'1998-10-1']
+    daily_average_phase3 = daily_average_no_missing['1996-1-1':'1998-10-1']
     daily_average_phase4 = daily_average_no_missing['1998-10-2':'2008-03-1']
     daily_average_phase5 = daily_average_no_missing['2013-1-29': '2013-12-14']
     daily_average_phase6 = daily_average_no_missing['2013-12-15' : '2017-08-02']
     daily_average_phase7 = daily_average_no_missing['2017-08-02':]
-    
     
     daily_average_phase3 = daily_average_phase3[daily_average_phase3['power'] > 0.99]
     daily_average_phase4 = daily_average_phase4[daily_average_phase4['power'] > 0.90]
@@ -71,7 +71,7 @@ def station_RIHT():
     
     writer.save()
     
-# station_RIHT()
+station_RIHT()
 
 
 def reactor_power():
@@ -91,7 +91,7 @@ def reactor_power():
     
     # frequency of power data changed from every few minutes to daily average
     daily_average = df.resample('D').mean().copy()
-    
+
     # for days that are blank, e.g, 1996-8, forward filled, i.e., power from 1996-7 applied forward to 1996-8
     daily_average = daily_average.fillna(method='ffill')
 #     monthly_average = monthly_average.dropna(how = "any")
@@ -101,12 +101,12 @@ def reactor_power():
         AllStationDataDates.append(x)
     
     # secondary side pressure wil be added here eventually (maybe also primary side pressure)
-    writer = pd.ExcelWriter('PLNGS_Power.xlsx', engine='xlsxwriter', datetime_format='dd-mm-yyyy')
-    daily_average.to_excel(writer, sheet_name = 'Daily Averaged FP')
+#     writer = pd.ExcelWriter('PLNGS_Power.xlsx', engine='xlsxwriter', datetime_format='dd-mm-yyyy')
+#     daily_average.to_excel(writer, sheet_name = 'Daily Averaged FP')
     
-    workbook = writer.book
-    worksheet1 = writer.sheets['Daily Averaged FP']
-    writer.save()
+#     workbook = writer.book
+#     worksheet1 = writer.sheets['Daily Averaged FP']
+#     writer.save()
     
     TrackedOutages = daily_average.index[daily_average['power'] < 0.1]
     
@@ -718,7 +718,7 @@ def pht_steam_quality(Temperature, Date):
         # index = location of list with this minimum difference relative to that of current (year, month) input 
         ClosestDay = difference.index(min(difference))
         
-        Fraction_of_FP = StationOperatingPower[ClosestDay]
+        Fraction_of_FP = StationPower[ClosestDay]
     
     # the outage in 1995 precedes the station log data available, so this is manually set to 0 % FP here in addition
     # to the other approximated outage dates
@@ -743,12 +743,12 @@ def pht_steam_quality(Temperature, Date):
     # no quality in return primary flow
     H_current = nc.enthalpyD2O_liquid(Temperature) + H_pht
     x = (H_current - H_satliq_outlet) / (EnthalpySaturatedSteam.magnitude - H_satliq_outlet)
-    
+#     print (Date, x, P, Fraction_of_FP)
     if x < 0:
         x = 0
     return x, P
 
-pht_steam_quality(261.8 +273.15, (1983, 5, 13))
+# pht_steam_quality(261.8 +273.15, (1991, 25, 10))
 
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
         
@@ -941,7 +941,6 @@ def ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, Secondar
 
     
     h_nb = h / (100 ** 2) # [W/cm^2 K]
-#     print (h, h_nb)
  
     return h_nb
 
@@ -951,7 +950,7 @@ def outside_bundle_pool_boiling(
         i
         ):
     
-    F = .25 # bundle boiling factor (empirical)
+    F = .19 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -969,11 +968,9 @@ def outside_bundle_pool_boiling(
         # outside_tube_boiling_Mostinski(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
 
     h_twophase = F * h_nb
-#     print (h_twophase, h_nb)
+
     return h_twophase
     
-
-# click to open
 
 # def in_tube_boiling_LiuWinterton(x_pht, MassFlux, Diameter, T_PrimaryWall, h_l, i):
 #     h_l = h_l * (100 ** 2)
@@ -1231,7 +1228,7 @@ def temperature_profile(
                 C_r = C_min / C_max
                 
                 #needs to change to bulk out
-                Q_max = C_min * (T_PrimaryBulkIn - T_PreheaterIn)
+                Q_max = C_min * (T_PrimaryBulkOut - T_PreheaterIn)
                 
                 # total area of only preheater area
                 TotalArea = sum(outer_area(Bundle)[(i + 1):(Bundle.NodeNumber - 1)])
@@ -1245,10 +1242,10 @@ def temperature_profile(
                 # 2 known temperatures at opposite ends (preheater in and PHT in at the top)
                 # solving for other two ends (PHT out, and end of preheater before mixing with recirculating downcomer)
 
-                T_PrimaryBulkOutEnd = T_PrimaryBulkIn - Q_NTU / (m_h_leakagecorrection * Cp_h)
+                T_PrimaryBulkOutEnd = T_PrimaryBulkOut - Q_NTU / (m_h_leakagecorrection * Cp_h)
                 T_SecondaryBulkOutEnd = T_PreheaterIn + Q_NTU / (MassFlow_preheater.magnitude * Cp_c)
                 # at end of preheater - about to mix with downcomer flow
-                
+
                 T_SecondaryBulkOut = T_SecondaryBulkIn - (T_sat_secondary - T_PreheaterIn) / 5
                 T_SecondaryBulkIn = T_SecondaryBulkOut
                 
@@ -1351,10 +1348,10 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
 
 
 def secondary_side_pressure(Date):
-    
-    #CHECK THESE ###############################################################################################
+    # first drop estimated
     FirstPressureReduction = (1992, 11, 1)
-    SecondPressureReduction = (1998, 11, 1)
+    # second rediction date from plngs data
+    SecondPressureReduction = (1998, 10, 25)
     
     if Date < FirstPressureReduction:
         SecondarySidePressure = 4.593  # MPa
@@ -1425,8 +1422,8 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransfe
        
     return RIHT
 
-         
-print (energy_balance(
-    ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Date= (1984, 4, 8), HeatTransferTimeStep = nc.TIME_STEP * 1,
-    SGFastMode="yes"
-    )- 273.15)
+        
+# print (energy_balance(
+#     ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Date= (1984, 4, 8), HeatTransferTimeStep = nc.TIME_STEP * 1,
+#     SGFastMode="yes"
+#     )- 273.15)
