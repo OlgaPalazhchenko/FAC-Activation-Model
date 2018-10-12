@@ -393,6 +393,7 @@ def heatcapacityH2O_liquid(Temperature, SecondarySidePressure):
     p = SecondarySidePressure
     
     ratio_pressures = p / ReferenceValues.p_ref  # p/p*, reduced pressure [unitless]
+
     ratio_temperatures = ReferenceValues.T_ref / Temperature  # T/T*, reduced temperature [unitless]
     
     Gibbs_TT = sum(
