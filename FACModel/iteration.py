@@ -276,22 +276,22 @@ def FAC_solver(Section, ConstantRate, j):
             
             x = e.potential(
                 Section, Section.StandardEqmPotentialH2[i], ProductConcentration[i], 1, 1,
-                Section.MetalOxide.ConcentrationH[i], ActivityCoefficient1[i], 2, Section.DensityH2O[i],
+                Section.MetalOxide.ConcentrationH[i], ActivityCoefficient1[i], 2, Section.DensityD2O_liquid[i],
                 Section.NernstConstant[i], "gas"
                 )
             
             y = e.potential(
                 Section, Section.StandardEqmPotentialFe[i], 1, 1, 1, ConcentrationFe2[i], ActivityCoefficient2[i], 1,
-                Section.DensityH2O[i], Section.NernstConstant[i], "aqueous"
+                Section.DensityD2O_liquid[i], Section.NernstConstant[i], "aqueous"
                 )
             
             if Section in ld.InletSections or Section in ld.OutletSections:
                 w = e.exchangecurrentdensity(
-                    Section, ACTIVATION_ENERGY_H2onFe, Section.MetalOxide.ConcentrationH[i], x, Section.DensityH2O[i],
-                    Section.PrimaryBulkTemperature[i], "Acceptor"
+                    Section, ACTIVATION_ENERGY_H2onFe, Section.MetalOxide.ConcentrationH[i], x,
+                    Section.DensityD2O_liquid[i], Section.PrimaryBulkTemperature[i], "Acceptor"
                     )
                 z = e.exchangecurrentdensity(
-                    Section, ACTIVATION_ENERGY_Fe, ConcentrationFe2[i], y, Section.DensityH2O[i],
+                    Section, ACTIVATION_ENERGY_Fe, ConcentrationFe2[i], y, Section.DensityD2O_liquid[i],
                     Section.PrimaryBulkTemperature[i], "Acceptor"
                     )
                 
@@ -304,11 +304,11 @@ def FAC_solver(Section, ConstantRate, j):
                 # assumed that different activation energies for half-cells if redox occurs on Alloy-800 vs. carbon steel
                 w = e.exchangecurrentdensity(
                     Section, ACTIVATION_ENERGYH2onALLOY800, Section.MetalOxide.ConcentrationH[i], x,
-                    Section.DensityH2O[i], Section.PrimaryBulkTemperature[i], "Acceptor"
+                    Section.DensityD2O_liquid[i], Section.PrimaryBulkTemperature[i], "Acceptor"
                     )
                 
                 z = e.exchangecurrentdensity(
-                    Section, ACTIVATION_ENERGY_ALLOY800, ConcentrationFe2[i], y, Section.DensityH2O[i],
+                    Section, ACTIVATION_ENERGY_ALLOY800, ConcentrationFe2[i], y, Section.DensityD2O_liquid[i],
                     Section.PrimaryBulkTemperature[i], "Acceptor"
                     )
                 

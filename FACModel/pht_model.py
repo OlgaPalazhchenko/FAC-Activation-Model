@@ -51,12 +51,15 @@ def initial_conditions():
         # temperature-dependent parameters            
         Section.NernstConstant = [x * (2.303 * nc.R / (2 * nc.F)) for x in Section.PrimaryBulkTemperature]
         
-        Section.DensityH2O = [
-            nc.densityH2O_liquid(x, nc.PrimarySidePressure) for x in Section.PrimaryBulkTemperature
-            ]
-        Section.ViscosityH2O = [
-            nc.viscosityH2O_liquid(x, nc.PrimarySidePressure) for x in Section.PrimaryBulkTemperature
-            ]
+        Section.DensityD2O_liquid = [nc.densityD2O_liquid(x) for x in Section.PrimaryBulkTemperature]
+        Section.ViscosityD2O_liquid = [nc.viscosityD2O_liquid(x) for x in Section.PrimaryBulkTemperature]
+
+#         Section.DensityD2O_liquid = [
+#             nc.DensityH2O_liquid(x, nc.PrimarySidePressure) for x in Section.PrimaryBulkTemperature
+#             ]
+#         Section.ViscosityD2O_liquid = [
+#             nc.viscosityH2O_liquid(x, nc.PrimarySidePressure) for x in Section.PrimaryBulkTemperature
+#             ]
         
         Section.FractionFeInnerOxide = c.fraction_metal_inner_oxide(Section, "Fe")
         Section.FractionNiInnerOxide = c.fraction_metal_inner_oxide(Section, "Ni")
@@ -561,15 +564,15 @@ for j in range(SimulationStart, SimulationEnd):
             # update solubility based on new temperatures in steam generators and inlet heades/feeders
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
-    elif j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
-        print (Date, x_pht, Power, RIHT_1, DividerPlateLeakage * 100)
-            
-
-        output = output_time_logging(
-            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, DividerPlateLeakage, j,
-            InletFeeder_1_Loop1.Section1.Bulk.FeTotal, OutletFeeder_2_Loop1.Section1.Bulk.FeTotal, 
-            FuelChannel_1_Loop1.Section1.Bulk.FeTotal, SteamGeneratorTube_2_Loop1.Section1.OuterFe3O4Loading,
-            SteamGeneratorTube_2_Loop1.Section1.InnerIronOxLoading
+        if j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
+            print (Date, x_pht, ld.SteamGenerator_2[1].SludgeLoading[1], RIHT_1, DividerPlateLeakage * 100)
+                
+            output = output_time_logging(
+                OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power,
+                DividerPlateLeakage, j, InletFeeder_1_Loop1.Section1.Bulk.FeTotal,
+                OutletFeeder_2_Loop1.Section1.Bulk.FeTotal, FuelChannel_1_Loop1.Section1.Bulk.FeTotal,
+                SteamGeneratorTube_2_Loop1.Section1.OuterFe3O4Loading,
+                SteamGeneratorTube_2_Loop1.Section1.InnerIronOxLoading
             )
     else:
         None

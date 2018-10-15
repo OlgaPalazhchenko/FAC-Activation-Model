@@ -111,7 +111,7 @@ def particulate(Section, BulkCrud_0):
         DepositionConstant = nc.OUTCORE_DEPOSITION 
     
     # density converted from [g/cm^3] to [kg/m^3] 
-    DensityCoolant = [(i / 1000) * (100 ** 3) for i in Section.DensityH2O]
+    DensityCoolant = [(i / 1000) * (100 ** 3) for i in Section.DensityD2O_liquid]
     
     # Deposition constant converted from kg_coolant/m^2 s to cm/s, dividing by density coolant (kg/m^3) converting to cm
     # [kg_coolant/m^2 s]/[kg_coolant/m^3] = [m/s]*[100 cm/m] * [1/cm] = [s^-1]

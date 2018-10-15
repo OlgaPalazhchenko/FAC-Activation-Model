@@ -491,7 +491,7 @@ def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
         
     #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
     if  Date == (1988, 4, 1) or WeeklyDate == (1988, 13):
-        Bundle.SludgeLoading[i] = 0.75 * Bundle.SludgeLoading[i]
+        Bundle.SludgeLoading[i] = 0.6 * Bundle.SludgeLoading[i]
         
     elif Date == DayOutage or WeeklyDate == (1995, 15):
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.8
@@ -1316,7 +1316,7 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
         LeakageRate = 0
         
     elif Date < DayOutage:
-        LeakageRate = 0.0018 # per year rate
+        LeakageRate = 0.001 # per year rate
     
     elif Date >= DayOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate

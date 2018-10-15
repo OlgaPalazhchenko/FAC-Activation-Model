@@ -21,12 +21,12 @@ def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, Ox
     # [mol_solute/kg_coolant] *[1 kg/1000 g coolant]* [g/mol solute] = [g_solute]/[g_coolant]* [g/cm^3 coolant]
     # = [g_solute/cm^3 coolant]
     elif UnitInput == "Mol per Kg" and UnitOutput == "Grams per Cm Cubed":
-        return [(x / 1000) * (MolarMass * y) for x, y in zip(Concentration, Section.DensityH2O)]
+        return [(x / 1000) * (MolarMass * y) for x, y in zip(Concentration, Section.DensityD2O_liquid)]
 
     elif UnitInput == "Grams per Cm Cubed" and UnitOutput == "Mol per Kg":
     # [g_solute/cm^3 coolant]/([g/cm^3 coolant]*[g/mol solute]) = [mol_solute/g coolant]*[1000 g/1 kg coolant]
     # = [mol solute/kg coolant]
-        return [x * 1000 / (MolarMass * y) for x, y in zip(Concentration, Section.DensityH2O)]
+        return [x * 1000 / (MolarMass * y) for x, y in zip(Concentration, Section.DensityD2O_liquid)]
 
     # Converts corrosion rates from [g/cm^2 s] to micrometers per annum [um/yr]
     elif UnitInput == "Corrosion Rate Grams" and UnitOutput == "Corrosion Rate Micrometers":
@@ -107,15 +107,15 @@ class Section():  # Defining each primary heat transport section as a class
         self.HeatFlux = None
         # self.PrimaryWallTemperature = None
         # self.SecondaryWallTemperature = None
-        self.SecondaryBulkTemperature = None
+#         self.SecondaryBulkTemperature = None
         self.NernstConstant = None
 
-        self.DensityH2O = None
-        self.ViscosityH2O = None
-        self.SolubilityFe = None
-        self.SolubilityCr = None
-        self.SolubilityCo = None
-        self.SolubilityNi = None
+        self.DensityD2O_liquid = None
+        self.ViscosityD2O_liquid = None
+#         self.SolubilityFe = None
+#         self.SolubilityCr = None
+#         self.SolubilityCo = None
+#         self.SolubilityNi = None
 
         self.InnerOxLoading = None
         self.InnerIronOxLoading = None
@@ -123,10 +123,12 @@ class Section():  # Defining each primary heat transport section as a class
         self.NiLoading = None
         self.OuterOxLoading = None
         self.CoLoading = None
-        self.OxThickness = None
+#         self.OxThickness = None
         self.SludgeLoading = None
 
-        self.StandardEqmPotentialFe = [float(SizingParametersReader[j + 13][i]) for i in range(self.RowStart, self.RowEnd)]
+        self.StandardEqmPotentialFe = [
+            float(SizingParametersReader[j + 13][i]) for i in range(self.RowStart, self.RowEnd)
+            ]
         self.StandardEqmPotentialFe3O4red = [float(SizingParametersReader[j + 14][i]) \
                                             for i in range(self.RowStart, self.RowEnd)]
         self.StandardEqmPotentialFe3O4oxid = [float(SizingParametersReader[j + 15][i]) \
@@ -342,8 +344,6 @@ for Section in FullLoop:
         Section.OuterFe3O4Loading = [0] * Section.NodeNumber
         Section.NiLoading = [0] * Section.NodeNumber
         Section.OuterOxLoading = [i * 1 for i in Section.OuterFe3O4Loading]
-    
-    Section.OxThickness = [x + y for x, y in zip(Section.InnerOxLoading, Section.OuterOxLoading)]
 
     Section.Distance = np.cumsum(Section.Length.magnitude)
 
@@ -351,16 +351,18 @@ for Section in FullLoop:
 def ReynoldsNumber(Section, Diameter):
     # Diameter is an input due to difference in desired dimension (e.g., inner, outer, hydraulic, etc.)
     # [cm/s][cm][g/cm^3]/([g/cm s]
-#     Section.DensityH2O = [nc.density("PHT", x, None) for x in Section.PrimaryBulkTemperature]
-#     Section.ViscosityH2O = [nc.viscosity("PHT", x, None) for x in Section.PrimaryBulkTemperature]
+#     Section.DensityD2O_liquid = [nc.densityD2O_liquid(x) for x in Section.PrimaryBulkTemperature]
+#     Section.ViscosityD2O_liquid = [nc.viscosityD2O_liquid(x) for x in Section.PrimaryBulkTemperature]
     
     Reynolds = [x * y * q / z  
-                for x, y, z, q in zip(Section.Velocity, Diameter, Section.ViscosityH2O, Section.DensityH2O)]
+                for x, y, z, q in zip(Section.Velocity, Diameter, Section.ViscosityD2O_liquid,
+                                      Section.DensityD2O_liquid)
+                ]
     return Reynolds
 
 
 def MassTransfer(Section):
-    Schmidt = [x / (y * nc.FeDiffusivity) for x, y in zip(Section.ViscosityH2O, Section.DensityH2O)]
+    Schmidt = [x / (y * nc.FeDiffusivity) for x, y in zip(Section.ViscosityD2O_liquid, Section.DensityD2O_liquid)]
     Reynolds = ReynoldsNumber(Section, Section.Diameter)
     Sherwood = [0.0165 * (x ** 0.86) * (y ** 0.33) for x, y in zip(Reynolds, Schmidt)]  
     # Berger & Hau for straight pipe, single phase, fully developed (turbulent) flow

@@ -104,7 +104,7 @@ def oxide_growth(
         ]
     ConvertedConcentrations = []
     for Conc, MW in zip(Concentrations, MolarMasses):  # Concentrations has 6 lists in it
-        x = [(z / 1000) * (MW * y) for z, y in zip(Conc, Section.DensityH2O)]
+        x = [(z / 1000) * (MW * y) for z, y in zip(Conc, Section.DensityD2O_liquid)]
         ConvertedConcentrations.append(x)
     FeTotal, NiTotal, CoTotal, FeSat, NiSat, CoSat = ConvertedConcentrations
 

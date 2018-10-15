@@ -166,7 +166,7 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
 
         TotalDistance.append(z)
         InnerOxide.append(x)
-        OuterOxide.append(y)
+        OuterOxide.append(y) 
 
 
     DividerPlateLeakage = Output[1]
