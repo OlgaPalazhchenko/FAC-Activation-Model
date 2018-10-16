@@ -430,8 +430,15 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     InputParameters = open(FileName, 'r')
     InputParametersReader = list(csv.reader(InputParameters, delimiter=','))  
      
-    InnerIronOxRows = [13, 14, 15, 16, 17, 18, 19]
-    OuterFe3O4Rows = [22, 23, 24, 25, 26, 27, 28]
+    InnerIronOxRows = []
+    OuterFe3O4Rows = []
+    for i in range(90):
+        x = 93 + i
+        InnerIronOxRows.append(x)
+        
+    for i in range(90):
+        x = 185 + i
+        OuterFe3O4Rowss.append(x)
      
     for k, Pipe in zip(InnerIronOxRows, AllPipes):
         Pipe.InnerIronOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
@@ -440,11 +447,11 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
         Pipe.OuterFe3O4Loading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
  
     for Bundle in SteamGenerator:
-        Bundle.SludgeLoading = [float(InputParametersReader[31][i]) for i in range(0, Bundle.NodeNumber)]
+        Bundle.SludgeLoading = [float(InputParametersReader[277][i]) for i in range(0, Bundle.NodeNumber)]
      
-    DividerPlateLeakage = float(InputParametersReader[34][0])
+    DividerPlateLeakage = float(InputParametersReader[280][0])
      
-    x = float(InputParametersReader[37][0])
+    x = float(InputParametersReader[283][0])
 
     return DividerPlateLeakage, x
 
@@ -565,7 +572,10 @@ for j in range(SimulationStart, SimulationEnd):
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
         if j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
-            print (Date, x_pht, ld.SteamGenerator_2[1].SludgeLoading[1], RIHT_1, DividerPlateLeakage * 100)
+#             print (
+#                 Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[1].OuterFe3O4Loading[15], 'sludge:',
+#                 ld.SteamGenerator_2[1].SludgeLoading[1], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
+#                 )
                 
             output = output_time_logging(
                 OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power,
