@@ -515,7 +515,7 @@ for j in range(SimulationStart, SimulationEnd):
         if j == SimulationStart:
                         
             if SimulationStart == 0:
-                x_pht = 0.01
+                x_pht = 0.011
                 DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
             else:
                 DividerPlateLeakage, x_pht = system_input(
@@ -572,10 +572,10 @@ for j in range(SimulationStart, SimulationEnd):
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
         if j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
-#             print (
-#                 Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[1].OuterFe3O4Loading[15], 'sludge:',
-#                 ld.SteamGenerator_2[1].SludgeLoading[1], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
-#                 )
+            print (
+                Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[1].OuterFe3O4Loading[15], 'sludge:',
+                ld.SteamGenerator_2[1].SludgeLoading[1], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
+                )
                 
             output = output_time_logging(
                 OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power,

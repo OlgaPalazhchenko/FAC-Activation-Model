@@ -461,10 +461,10 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
         return conductivity
     
     elif material == "inner magnetite":
-        return 1.5 / 100  # [W/cm K]
+        return 2 / 100  # [W/cm K]
     
     elif material == "outer magnetite":
-        return 1 / 100  # [W/cm K]
+        return 1.4 / 100  # [W/cm K]
     else:
         return None
 
@@ -476,26 +476,29 @@ def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
     
     Time_Step = HeatTransferTimeStep / 24 / 365 #hr --> yr
     # default values
-    ReducedTubeGrowth = 0.0004  # [g/cm^2] /year = 3.25 um/year
+    ReducedTubeGrowth = 0.0003  # [g/cm^2] /year = 3.25 um/year
     
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     if Date in TrackedOutageDays:
         Growth = 0
     
     elif Date <= DayCPP:
-        Growth = 0.00085#[g/cm^2]/yr
+        Growth = 0.0008#[g/cm^2]/yr
     
     else:
         Growth = ReducedTubeGrowth 
         
     #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
-    if  Date == (1988, 4, 1) or WeeklyDate == (1988, 13):
-        Bundle.SludgeLoading[i] = 0.8 * Bundle.SludgeLoading[i]
-        
-    elif Date == DayOutage or WeeklyDate == (1995, 15):
+#     if  Date == (1988, 4, 1) or WeeklyDate == (1988, 13):
+#         Bundle.SludgeLoading[i] = 0.8 * Bundle.SludgeLoading[i]
+#         
+    if Date == DayOutage or WeeklyDate == WeekOutage:
         Bundle.SludgeLoading[i] = 0
     
-    elif Date == DayRefurbishment:
+    elif Date == DayCPP or WeeklyDate == WeekCPP:
+        Bundle.SludgeLoading[i] = 0.5 * Bundle.SludgeLoading[i]
+    
+    elif Date == DayRefurbishment or WeeklyDate == WeekRefurbishment:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.25
          
     else:
@@ -1301,7 +1304,7 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
     # time input (j) is in hours, converted to yearly
     Time_Step = HeatTransferTimeStep / 24 / 365 # hr --> yr
     
-    PostOutageYearlyLeakage = 0.0001 # per year rate
+    PostOutageYearlyLeakage = 0.0005 # per year rate
     
     # (year, week number in the year, day number in the week) 
     CalendarDate = datetime(*Date).isocalendar() 
@@ -1315,7 +1318,7 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
         LeakageRate = 0
         
     elif Date < DayOutage:
-        LeakageRate = 0.002 # per year rate
+        LeakageRate = 0.0016 # per year rate
     
     elif Date >= DayOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate
@@ -1333,21 +1336,21 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
         DividerPlateLeakage = 0.045
     
     elif Date == (1984, 5, 24) or WeeklyDate == (1984, 21):
-        DividerPlateLeakage = 0.055
+        DividerPlateLeakage = 0.06
         
     elif Date == DayOutageRestart or WeeklyDate == WeekOutageRestart:
-        DividerPlateLeakage = 0.025
+        DividerPlateLeakage = 0.0225
     
     # Development of additional leak site
     # impulse input of leak site
     elif Date == (1996, 3, 1) or WeeklyDate == (1996, 9):
-        DividerPlateLeakage = 0.0325
+        DividerPlateLeakage = 0.04
  
     DividerPlateLeakage = DividerPlateLeakage + Time_Step * LeakageRate
     
     # impulse input of leak site plateau
-    if Date >= (1998, 11, 1):
-        DividerPlateLeakage = 0.048
+#     if Date >= (1998, 11, 1):
+#         DividerPlateLeakage = 0.048
 
     return DividerPlateLeakage
 

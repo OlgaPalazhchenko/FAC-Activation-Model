@@ -141,7 +141,7 @@ def oxide_growth(
                 else:
                     HFE = 0 
                     
-                x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i]) * (1 + 4 * HFE)
+                x = Section.KpFe3O4electrochem[i] * (FeTotal[i] - FeSat[i]) * (1 + 3.5 * HFE)
                 
             else:  # FeTotal[i] < FeSat[i]:
                 x = Section.KdFe3O4electrochem[i] * (FeTotal[i] - FeSat[i])
