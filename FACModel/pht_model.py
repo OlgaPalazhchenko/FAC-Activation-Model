@@ -330,43 +330,58 @@ def output_time_logging(
    # add power as output to steam frac - can use to filter instead of steam quality
     RIHT_by_phase.set_index('Date', inplace=True)
      
-    RIHT_phase1_preCPP = RIHT_by_phase['1983-4-8':'1988-5-8']
-    RIHT_phase1_postCPP = RIHT_by_phase['1988-5-8':'1992-9-8']
-    RIHT_phase2 = RIHT_by_phase['1992-9-8':'1995-12-8']
-    RIHT_phase3 = RIHT_by_phase['1996-1-1':'1998-9-8']
-    RIHT_phase4 = RIHT_by_phase['1998-9-8':'2008-3-8']
-    RIHT_phase5_6 = RIHT_by_phase['2012-5-8':'2019-6-8']
+    RIHT_phase1_preCPP = RIHT_by_phase['1983-4-8':'1987-6-1']
+    RIHT_phase1_postCPP = RIHT_by_phase['1987-6-2':'1992-11-10']
+    
+    RIHT_phase1_2_Overlap = RIHT_by_phase['1992-9-11':'1992-11-10']
+    
+    RIHT_phase2 = RIHT_by_phase['1992-11-11':'1995-4-13']
+    RIHT_phase3 = RIHT_by_phase['1995-12-27':'1998-10-25']
+    
+    RIHT_phase3_4_Overlap = RIHT_by_phase['1998-10-1':'1998-11-25']
+    
+    RIHT_phase4 = RIHT_by_phase['1998-11-26':'2008-3-28']
+    RIHT_phase5_6 = RIHT_by_phase['2012-5-8':'2018-5-1']
    
    # filters data to remove outages
-    Shutdown = SGHX.FULLPOWER * 0.05 #5% of full power
-    RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Power'] > Shutdown]
-    RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['Power'] > Shutdown]
-    RIHT_phase2 = RIHT_phase2[RIHT_phase2['Power'] > Shutdown]
-    RIHT_phase3 = RIHT_phase3[RIHT_phase3['Power'] > Shutdown]
-    RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] > Shutdown]
-    RIHT_phase5_6 = RIHT_phase5_6[RIHT_phase5_6['Power'] > Shutdown]
+    Shutdown = SGHX.FULLPOWER * 0.99
+    Deratings = SGHX.FULLPOWER * 0.89
+    
+    RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Power'] >= Shutdown]
+    RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['Power'] >= Shutdown]
+    RIHT_phase1_2_Overlap = RIHT_phase1_2_Overlap[RIHT_phase1_2_Overlap['Power'] >= Shutdown]
+    
+    RIHT_phase2 = RIHT_phase2[RIHT_phase2['Power'] >= Shutdown]
+    RIHT_phase3 = RIHT_phase3[RIHT_phase3['Power'] >= Shutdown]
+    RIHT_phase3_4_Overlap = RIHT_phase3_4_Overlap[RIHT_phase3_4_Overlap['Power'] >= Shutdown]
+    
+    RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] >= Deratings]
+    RIHT_phase5 = RIHT_phase5[RIHT_phase5['Power'] >= Shutdown]
     
     if j % (7 * 4 * 12) == 0: #updates list in csv file (list itself appended to monthly)
-        writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
+        writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='dd-mm-yyyy')
          
         RIHT_phase1_preCPP.to_excel(writer, sheet_name = 'Phase 1 Pre CPP')
         RIHT_phase1_postCPP.to_excel(writer, sheet_name = 'Phase 1 Post CPP')
+        RIHT_phase1_2_Overlap.to_excel(writer, sheet_name = 'Phase 1/2 Overlap')
         RIHT_phase2.to_excel(writer, sheet_name = 'Phase 2')
         RIHT_phase3.to_excel(writer, sheet_name = 'Phase 3')
+        RIHT_phase3_4_Overlap.to_excel(writer, sheet_name = 'Phase 3/4 Overlap')
         RIHT_phase4.to_excel(writer, sheet_name = 'Phase 4')
-        RIHT_phase5_6.to_excel(writer, sheet_name = 'Phase 5_6')
-         
+        RIHT_phase5_6.to_excel(writer, sheet_name = 'Phase 5')
          
         # sets spacing between columns A and B so date column (A) is more clear
         workbook  = writer.book
         worksheet1 = writer.sheets['Phase 1 Pre CPP']
         worksheet2 = writer.sheets['Phase 1 Post CPP']
-        worksheet3 = writer.sheets['Phase 2']
-        worksheet4 = writer.sheets['Phase 3']
-        worksheet5 = writer.sheets['Phase 4']
-        worksheet6 = writer.sheets['Phase 5_6']
+        worksheet3 = writer.sheets['Phase 1/2 Overlap']
+        worksheet4 = writer.sheets['Phase 2']
+        worksheet5 = writer.sheets['Phase 3']
+        worksheet6 = writer.sheets['Phase 3/4 Overlap']
+        worksheet7 = writer.sheets['Phase 4']
+        worksheet8 = writer.sheets['Phase 5']
          
-        worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5, worksheet6]
+        worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8]
          
         for sheet in worksheets:
             sheet.set_column('A:B', 12)
@@ -456,7 +471,7 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     return DividerPlateLeakage, x
 
 
-SimulationYears = 16 # years
+SimulationYears = 37 # years
 SimulationStart = 0
 HoursinYear = 8760
 
@@ -515,7 +530,7 @@ for j in range(SimulationStart, SimulationEnd):
         if j == SimulationStart:
                         
             if SimulationStart == 0:
-                x_pht = 0.011
+                x_pht = 0.009
                 DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
             else:
                 DividerPlateLeakage, x_pht = system_input(

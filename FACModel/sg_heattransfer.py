@@ -7,7 +7,10 @@ import csv
 import pandas as pd
 from datetime import date, timedelta, datetime
 
-    
+
+FULLPOWER = 2061.4 * 1000
+ 
+ 
 def station_RIHT():
     Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_RIHT_raw.csv'
     df = pd.read_csv(Filename, header=None)
@@ -27,44 +30,45 @@ def station_RIHT():
     df['mean'] = df.iloc[:, 1:5].mean(axis = 1)
     
     #filters data to remove anything below 0.99 FP (except for phase 4, where power deratings took place to ~0.9 FP
-    df = df[df['power'] > 0.90]
+    df = df[df['power'] >= 0.89]
         
     #resamples all data by desired time period ('D' for daily) and performs operation, here taking the mean
     daily_average = df.resample('D').mean().copy()
     
     daily_average_no_missing = daily_average.dropna(axis = 0, how='any')
     
+    Shutdown = FULLPOWER * 0.99
+    Deratings = FULLPOWER * 0.89
     
     # separate sub dataframes based on PLNGS 'Phases' of operation
-    daily_average_phase3 = daily_average_no_missing['1996-1-1':'1998-10-1']
-    daily_average_phase4 = daily_average_no_missing['1998-10-2':'2008-03-1']
-    daily_average_phase5 = daily_average_no_missing['2013-1-29': '2013-12-14']
-    daily_average_phase6 = daily_average_no_missing['2013-12-15' : '2017-08-02']
-    daily_average_phase7 = daily_average_no_missing['2017-08-02':]
+    daily_average_phase3 = daily_average_no_missing['1995-12-27':'1998-10-25']
     
-    daily_average_phase3 = daily_average_phase3[daily_average_phase3['power'] > 0.99]
-    daily_average_phase4 = daily_average_phase4[daily_average_phase4['power'] > 0.90]
-    daily_average_phase5 = daily_average_phase5[daily_average_phase5['power'] > 0.99]
-    daily_average_phase6 = daily_average_phase6[daily_average_phase6['power'] > 0.99]
-    daily_average_phase7 = daily_average_phase7[daily_average_phase7['power'] > 0.99]
+    daily_average_phase3_4_overlap = daily_average_no_missing['1998-10-1':'1998-11-25']
     
-    writer = pd.ExcelWriter('PLNGS_RIHT_by_Phase.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
+    daily_average_phase4 = daily_average_no_missing['1998-11-26':'2008-3-28']
+    daily_average_phase5 = daily_average_no_missing['2012-5-8': '2018-5-1']
+    
+    
+    daily_average_phase3 = daily_average_phase3[daily_average_phase3['power'] >= Shutdown]
+    daily_average_phase3_4_overlap = daily_average_phase3_4_overlap[daily_average_phase3_4_overlap['power'] >= Shutdown]
+#     daily_average_phase4 = daily_average_phase4[daily_average_phase4['power'] >= Deratings]
+    daily_average_phase5 = daily_average_phase5[daily_average_phase5['power'] >= Shutdown]
+    
+    writer = pd.ExcelWriter('PLNGS_RIHT_by_Phase.xlsx', engine='xlsxwriter', datetime_format='dd-mm-yyyy')
     
     daily_average_phase3.to_excel(writer, sheet_name = 'Phase 3')
+    daily_average_phase3_4_overlap.to_excel(writer, sheet_name = 'Phase 3/4 Overlap')
     daily_average_phase4.to_excel(writer, sheet_name = 'Phase 4')
     daily_average_phase5.to_excel(writer, sheet_name = 'Phase 5')
-    daily_average_phase6.to_excel(writer, sheet_name = 'Phase 6')
-    daily_average_phase7.to_excel(writer, sheet_name = 'Phase 7')
     
     # sets spacing between columns A and B so date column (A) is more clear
     workbook  = writer.book
     worksheet1 = writer.sheets['Phase 3']
-    worksheet2 = writer.sheets['Phase 4']
-    worksheet3 = writer.sheets['Phase 5']
-    worksheet4 = writer.sheets['Phase 6']
-    worksheet5 = writer.sheets['Phase 7']
+    worksheet2 = writer.sheets['Phase 3/4 Overlap']
+    worksheet3 = writer.sheets['Phase 4']
+    worksheet4 = writer.sheets['Phase 5']
     
-    worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5]
+    worksheets = [worksheet1, worksheet2, worksheet3, worksheet4]
     
     for sheet in worksheets:
         sheet.set_column('A:B', 12)
@@ -193,7 +197,7 @@ Method = "tube length"
 FullTubeComplement = 3542
 
 DayStartup = (1983, 4, 8)
-DayCPP = (1987, 3, 1)
+DayCPP = (1987, 6, 1)
 DayOutage = (1995, 4, 13)
 DayOutageRestart = (1996, 1, 1)
 DayRefurbishment = (2008, 3, 29)
@@ -207,8 +211,6 @@ for x in EventDays:
 
 WeekStartup, WeekCPP, WeekOutage, WeekOutageRestart, WeekRefurbishment, WeekRefurbishmentRestart = EventWeeks
 
-
-FULLPOWER = 2061.4 * 1000
 
 T_sat_primary = 310 + 273.15
 T_PreheaterIn = 186 + 273.15
@@ -464,7 +466,7 @@ def thermal_conductivity(Twall, material, SecondarySidePressure):
         return 2 / 100  # [W/cm K]
     
     elif material == "outer magnetite":
-        return 1.4 / 100  # [W/cm K]
+        return 1.3 / 100  # [W/cm K]
     else:
         return None
 
@@ -483,7 +485,7 @@ def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
         Growth = 0
     
     elif Date <= DayCPP:
-        Growth = 0.0008#[g/cm^2]/yr
+        Growth = 0.0014#[g/cm^2]/yr
     
     else:
         Growth = ReducedTubeGrowth 
@@ -493,10 +495,10 @@ def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
 #         Bundle.SludgeLoading[i] = 0.8 * Bundle.SludgeLoading[i]
 #         
     if Date == DayOutage or WeeklyDate == WeekOutage:
-        Bundle.SludgeLoading[i] = 0
+        Bundle.SludgeLoading[i] = 0.1 * Bundle.SludgeLoading[i]
     
     elif Date == DayCPP or WeeklyDate == WeekCPP:
-        Bundle.SludgeLoading[i] = 0.5 * Bundle.SludgeLoading[i]
+        Bundle.SludgeLoading[i] = 0.6 * Bundle.SludgeLoading[i]
     
     elif Date == DayRefurbishment or WeeklyDate == WeekRefurbishment:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.25
@@ -735,7 +737,7 @@ def pht_steam_quality(Temperature, Date):
         
     # outside of data in the logs and the 1995 outage (1983-1995 data) 99 % full power is assumed
     else:
-        Fraction_of_FP = 0.99
+        Fraction_of_FP = 1
        
     P = FULLPOWER * Fraction_of_FP
 
@@ -1304,7 +1306,7 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
     # time input (j) is in hours, converted to yearly
     Time_Step = HeatTransferTimeStep / 24 / 365 # hr --> yr
     
-    PostOutageYearlyLeakage = 0.0005 # per year rate
+    PostOutageYearlyLeakage = 0.0006 # per year rate
     
     # (year, week number in the year, day number in the week) 
     CalendarDate = datetime(*Date).isocalendar() 
@@ -1318,7 +1320,7 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
         LeakageRate = 0
         
     elif Date < DayOutage:
-        LeakageRate = 0.0016 # per year rate
+        LeakageRate = 0.0025 # per year rate
     
     elif Date >= DayOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate
@@ -1336,15 +1338,15 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
         DividerPlateLeakage = 0.045
     
     elif Date == (1984, 5, 24) or WeeklyDate == (1984, 21):
-        DividerPlateLeakage = 0.06
+        DividerPlateLeakage = 0.0525
         
     elif Date == DayOutageRestart or WeeklyDate == WeekOutageRestart:
-        DividerPlateLeakage = 0.0225
+        DividerPlateLeakage = 0.025
     
     # Development of additional leak site
     # impulse input of leak site
     elif Date == (1996, 3, 1) or WeeklyDate == (1996, 9):
-        DividerPlateLeakage = 0.04
+        DividerPlateLeakage = 0.045
  
     DividerPlateLeakage = DividerPlateLeakage + Time_Step * LeakageRate
     
@@ -1359,7 +1361,7 @@ def secondary_side_pressure(Date):
     # first drop estimated
     FirstPressureReduction = (1992, 11, 1)
     # second rediction date from plngs data
-    SecondPressureReduction = (1998, 10, 25)
+    SecondPressureReduction = (1998, 11, 26)
     
     if Date < FirstPressureReduction:
         SecondarySidePressure = 4.593  # MPa
@@ -1430,8 +1432,8 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransfe
        
     return RIHT
 
-        
-# print (energy_balance(
-#     ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Date= (1984, 4, 8), HeatTransferTimeStep = nc.TIME_STEP * 1,
-#     SGFastMode="yes"
-#     )- 273.15)
+         
+print (energy_balance(
+    ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Date= (1984, 4, 8), HeatTransferTimeStep = nc.TIME_STEP * 1,
+    SGFastMode="yes"
+    )- 273.15)
