@@ -331,57 +331,45 @@ def output_time_logging(
     RIHT_by_phase.set_index('Date', inplace=True)
      
     RIHT_phase1_preCPP = RIHT_by_phase['1983-4-8':'1987-6-1']
-    RIHT_phase1_postCPP = RIHT_by_phase['1987-6-2':'1992-11-10']
+    RIHT_phase1_postCPP = RIHT_by_phase['1987-6-1':'1992-9-1']
     
-    RIHT_phase1_2_Overlap = RIHT_by_phase['1992-9-11':'1992-11-10']
+    RIHT_phase2 = RIHT_by_phase['1992-9-2':'1995-4-13']
+    RIHT_phase3 = RIHT_by_phase['1995-12-27':'1998-10-1']
     
-    RIHT_phase2 = RIHT_by_phase['1992-11-11':'1995-4-13']
-    RIHT_phase3 = RIHT_by_phase['1995-12-27':'1998-10-25']
-    
-    RIHT_phase3_4_Overlap = RIHT_by_phase['1998-10-1':'1998-11-25']
-    
-    RIHT_phase4 = RIHT_by_phase['1998-11-26':'2008-3-28']
-    RIHT_phase5_6 = RIHT_by_phase['2012-5-8':'2018-5-1']
+    RIHT_phase4 = RIHT_by_phase['1998-10-1':'2008-3-28']
+    RIHT_phase5 = RIHT_by_phase['2012-5-8':'2018-5-1']
    
    # filters data to remove outages
-    Shutdown = SGHX.FULLPOWER * 0.99
+    Shutdown = SGHX.FULLPOWER * 0.98
     Deratings = SGHX.FULLPOWER * 0.89
     
     RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Power'] >= Shutdown]
     RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['Power'] >= Shutdown]
-    RIHT_phase1_2_Overlap = RIHT_phase1_2_Overlap[RIHT_phase1_2_Overlap['Power'] >= Shutdown]
-    
     RIHT_phase2 = RIHT_phase2[RIHT_phase2['Power'] >= Shutdown]
     RIHT_phase3 = RIHT_phase3[RIHT_phase3['Power'] >= Shutdown]
-    RIHT_phase3_4_Overlap = RIHT_phase3_4_Overlap[RIHT_phase3_4_Overlap['Power'] >= Shutdown]
-    
     RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] >= Deratings]
     RIHT_phase5 = RIHT_phase5[RIHT_phase5['Power'] >= Shutdown]
     
     if j % (7 * 4 * 12) == 0: #updates list in csv file (list itself appended to monthly)
-        writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='dd-mm-yyyy')
+        writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
          
         RIHT_phase1_preCPP.to_excel(writer, sheet_name = 'Phase 1 Pre CPP')
         RIHT_phase1_postCPP.to_excel(writer, sheet_name = 'Phase 1 Post CPP')
-        RIHT_phase1_2_Overlap.to_excel(writer, sheet_name = 'Phase 1/2 Overlap')
         RIHT_phase2.to_excel(writer, sheet_name = 'Phase 2')
         RIHT_phase3.to_excel(writer, sheet_name = 'Phase 3')
-        RIHT_phase3_4_Overlap.to_excel(writer, sheet_name = 'Phase 3/4 Overlap')
         RIHT_phase4.to_excel(writer, sheet_name = 'Phase 4')
-        RIHT_phase5_6.to_excel(writer, sheet_name = 'Phase 5')
+        RIHT_phase5.to_excel(writer, sheet_name = 'Phase 5')
          
         # sets spacing between columns A and B so date column (A) is more clear
         workbook  = writer.book
         worksheet1 = writer.sheets['Phase 1 Pre CPP']
         worksheet2 = writer.sheets['Phase 1 Post CPP']
-        worksheet3 = writer.sheets['Phase 1/2 Overlap']
-        worksheet4 = writer.sheets['Phase 2']
-        worksheet5 = writer.sheets['Phase 3']
-        worksheet6 = writer.sheets['Phase 3/4 Overlap']
-        worksheet7 = writer.sheets['Phase 4']
-        worksheet8 = writer.sheets['Phase 5']
+        worksheet3 = writer.sheets['Phase 2']
+        worksheet4 = writer.sheets['Phase 3']
+        worksheet5 = writer.sheets['Phase 4']
+        worksheet6 = writer.sheets['Phase 5']
          
-        worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5, worksheet6, worksheet7, worksheet8]
+        worksheets = [worksheet1, worksheet2, worksheet3, worksheet4, worksheet5, worksheet6]
          
         for sheet in worksheets:
             sheet.set_column('A:B', 12)
@@ -434,7 +422,6 @@ def sg_heat_transfer(Outlet, Inlet, SteamGenerator, j):
 
 def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     
-
     if InletFeeder == ld.InletFeeder:
         FileName = 'SG2 Input Phase 2.csv'
     else:
@@ -453,7 +440,7 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
         
     for i in range(90):
         x = 185 + i
-        OuterFe3O4Rowss.append(x)
+        OuterFe3O4Rows.append(x)
      
     for k, Pipe in zip(InnerIronOxRows, AllPipes):
         Pipe.InnerIronOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
@@ -467,11 +454,16 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     DividerPlateLeakage = float(InputParametersReader[280][0])
      
     x = float(InputParametersReader[283][0])
+    
+    print (
+        'from input file: DP:', DividerPlateLeakage, 'steam frac', x, 'outer fe3o4 loading last node, first tube',
+        SteamGenerator[0].OuterFe3O4Loading[21]
+        )
 
     return DividerPlateLeakage, x
 
 
-SimulationYears = 37 # years
+SimulationYears = 10 # years
 SimulationStart = 0
 HoursinYear = 8760
 
@@ -522,27 +514,28 @@ for j in range(SimulationStart, SimulationEnd):
         )
         SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, ld.InletFeeder, ld.SteamGenerator_2, j)
       
-
+    
+    # if dividing left by right side (%) gives zero remainder (== 0):
+    if j == SimulationStart:
+        if SimulationStart == 0:
+            x_pht = 0.009
+            DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
+        else:
+            DividerPlateLeakage, x_pht = system_input(
+                ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2
+                )
+             
+            if Loop == "full":
+                DividerPlateLeakage, x_pht = system_input(
+                    ld.InletFeeder_2,ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator
+                    )
+    else: 
+        None
+    
     # parameters tracked/updated with time
     HeatTransferTimeStep = 7 * nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
     
     if j % (HeatTransferTimeStep / nc.TIME_STEP) == 0:
-        if j == SimulationStart:
-                        
-            if SimulationStart == 0:
-                x_pht = 0.009
-                DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
-            else:
-                DividerPlateLeakage, x_pht = system_input(
-                    ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2
-                    )
-                 
-                if Loop == "full":
-                    DividerPlateLeakage, x_pht = system_input(
-                        ld.InletFeeder_2,ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator
-                        )
-        else:
-            None
                                    
         start = datetime(*SGHX.DayStartup)
         delta = timedelta(hours = j * nc.TIME_STEP)

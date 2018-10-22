@@ -37,38 +37,32 @@ def station_RIHT():
     
     daily_average_no_missing = daily_average.dropna(axis = 0, how='any')
     
-    Shutdown = FULLPOWER * 0.99
-    Deratings = FULLPOWER * 0.89
+    Shutdown = 0.99
+#     Deratings = 0.89
     
     # separate sub dataframes based on PLNGS 'Phases' of operation
-    daily_average_phase3 = daily_average_no_missing['1995-12-27':'1998-10-25']
-    
-    daily_average_phase3_4_overlap = daily_average_no_missing['1998-10-1':'1998-11-25']
-    
-    daily_average_phase4 = daily_average_no_missing['1998-11-26':'2008-3-28']
+    daily_average_phase3 = daily_average_no_missing['1995-12-27':'1998-10-1']
+    daily_average_phase4 = daily_average_no_missing['1998-10-2':'2008-3-28']
     daily_average_phase5 = daily_average_no_missing['2012-5-8': '2018-5-1']
     
     
     daily_average_phase3 = daily_average_phase3[daily_average_phase3['power'] >= Shutdown]
-    daily_average_phase3_4_overlap = daily_average_phase3_4_overlap[daily_average_phase3_4_overlap['power'] >= Shutdown]
 #     daily_average_phase4 = daily_average_phase4[daily_average_phase4['power'] >= Deratings]
     daily_average_phase5 = daily_average_phase5[daily_average_phase5['power'] >= Shutdown]
     
-    writer = pd.ExcelWriter('PLNGS_RIHT_by_Phase.xlsx', engine='xlsxwriter', datetime_format='dd-mm-yyyy')
+    writer = pd.ExcelWriter('PLNGS_RIHT_by_Phase.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
     
     daily_average_phase3.to_excel(writer, sheet_name = 'Phase 3')
-    daily_average_phase3_4_overlap.to_excel(writer, sheet_name = 'Phase 3/4 Overlap')
     daily_average_phase4.to_excel(writer, sheet_name = 'Phase 4')
     daily_average_phase5.to_excel(writer, sheet_name = 'Phase 5')
     
     # sets spacing between columns A and B so date column (A) is more clear
     workbook  = writer.book
     worksheet1 = writer.sheets['Phase 3']
-    worksheet2 = writer.sheets['Phase 3/4 Overlap']
-    worksheet3 = writer.sheets['Phase 4']
-    worksheet4 = writer.sheets['Phase 5']
+    worksheet2 = writer.sheets['Phase 4']
+    worksheet3 = writer.sheets['Phase 5']
     
-    worksheets = [worksheet1, worksheet2, worksheet3, worksheet4]
+    worksheets = [worksheet1, worksheet2, worksheet3]
     
     for sheet in worksheets:
         sheet.set_column('A:B', 12)
@@ -78,6 +72,43 @@ def station_RIHT():
 station_RIHT()
 
 
+def boiler_pressure(SteamGenerator):
+    
+    Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS Secondary Side Pressure.csv'
+    
+    df = pd.read_csv(Filename, header=None)
+    
+    BO_1 = 'Pressure Boiler 1'
+    BO_2 = 'Pressure Boiler 2'
+    BO_3 = 'Pressure Boiler 3'
+    BO_4 = 'Pressure Boiler 4'
+    
+    df.columns = ['date', 'power', BO_1, BO_2, BO_3, BO_4]
+
+    # converts from string object to time series  
+    df.date = pd.to_datetime(df.date)
+    df.set_index('date', inplace=True)
+    
+    # frequency of power data changed from every few minutes to daily average
+    daily_average = df.resample('D').mean().copy()
+    daily_average_no_outages = daily_average.index[daily_average['power'] > 0.89]
+    
+    NonOutageTrackedDates = []
+    
+    for date in daily_average_no_outages.index:
+        x = (date.year, date.month, date.day)
+        NonOutageTrackedDates.append(x)
+    
+    if SteamGenerator == ld.SteamGenerator_2:
+        Boiler = BO_1
+    elif SteamGenerator == ld.SteamGenerator:
+        Boiler = BO_2
+    
+    Pressure = daily_average_no_outages.as_matrix([Boiler]).flatten()
+    
+    return NonOutageTrackedDates, Pressure
+    
+    
 def reactor_power():
     TrackedOutageDays = []
     EstimatedOutageDays = []
@@ -112,7 +143,7 @@ def reactor_power():
     worksheet1 = writer.sheets['Daily Averaged FP']
     writer.save()
     
-    TrackedOutages = daily_average.index[daily_average['power'] < 0.1]
+    TrackedOutages = daily_average.index[daily_average['power'] < 0.5]
     
     for date in TrackedOutages:
         x = (date.year, date.month, date.day)
@@ -138,7 +169,7 @@ def reactor_power():
     worksheet1 = writer.sheets['Daily Averaged FP']
     writer.save()
     
-    EstimatedOutages = daily_average_2.index[daily_average_2['power'] < 0.1]
+    EstimatedOutages = daily_average_2.index[daily_average_2['power'] < 0.5]
     
     
     for date in EstimatedOutages:
@@ -146,7 +177,7 @@ def reactor_power():
         EstimatedOutageDays.append(x)
     
     # Estimated operating power (from estimates in spreadsheet)
-    EstimatedPower = daily_average_2.as_matrix(['power']).flatten()
+#     EstimatedPower = daily_average_2.as_matrix(['power']).flatten()
     
     # All outage days, estimated and from station data
     TrackedOutageDays = EstimatedOutageDays + TrackedOutageDays
@@ -163,10 +194,10 @@ def reactor_power():
     # only the estimated outage days pre 1996 station data
     # estimated operating power during the outage days
     # station power for dates where station data available (1996- June 2018)
-    return AllStationDataDates, TrackedOutageDays, EstimatedOutageDays, EstimatedPower, StationPower
+    return AllStationDataDates, TrackedOutageDays, EstimatedOutageDays, StationPower
 
 
-AllStationDataDates, TrackedOutageDays, EstimatedOutageDays, EstimatedPower, StationPower = reactor_power()
+AllStationDataDates, TrackedOutageDays, EstimatedOutageDays, StationPower = reactor_power()
 # print (len(OutageYearsMonths))
 
 def RIHT_plots():
@@ -485,7 +516,7 @@ def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
         Growth = 0
     
     elif Date <= DayCPP:
-        Growth = 0.0014#[g/cm^2]/yr
+        Growth = 0.0012#[g/cm^2]/yr
     
     else:
         Growth = ReducedTubeGrowth 
@@ -498,7 +529,7 @@ def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
         Bundle.SludgeLoading[i] = 0.1 * Bundle.SludgeLoading[i]
     
     elif Date == DayCPP or WeeklyDate == WeekCPP:
-        Bundle.SludgeLoading[i] = 0.6 * Bundle.SludgeLoading[i]
+        Bundle.SludgeLoading[i] = 0.7 * Bundle.SludgeLoading[i]
     
     elif Date == DayRefurbishment or WeeklyDate == WeekRefurbishment:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.25
@@ -710,7 +741,7 @@ def pht_steam_quality(Temperature, Date):
     
     difference = []
 
-    # outages are accounted for in the 1996-01 to 2018-06 data via power derating (down to 0.01 or lower)
+    # outages are accounted for in the 1996-01 to 2018-06 data via power derating
     if Date in AllStationDataDates:
         
         for x in AllStationDataDates:
@@ -729,13 +760,10 @@ def pht_steam_quality(Temperature, Date):
     
     # the outage in 1995 precedes the station log data available, so this is manually set to 0 % FP here in addition
     # to the other approximated outage dates
-    
-    # many of these estimated outages are not the entire month (so a recovery power is taken into account)
     elif Date in EstimatedOutageDays:
         Fraction_of_FP = 0
-    
-        
-    # outside of data in the logs and the 1995 outage (1983-1995 data) 99 % full power is assumed
+      
+    # outside of data in the logs/estimates and the 1995 outage (1983-1995 data) 100 % full power is assumed
     else:
         Fraction_of_FP = 1
        
@@ -1320,7 +1348,7 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
         LeakageRate = 0
         
     elif Date < DayOutage:
-        LeakageRate = 0.0025 # per year rate
+        LeakageRate = 0.0015 # per year rate
     
     elif Date >= DayOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate
@@ -1338,7 +1366,7 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
         DividerPlateLeakage = 0.045
     
     elif Date == (1984, 5, 24) or WeeklyDate == (1984, 21):
-        DividerPlateLeakage = 0.0525
+        DividerPlateLeakage = 0.055
         
     elif Date == DayOutageRestart or WeeklyDate == WeekOutageRestart:
         DividerPlateLeakage = 0.025
@@ -1433,7 +1461,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransfe
     return RIHT
 
          
-print (energy_balance(
-    ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Date= (1984, 4, 8), HeatTransferTimeStep = nc.TIME_STEP * 1,
-    SGFastMode="yes"
-    )- 273.15)
+# print (energy_balance(
+#     ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Date= (1984, 4, 8), HeatTransferTimeStep = nc.TIME_STEP * 1,
+#     SGFastMode="yes"
+#     )- 273.15)
