@@ -72,7 +72,7 @@ def station_RIHT():
 station_RIHT()
 
 
-def boiler_pressure(SteamGenerator):
+def boiler_pressure():
     
     Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS Secondary Side Pressure.csv'
     
@@ -98,17 +98,16 @@ def boiler_pressure(SteamGenerator):
     for date in daily_average_no_outages.index:
         x = (date.year, date.month, date.day)
         NonOutageTrackedDates.append(x)
+
     
-    if SteamGenerator == ld.SteamGenerator_2:
-        Boiler = BO_1
-    elif SteamGenerator == ld.SteamGenerator:
-        Boiler = BO_2
+    Pressure_BO1 = daily_average_no_outages.as_matrix([BO_1]).flatten()
     
-    Pressure = daily_average_no_outages.as_matrix([Boiler]).flatten()
+    return NonOutageTrackedDates, Pressure_BO1
     
-    return NonOutageTrackedDates, Pressure
-    
-    
+
+NonOutageTrackedDates, Pressure_BO1 = boiler_pressure()
+
+
 def reactor_power():
     TrackedOutageDays = []
     EstimatedOutageDays = []
@@ -1268,11 +1267,8 @@ def temperature_profile(
                 # total area of only preheater area
                 TotalArea = sum(outer_area(Bundle)[(i + 1):(Bundle.NodeNumber - 1)])
                 NTU = U * TotalArea * TotalSGTubeNumber / C_min
-                
 
-                
                 eta = 1 - np.exp(-(1 / C_r) * (1 - np.exp(-C_r * NTU)))
-#                 print (U, C_r, NTU, TotalArea, eta, Cp_c, Cp_h, T_PrimaryBulkOut-273.15)
                 Q_NTU = eta * Q_max
 
                 # 2 known temperatures at opposite ends (preheater in and PHT in at the top)
@@ -1330,7 +1326,7 @@ def temperature_profile(
     return PrimaryBulk, HeatFlux
 
 
-def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
+def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlateLeakage):
     # time input (j) is in hours, converted to yearly
     Time_Step = HeatTransferTimeStep / 24 / 365 # hr --> yr
     
@@ -1344,11 +1340,11 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
     if Date in TrackedOutageDays:
         LeakageRate = 0 # per year rate
       
-    elif Date == DayStartup:
+    elif Date == RunStart_CalendarDate:
         LeakageRate = 0
         
     elif Date < DayOutage:
-        LeakageRate = 0.0015 # per year rate
+        LeakageRate = 0.00125 # per year rate
     
     elif Date >= DayOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate
@@ -1385,7 +1381,23 @@ def divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage):
     return DividerPlateLeakage
 
 
-def secondary_side_pressure(Date):
+def secondary_side_pressure(SteamGenerator, Date):
+    
+    if Date in AllStationDataDates:
+        for x in AllStationDataDates:
+            
+            delta_time = [x1 - x2 for (x1, x2) in zip(Date, x)] 
+            
+            delta_time = [abs(number) for number in delta_time]
+            
+            difference.append(delta_time)
+
+        # min function --> smallest difference between first index in all lists in tuple compared, followed by second     
+        # index = location of list with this minimum difference relative to that of current (year, month) input 
+        ClosestDay = difference.index(min(difference))
+        
+        Pressure = [ClosestDay]
+    
     # first drop estimated
     FirstPressureReduction = (1992, 11, 1)
     # second rediction date from plngs data
@@ -1427,7 +1439,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransfe
     # adjusts how many tubes per bundle to account for tubes plugged
     bundle_sizes(SteamGenerator, TotalSGTubeNumber)
     
-    SecondarySidePressure = secondary_side_pressure(Date)
+    SecondarySidePressure = secondary_side_pressure(SteamGenerator, Date)
     
     MasssFlow_dividerplate.magnitude = MassFlow_h.magnitude * DividerPlateLeakage
     # decreases as divider (bypass) flow increases

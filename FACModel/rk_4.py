@@ -92,8 +92,8 @@ def spatial(Section, Solution, Bulk, km, Diameter, Velocity, Length, i):
 
 
 def oxide_growth(
-        Section, ElementTracking,  RK4_InnerIronOxLoading, RK4_OuterFe3O4Loading, RK4_NiLoading, RK4_CoLoading,
-        j):
+        Section, ElementTracking, RK4_InnerIronOxLoading, RK4_OuterFe3O4Loading, RK4_NiLoading, RK4_CoLoading, j
+        ):
 
     MolarMasses = [nc.FeMolarMass, nc.FeMolarMass, nc.NiMolarMass, nc.NiMolarMass, nc.CoMolarMass, nc.CoMolarMass]
     
@@ -214,7 +214,7 @@ def pht_cleaning(Bundle, InnerOxide, OuterOxide, j):
         CleanedOutage = SGHX.CleanedOutageSG2
         CleanedRefurb = SGHX.CleanedRefurbishmentSG2
 
-    #need to change cleaning efficiency for each individual clean 
+    #need cleaning efficiency for each individual clean 
     if j == Outage_hours:
         if Bundle in CleanedOutage:
             CleaningEfficiency = 0.6

@@ -2,7 +2,7 @@ import csv
 import numpy as np
 
 
-TIME_STEP = 24  # hr
+TIME_STEP = 168  # hr
 TIME_INCREMENT = 3600 * TIME_STEP  # [s] Based on desired time step (e.g., 3600s/h for 1h time step)
 
 

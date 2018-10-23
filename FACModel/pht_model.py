@@ -259,7 +259,7 @@ class PHTS():
                 
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
-            self.Section1, j, SimulationStart, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking
+            self.Section1, j, SimulationStartHours, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking
             )
 
 
@@ -333,7 +333,7 @@ def output_time_logging(
     RIHT_phase1_preCPP = RIHT_by_phase['1983-4-8':'1987-6-1']
     RIHT_phase1_postCPP = RIHT_by_phase['1987-6-1':'1992-9-1']
     
-    RIHT_phase2 = RIHT_by_phase['1992-9-2':'1995-4-13']
+    RIHT_phase2 = RIHT_by_phase['1992-9-1':'1995-4-13']
     RIHT_phase3 = RIHT_by_phase['1995-12-27':'1998-10-1']
     
     RIHT_phase4 = RIHT_by_phase['1998-10-1':'2008-3-28']
@@ -345,12 +345,16 @@ def output_time_logging(
     
     RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Power'] >= Shutdown]
     RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['Power'] >= Shutdown]
+    
+    RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['RIHT'] >= 264.5]
+    
+    
     RIHT_phase2 = RIHT_phase2[RIHT_phase2['Power'] >= Shutdown]
     RIHT_phase3 = RIHT_phase3[RIHT_phase3['Power'] >= Shutdown]
     RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] >= Deratings]
     RIHT_phase5 = RIHT_phase5[RIHT_phase5['Power'] >= Shutdown]
     
-    if j % (7 * 4 * 12) == 0: #updates list in csv file (list itself appended to monthly)
+    if j % (8) == 0: #updates list in csv file (list itself appended to monthly)
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
          
         RIHT_phase1_preCPP.to_excel(writer, sheet_name = 'Phase 1 Pre CPP')
@@ -463,12 +467,19 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     return DividerPlateLeakage, x
 
 
-SimulationYears = 10 # years
-SimulationStart = 0
+SimulationDurationYears = 11 # years
+SimulationStartYears = 0
 HoursinYear = 8760
 
-SimulationHours = SimulationStart + SimulationYears * 365#(HoursinYear / nc.TIME_STEP)
-SimulationEnd = SimulationHours
+PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
+delta = timedelta(hours = SimulationStartYears * HoursinYear)
+
+CalendarDate = PLNGSStartUp_CalendarDate + delta
+RunStart_CalendarDate = (CalendarDate.year, CalendarDate.month, CalendarDate.day)
+
+SimulationStartHours = int(SimulationStartYears * HoursinYear / nc.TIME_STEP)
+SimulationEndHours = int((SimulationStartYears + SimulationDurationYears) * HoursinYear / nc.TIME_STEP)
+
 
 import time
 start_time = time.time()
@@ -476,7 +487,7 @@ start_time = time.time()
 # load initial chemistry for full/half loop
 initial_conditions()
 
-for j in range(SimulationStart, SimulationEnd):     
+for j in range(SimulationStartHours, SimulationEndHours):     
     
     InletFeeder_1_Loop1 = PHTS(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j)
     
@@ -516,8 +527,8 @@ for j in range(SimulationStart, SimulationEnd):
       
     
     # if dividing left by right side (%) gives zero remainder (== 0):
-    if j == SimulationStart:
-        if SimulationStart == 0:
+    if j == SimulationStartHours:
+        if SimulationStartHours == 0:
             x_pht = 0.009
             DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
         else:
@@ -533,14 +544,12 @@ for j in range(SimulationStart, SimulationEnd):
         None
     
     # parameters tracked/updated with time
-    HeatTransferTimeStep = 7 * nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
+    HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
     
     if j % (HeatTransferTimeStep / nc.TIME_STEP) == 0:
                                    
-        start = datetime(*SGHX.DayStartup)
         delta = timedelta(hours = j * nc.TIME_STEP)
-        CalendarYear = start + delta
-        
+        CalendarYear = PLNGSStartUp_CalendarDate + delta
         Date = (CalendarYear.year, CalendarYear.month, CalendarYear.day)
 
         if Loop == "full":
@@ -572,7 +581,7 @@ for j in range(SimulationStart, SimulationEnd):
         # in half loop mode, these are equal, so avg = RIHT_1 = RIHT_2
         T_RIH_average = (RIHT_1 + RIHT_2) / 2
         x_pht, Power = SGHX.pht_steam_quality(T_RIH_average + 273.15, Date)
-        DividerPlateLeakage = SGHX.divider_plate(Date, HeatTransferTimeStep, DividerPlateLeakage)
+        DividerPlateLeakage = SGHX.divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlateLeakage)
         
         # core and outlet temperatures currently not being updated, but all sections called for continuity
         for Section in Sections:
