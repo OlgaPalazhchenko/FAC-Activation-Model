@@ -346,7 +346,7 @@ def output_time_logging(
     RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Power'] >= Shutdown]
     RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['Power'] >= Shutdown]
     
-    RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['RIHT'] >= 264.5]
+    RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['RIHT'] >= 265.2]
     
     
     RIHT_phase2 = RIHT_phase2[RIHT_phase2['Power'] >= Shutdown]
@@ -460,25 +460,29 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     x = float(InputParametersReader[283][0])
     
     print (
-        'from input file: DP:', DividerPlateLeakage, 'steam frac', x, 'outer fe3o4 loading last node, first tube',
-        SteamGenerator[0].OuterFe3O4Loading[21]
+        'from input file: steam frac', x, 'fe3o4',
+        SteamGenerator[0].OuterFe3O4Loading[21], 'sludge', SteamGenerator[0].SludgeLoading[21], 'DP:',
+        DividerPlateLeakage 
         )
 
     return DividerPlateLeakage, x
 
 
-SimulationDurationYears = 11 # years
-SimulationStartYears = 0
-HoursinYear = 8760
-
 PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
-delta = timedelta(hours = SimulationStartYears * HoursinYear)
+RunStart_CalendarDate = (1994, 3, 25)
+RunEnd_CalendarDate = (2008, 3, 1)
 
-CalendarDate = PLNGSStartUp_CalendarDate + delta
-RunStart_CalendarDate = (CalendarDate.year, CalendarDate.month, CalendarDate.day)
+a = PLNGSStartUp_CalendarDate
+b = datetime(*RunStart_CalendarDate)
+delta = b - a
+delta = (delta.days * 24) / nc.TIME_STEP
+SimulationStartHours = round(delta)
 
-SimulationStartHours = int(SimulationStartYears * HoursinYear / nc.TIME_STEP)
-SimulationEndHours = int((SimulationStartYears + SimulationDurationYears) * HoursinYear / nc.TIME_STEP)
+a = datetime(*RunStart_CalendarDate)
+b = datetime(*RunEnd_CalendarDate)
+delta = b - a
+delta = (delta.days * 24) / nc.TIME_STEP
+SimulationEndHours = round(delta)
 
 
 import time
@@ -543,6 +547,7 @@ for j in range(SimulationStartHours, SimulationEndHours):
     else: 
         None
     
+    
     # parameters tracked/updated with time
     HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
     
@@ -590,8 +595,8 @@ for j in range(SimulationStartHours, SimulationEndHours):
 
         if j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
             print (
-                Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[1].OuterFe3O4Loading[15], 'sludge:',
-                ld.SteamGenerator_2[1].SludgeLoading[1], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
+                Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterFe3O4Loading[21], 'sludge:',
+                ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
                 )
                 
             output = output_time_logging(

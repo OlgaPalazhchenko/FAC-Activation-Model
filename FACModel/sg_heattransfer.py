@@ -105,7 +105,7 @@ def boiler_pressure():
     return NonOutageTrackedDates, Pressure_BO1
     
 
-NonOutageTrackedDates, Pressure_BO1 = boiler_pressure()
+# NonOutageTrackedDates, Pressure_BO1 = boiler_pressure()
 
 
 def reactor_power():
@@ -513,10 +513,7 @@ def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
     # CPP installation (late 1986) reduces secondary side crud by 50% 
     if Date in TrackedOutageDays:
         Growth = 0
-    
-    elif Date <= DayCPP:
-        Growth = 0.0012#[g/cm^2]/yr
-    
+
     else:
         Growth = ReducedTubeGrowth 
         
@@ -528,7 +525,7 @@ def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
         Bundle.SludgeLoading[i] = 0.1 * Bundle.SludgeLoading[i]
     
     elif Date == DayCPP or WeeklyDate == WeekCPP:
-        Bundle.SludgeLoading[i] = 0.7 * Bundle.SludgeLoading[i]
+        Bundle.SludgeLoading[i] = 0.6 * Bundle.SludgeLoading[i]
     
     elif Date == DayRefurbishment or WeeklyDate == WeekRefurbishment:
         Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.25
@@ -1144,7 +1141,7 @@ def temperature_profile(
         Bundle, HeatTransferTimeStep, InnerOxide, OuterOxide, m_h_leakagecorrection, SecondarySidePressure, x_pht,
         Date, TotalSGTubeNumber
         ):
-    
+
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
     # U assumed to be constant over node's area, bulk temperatures at end of node calculated, repeat
     T_sat_secondary = nc.saturation_temperatureH2O(SecondarySidePressure)
@@ -1383,20 +1380,20 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
 
 def secondary_side_pressure(SteamGenerator, Date):
     
-    if Date in AllStationDataDates:
-        for x in AllStationDataDates:
-            
-            delta_time = [x1 - x2 for (x1, x2) in zip(Date, x)] 
-            
-            delta_time = [abs(number) for number in delta_time]
-            
-            difference.append(delta_time)
-
-        # min function --> smallest difference between first index in all lists in tuple compared, followed by second     
-        # index = location of list with this minimum difference relative to that of current (year, month) input 
-        ClosestDay = difference.index(min(difference))
-        
-        Pressure = [ClosestDay]
+#     if Date in AllStationDataDates:
+#         for x in AllStationDataDates:
+#             
+#             delta_time = [x1 - x2 for (x1, x2) in zip(Date, x)] 
+#             
+#             delta_time = [abs(number) for number in delta_time]
+#             
+#             difference.append(delta_time)
+# 
+#         # min function --> smallest difference between first index in all lists in tuple compared, followed by second     
+#         # index = location of list with this minimum difference relative to that of current (year, month) input 
+#         ClosestDay = difference.index(min(difference))
+#         
+#         Pressure = [ClosestDay]
     
     # first drop estimated
     FirstPressureReduction = (1992, 11, 1)
@@ -1431,7 +1428,7 @@ CleanedRefurbishmentSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayRefu
 
 
 def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransferTimeStep, SGFastMode):
-   
+       
     Energy = []
 
     TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Date)
@@ -1450,7 +1447,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransfe
     for Bundle in SteamGenerator:
         
         [Bundle.PrimaryBulkTemperature, Bundle.HeatFlux] = temperature_profile(
-            Bundle, HeatTransferTimeStep, Bundle.InnerOxLoading, Bundle.OuterOxLoading, RemainingPHTMassFlow,
+            Bundle, HeatTransferTimeStep, Bundle.InnerIronOxLoading, Bundle.OuterFe3O4Loading, RemainingPHTMassFlow,
             SecondarySidePressure, x_pht, Date, TotalSGTubeNumber
             )
         
