@@ -9,7 +9,83 @@ from datetime import date, timedelta, datetime
 
 
 FULLPOWER = 2061.4 * 1000
- 
+FullTubeComplement = 3542
+
+DayStartup = (1983, 4, 8)
+DayCPP = (1987, 6, 1)
+DayOutage = (1995, 4, 13)
+DayOutageRestart = (1996, 1, 1)
+DayRefurbishment = (2008, 3, 29)
+DayRefurbishmentRestart = (2012, 12, 10)
+
+EventWeeks = []
+EventDays = (DayStartup, DayCPP, DayOutage, DayOutageRestart, DayRefurbishment, DayRefurbishmentRestart) 
+for x in EventDays:
+    y = (datetime(*x).isocalendar()[0], datetime(*x).isocalendar()[1]) 
+    EventWeeks.append(y)
+
+WeekStartup, WeekCPP, WeekOutage, WeekOutageRestart, WeekRefurbishment, WeekRefurbishmentRestart = EventWeeks
+
+
+T_sat_primary = 310 + 273.15
+T_PreheaterIn = 186 + 273.15
+RecirculationRatio = 5.3
+
+
+h_i = nc.SGParameters()
+h_o = nc.SGParameters()
+U_h = nc.SGParameters()
+U_c = nc.SGParameters()
+U_total = nc.SGParameters()
+R_F_primary = nc.SGParameters()
+R_F_secondary = nc.SGParameters()
+MassFlow_preheater = nc.SGParameters()
+MassFlow_downcomer = nc.SGParameters()
+MassFlow_c_total = nc.SGParameters()
+ShellDiameter = nc.SGParameters()
+MassFlux_c = nc.SGParameters()
+MassFlux_h = nc.SGParameters()
+EnthalpySaturatedSteam = nc.SGParameters()
+MassFlow_h = nc.SGParameters()
+MasssFlow_dividerplate = nc.SGParameters()
+EquivalentDiameter = nc.SGParameters()
+TubePitch = nc.SGParameters()
+
+for i in [h_i, h_o]:
+    i.unit = "K/W"
+
+for i in [U_h, U_c, U_total]:
+    i.unit = "W/cm^2 K"
+
+for i in [R_F_primary, R_F_secondary]:
+    i.unit = "cm^2 K/W"
+
+MassFlow_h.magnitude = 1900 * 1000
+# Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
+# 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
+MassFlow_preheater.magnitude = 239 * 1000
+MassFlow_ReheaterDrains = 0#72 * 1000 / 4
+MassFlow_downcomer.magnitude = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
+
+MassFlow_c_total.magnitude = MassFlow_downcomer.magnitude + MassFlow_preheater.magnitude + MassFlow_ReheaterDrains
+
+
+ShellDiameter.magnitude = 2.28 * 100
+
+for i in [MassFlow_c_total, MassFlow_h, MasssFlow_dividerplate, MassFlow_preheater, MassFlow_downcomer]:
+    i.unit = "g/s"
+
+for i in [ShellDiameter, EquivalentDiameter, TubePitch]:
+    i.unit = "cm"
+
+for i in [MassFlux_c, MassFlux_h]:
+    i.unit = "g/cm^2 s"
+    
+EnthalpySaturatedSteam.magnitude = 2116.3  # 9.89 MPa
+EnthalpySaturatedSteam.unit = "J/g"
+
+TubePitch.magnitude = 2.413
+
  
 def station_RIHT():
     Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_RIHT_raw.csv'
@@ -74,7 +150,7 @@ station_RIHT()
 
 def boiler_pressure():
     
-    Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS Secondary Side Pressure.csv'
+    Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS Pressure_raw.csv'
     
     df = pd.read_csv(Filename, header=None)
     
@@ -197,109 +273,29 @@ def reactor_power():
 
 
 AllStationDataDates, TrackedOutageDays, EstimatedOutageDays, StationPower = reactor_power()
-# print (len(OutageYearsMonths))
 
-def RIHT_plots():
-    RIHT_data = open('RIHTOutputSG2.csv', 'r')
-    RIHTReader = list(csv.reader(RIHT_data, delimiter=',')) 
-    
-    RIHT = [float(RIHTReader[1][i]) for i in range((2016-1983)*4)]
-    Year = [float(RIHTReader[2][i]) for i in range((2016-1983)*4)]
-   
-    ax1 = plt.subplot()
-    
-    ax1.plot(
-        Year, RIHT, linestyle=None, marker='o', color='0.50',
-        label='Inner Oxide'
-        )
-    ax1.set_xlabel('Year')
-    ax1.set_ylabel('Reactor Inlet Header Temperature (${^o C}$)')
-    plt.tight_layout()
-    plt.show()
-   
-    # converts from string object to time series  
+
+# def RIHT_plots():
+#     RIHT_data = open('RIHTOutputSG2.csv', 'r')
+#     RIHTReader = list(csv.reader(RIHT_data, delimiter=',')) 
+#     
+#     RIHT = [float(RIHTReader[1][i]) for i in range((2016-1983)*4)]
+#     Year = [float(RIHTReader[2][i]) for i in range((2016-1983)*4)]
+#    
+#     ax1 = plt.subplot()
+#     
+#     ax1.plot(
+#         Year, RIHT, linestyle=None, marker='o', color='0.50',
+#         label='Inner Oxide'
+#         )
+#     ax1.set_xlabel('Year')
+#     ax1.set_ylabel('Reactor Inlet Header Temperature (${^o C}$)')
+#     plt.tight_layout()
+#     plt.show()
+
     
 # RIHT_plots()
 
-SGFastMode = "yes"
-Method = "tube length"
-
-FullTubeComplement = 3542
-
-DayStartup = (1983, 4, 8)
-DayCPP = (1987, 6, 1)
-DayOutage = (1995, 4, 13)
-DayOutageRestart = (1996, 1, 1)
-DayRefurbishment = (2008, 3, 29)
-DayRefurbishmentRestart = (2012, 12, 10)
-
-EventWeeks = []
-EventDays = (DayStartup, DayCPP, DayOutage, DayOutageRestart, DayRefurbishment, DayRefurbishmentRestart) 
-for x in EventDays:
-    y = (datetime(*x).isocalendar()[0], datetime(*x).isocalendar()[1]) 
-    EventWeeks.append(y)
-
-WeekStartup, WeekCPP, WeekOutage, WeekOutageRestart, WeekRefurbishment, WeekRefurbishmentRestart = EventWeeks
-
-
-T_sat_primary = 310 + 273.15
-T_PreheaterIn = 186 + 273.15
-RecirculationRatio = 5.3
-
-
-h_i = nc.SGParameters()
-h_o = nc.SGParameters()
-U_h = nc.SGParameters()
-U_c = nc.SGParameters()
-U_total = nc.SGParameters()
-R_F_primary = nc.SGParameters()
-R_F_secondary = nc.SGParameters()
-MassFlow_preheater = nc.SGParameters()
-MassFlow_downcomer = nc.SGParameters()
-MassFlow_c_total = nc.SGParameters()
-ShellDiameter = nc.SGParameters()
-MassFlux_c = nc.SGParameters()
-MassFlux_h = nc.SGParameters()
-EnthalpySaturatedSteam = nc.SGParameters()
-MassFlow_h = nc.SGParameters()
-MasssFlow_dividerplate = nc.SGParameters()
-EquivalentDiameter = nc.SGParameters()
-TubePitch = nc.SGParameters()
-
-for i in [h_i, h_o]:
-    i.unit = "K/W"
-
-for i in [U_h, U_c, U_total]:
-    i.unit = "W/cm^2 K"
-
-for i in [R_F_primary, R_F_secondary]:
-    i.unit = "cm^2 K/W"
-
-MassFlow_h.magnitude = 1900 * 1000
-# Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
-# 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
-MassFlow_preheater.magnitude = 239 * 1000
-MassFlow_ReheaterDrains = 0#72 * 1000 / 4
-MassFlow_downcomer.magnitude = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
-
-MassFlow_c_total.magnitude = MassFlow_downcomer.magnitude + MassFlow_preheater.magnitude + MassFlow_ReheaterDrains
-
-
-ShellDiameter.magnitude = 2.28 * 100
-
-for i in [MassFlow_c_total, MassFlow_h, MasssFlow_dividerplate, MassFlow_preheater, MassFlow_downcomer]:
-    i.unit = "g/s"
-
-for i in [ShellDiameter, EquivalentDiameter, TubePitch]:
-    i.unit = "cm"
-
-for i in [MassFlux_c, MassFlux_h]:
-    i.unit = "g/cm^2 s"
-    
-EnthalpySaturatedSteam.magnitude = 2116.3  # 9.89 MPa
-EnthalpySaturatedSteam.unit = "J/g"
-
-TubePitch.magnitude = 2.413
 
 # # select desired SG tubes to be run by arc length
 # UBends = [1.49, 0.685, 2.31, 3.09]
@@ -410,128 +406,142 @@ def primaryside_cleaned_tubes(SteamGenerator, Date):
     return Cleaned
 
 
-def closest_tubelength(TubeLength):
-    # input = desired tube length
-    # function scans through all available 87 lengths and outputs the number of the tube that has the closest length
-    
-    difference = []
-    for Zone in ld.SteamGenerator:
-        difference.append(abs(TubeLength - Zone.Distance[Zone.NodeNumber - 1]))
-    
-    return difference.index(min(difference))
-
-
+# def closest_tubelength(TubeLength):
+#     # input = desired tube length
+#     # function scans through all available 87 lengths and outputs the number of the tube that has the closest length
+#     
+#     difference = []
+#     for Zone in ld.SteamGenerator:
+#         difference.append(abs(TubeLength - Zone.Distance[Zone.NodeNumber - 1]))
+#     
+#     return difference.index(min(difference))
+# 
+# 
 def closest_ubend(UbendLength):
     # searches through all 87 u-bend arc lengths and chooses the one closest to input
-    
+     
     difference = []
     for i in ld.u_bend_total:
         # calculates differences between input Number and all others in given list
         difference.append(abs(UbendLength - i))
-    
+     
     # returns index of value that has smallest difference with input Number
     return difference.index(min(difference))
 
 
-def tube_picker(Method, SteamGenerator):
-    tubes = []
-    tube_number = [] #number (from 0 to 86) of the tube bundle
-    
-    # selects class initializations (for desired steam generator) based on desired u-bend tube arc lengths
-    if Method == "arc length": 
-        for k in UBends:  # want multiple u-bends
-            x = closest_ubend(k)
-            tube_number.append(x)
-
-        for i in tube_number:
-            tubes.append(SteamGenerator[i])
-    # selects class initializations based on desired overall tube lengths        
-    elif Method == "tube length":
-        #if different tubes needed to be run in each steam generator, customize line below
-        if SteamGenerator == ld.SteamGenerator or SteamGenerator == ld.SteamGenerator_2:
-            Lengths = TubeLengths
-
-        for k in Lengths:
-            x = closest_tubelength(k)
-            tube_number.append(x)
-        
-        for i in tube_number:
-            tubes.append(SteamGenerator[i])
-    
-    else:
-        None
-        
-    return tubes, tube_number
+# def tube_picker(Method, SteamGenerator):
+#     tubes = []
+#     tube_number = [] #number (from 0 to 86) of the tube bundle
+#     
+#     # selects class initializations (for desired steam generator) based on desired u-bend tube arc lengths
+#     if Method == "arc length": 
+#         for k in UBends:  # want multiple u-bends
+#             x = closest_ubend(k)
+#             tube_number.append(x)
+# 
+#         for i in tube_number:
+#             tubes.append(SteamGenerator[i])
+#     # selects class initializations based on desired overall tube lengths        
+#     elif Method == "tube length":
+#         #if different tubes needed to be run in each steam generator, customize line below
+#         if SteamGenerator == ld.SteamGenerator or SteamGenerator == ld.SteamGenerator_2:
+#             Lengths = TubeLengths
+# 
+#         for k in Lengths:
+#             x = closest_tubelength(k)
+#             tube_number.append(x)
+#         
+#         for i in tube_number:
+#             tubes.append(SteamGenerator[i])
+#     
+#     else:
+#         None
+#         
+#     return tubes, tube_number
 
 
 Default_Tube = closest_ubend(1.52 * 100)
 
 
-def MassFlux_c(Bundle, i):
-    if Bundle.Length.label[i] == "opposite preheater":
-        PreheaterDiameter = 1.3 * 100  # [cm]
-        MassFlow = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
-        TotalTubes = FullTubeComplement
-    else:
-        PreheaterDiameter = 0
-        MassFlow = MassFlow_c_total.magnitude
-        TotalTubes = FullTubeComplement  # * 2
-        
-    ShellCrossBundlealArea = (np.pi / 4) * (
-    (ShellDiameter.magnitude ** 2)
-    - (ld.Bundle[0].OuterDiameter[0] ** 2) * TotalTubes
-    - PreheaterDiameter ** 2
-    )
-    Flux = MassFlow / ShellCrossSectionalArea
-    return Flux
+# def MassFlux_c(Bundle, i):
+#     if Bundle.Length.label[i] == "opposite preheater":
+#         PreheaterDiameter = 1.3 * 100  # [cm]
+#         MassFlow = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
+#         TotalTubes = FullTubeComplement
+#     else:
+#         PreheaterDiameter = 0
+#         MassFlow = MassFlow_c_total.magnitude
+#         TotalTubes = FullTubeComplement  # * 2
+#         
+#     ShellCrossBundlealArea = (np.pi / 4) * (
+#     (ShellDiameter.magnitude ** 2)
+#     - (ld.Bundle[0].OuterDiameter[0] ** 2) * TotalTubes
+#     - PreheaterDiameter ** 2
+#     )
+#     Flux = MassFlow / ShellCrossSectionalArea
+#     return Flux
 
 
 def thermal_conductivity(Twall, material, SecondarySidePressure):
     if material == "Alloy-800" or material == "Alloy800" or material == "A800" or material == "Alloy 800":
-        Twall_C = Twall - 273.15  # oC in alloy thermal conductivity equation 
-        conductivity = (11.450 + 0.0161 * Twall_C) / 100  # M.K.E thesis for Alloy-800 tubing [W/cm K] 
+        
+        # oC in alloy thermal conductivity equation
+        Twall_C = Twall - 273.15 
+        # M.K.E thesis for Alloy-800 tubing [W/cm K] 
+        conductivity = (11.450 + 0.0161 * Twall_C) / 100  
+        
         return conductivity
     
+    # from CNL documents on magnetite inner and outer layer conductivities
     elif material == "inner magnetite":
         return 2 / 100  # [W/cm K]
     
     elif material == "outer magnetite":
         return 1.3 / 100  # [W/cm K]
-    else:
+    
+    else:    
         return None
 
 
-def sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i):
+def sludge_fouling_resistance(Bundle, RunStart_CalendarDate, Date, HeatTransferTimeStep, i):
     
+    # week number, in the event that timestep into heat transfer function is once a week only
     CalendarDate = datetime(*Date).isocalendar() 
     WeeklyDate = (CalendarDate[0], CalendarDate[1])
     
+    # converts to yearly (HeatTransferTimeStep is by default in hours)
     Time_Step = HeatTransferTimeStep / 24 / 365 #hr --> yr
-    # default values
-    ReducedTubeGrowth = 0.0003  # [g/cm^2] /year = 3.25 um/year
     
-    # CPP installation (late 1986) reduces secondary side crud by 50% 
+    # [g/cm^2] /year
+    RegularTubeGrowth = 0.0013
+    ReducedTubeGrowth = 0.0003  
+    
     if Date in TrackedOutageDays:
         Growth = 0
-
+    
+    elif Date == RunStart_CalendarDate:
+        Growth = 0
+        
+    elif Date <= DayCPP:
+        Growth = RegularTubeGrowth
+        
     else:
         Growth = ReducedTubeGrowth 
         
-    #estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
-#     if  Date == (1988, 4, 1) or WeeklyDate == (1988, 13):
-#         Bundle.SludgeLoading[i] = 0.8 * Bundle.SludgeLoading[i]
-#         
-    if Date == DayOutage or WeeklyDate == WeekOutage:
-        Bundle.SludgeLoading[i] = 0.1 * Bundle.SludgeLoading[i]
     
+    if Date == DayOutage or WeeklyDate == WeekOutage:
+        Bundle.SludgeLoading[i] = 0.2 * Bundle.SludgeLoading[i]
+    
+    # estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
+    # CPP installation (late 1986) reduces secondary side crud by 40-50% 
     elif Date == DayCPP or WeeklyDate == WeekCPP:
-        Bundle.SludgeLoading[i] = 0.6 * Bundle.SludgeLoading[i]
+        Bundle.SludgeLoading[i] = 0.4 * Bundle.SludgeLoading[i]
     
     elif Date == DayRefurbishment or WeeklyDate == WeekRefurbishment:
-        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] * 0.25
+        Bundle.SludgeLoading[i] = 0.2 * Bundle.SludgeLoading[i]
          
     else:
-        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] + Growth * Time_Step #  [g/cm^2] + [g/cm^2]/yr * 1/12th of a year
+        Bundle.SludgeLoading[i] = Bundle.SludgeLoading[i] + Growth * Time_Step
     
     Thickness = Bundle.SludgeLoading[i] / nc.Fe3O4Density
     
@@ -779,7 +789,7 @@ def pht_steam_quality(Temperature, Date):
         x = 0
     return x, P
 
-# pht_steam_quality(261.8 +273.15, (1991, 25, 10))
+
 
 def sht_steam_quality(Q, T_sat_secondary, x, MassFlow_c, SecondarySidePressure):
         
@@ -1043,8 +1053,8 @@ def in_tube_boiling_LiuWinterton(x_pht, MassFlux, Diameter, T_PrimaryWall, h_l, 
 
 
 def wall_temperature(
-        Bundle, HeatTransferTimeStep, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerAccumulation,
-        OuterAccumulation, Date, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber):
+        Bundle, RunStart_CalendarDate, Date, HeatTransferTimeStep, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht,
+        InnerAccumulation, OuterAccumulation, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber):
     
     # i = each node of SG tube
     T_PrimaryWall = T_PrimaryBulkIn - (1 / 3) * (T_PrimaryBulkIn - T_SecondaryBulkIn)
@@ -1100,7 +1110,9 @@ def wall_temperature(
             # [cm^2 K/W]
             R_F_primary.magnitude = pht_fouling_resistance(i, InnerAccumulation[i], OuterAccumulation[i]) 
             
-            R_F_secondary.magnitude = sludge_fouling_resistance(Bundle, HeatTransferTimeStep, Date, i)
+            R_F_secondary.magnitude = sludge_fouling_resistance(
+                Bundle, RunStart_CalendarDate, Date, HeatTransferTimeStep, i
+                )
                         
             PCR = primary_convection_resistance(
                 Bundle, T_PrimaryBulkIn, T_PrimaryWall, x_pht, m_h_leakagecorrection, i, TotalSGTubeNumber
@@ -1138,8 +1150,8 @@ def wall_temperature(
 
 
 def temperature_profile(
-        Bundle, HeatTransferTimeStep, InnerOxide, OuterOxide, m_h_leakagecorrection, SecondarySidePressure, x_pht,
-        Date, TotalSGTubeNumber
+        Bundle, RunStart_CalendarDate, Date, HeatTransferTimeStep, InnerOxide, OuterOxide, m_h_leakagecorrection,
+        SecondarySidePressure, x_pht, TotalSGTubeNumber
         ):
 
     # bulk temperatures guessed, wall temperatures and overall heat transfer coefficient calculated
@@ -1164,8 +1176,8 @@ def temperature_profile(
         Cp_c = nc.heatcapacityH2O_liquid(T_SecondaryBulkIn, SecondarySidePressure)
         
         T_wh, T_wc, U, h_i = wall_temperature(
-            Bundle, HeatTransferTimeStep, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in, x_pht, InnerOxide, OuterOxide,
-            Date, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber)
+            Bundle, RunStart_CalendarDate, Date, HeatTransferTimeStep, i, T_PrimaryBulkIn, T_SecondaryBulkIn, x_in,
+            x_pht, InnerOxide, OuterOxide, SecondarySidePressure, m_h_leakagecorrection, TotalSGTubeNumber)
         
         
         # [W/ cm^2 K] * [K] * [cm^2] = [W] = [J/s]        
@@ -1229,7 +1241,6 @@ def temperature_profile(
 #                         break 
             
             x_in = sht_steam_quality(Q, T_sat_secondary, x_in, MassFlow_c_total.magnitude, SecondarySidePressure)
-
 
             PrimaryBulk.append(T_PrimaryBulkOut)
             SecondaryBulk.append(T_SecondaryBulkOut)
@@ -1341,7 +1352,7 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
         LeakageRate = 0
         
     elif Date < DayOutage:
-        LeakageRate = 0.00125 # per year rate
+        LeakageRate = 0.0035 # per year rate
     
     elif Date >= DayOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate
@@ -1355,19 +1366,20 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
     
     # Leakage through the replaced welded divider plates immediately following replacement was estimated as 2% PHT flow
     # impulse input of leak site
+    
     if Date == (1983, 6, 1) or WeeklyDate == (1983, 22):
         DividerPlateLeakage = 0.045
     
     elif Date == (1984, 5, 24) or WeeklyDate == (1984, 21):
         DividerPlateLeakage = 0.055
         
-    elif Date == DayOutageRestart or WeeklyDate == WeekOutageRestart:
+    elif Date == DayOutage or WeeklyDate == WeekOutage:
         DividerPlateLeakage = 0.025
     
     # Development of additional leak site
     # impulse input of leak site
-    elif Date == (1996, 3, 1) or WeeklyDate == (1996, 9):
-        DividerPlateLeakage = 0.045
+    elif Date == (1996, 2, 20) or WeeklyDate == (1996, 8):
+        DividerPlateLeakage = 0.046
  
     DividerPlateLeakage = DividerPlateLeakage + Time_Step * LeakageRate
     
@@ -1409,7 +1421,7 @@ def secondary_side_pressure(SteamGenerator, Date):
     
     # return to full boiler secondary side pressure, 4.593 MPa
     # pressure restored shortly after reactor back online from refurb.
-    elif DayOutageRestart < Date < SecondPressureReduction:
+    elif (1996, 1, 26) < Date < SecondPressureReduction:
         SecondarySidePressure = 4.593
     
     elif Date >= SecondPressureReduction:
@@ -1427,7 +1439,7 @@ CleanedRefurbishmentSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayRefurb
 CleanedRefurbishmentSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayRefurbishment)
 
 
-def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransferTimeStep, SGFastMode):
+def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_CalendarDate, Date, HeatTransferTimeStep):
        
     Energy = []
 
@@ -1447,8 +1459,8 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransfe
     for Bundle in SteamGenerator:
         
         [Bundle.PrimaryBulkTemperature, Bundle.HeatFlux] = temperature_profile(
-            Bundle, HeatTransferTimeStep, Bundle.InnerIronOxLoading, Bundle.OuterFe3O4Loading, RemainingPHTMassFlow,
-            SecondarySidePressure, x_pht, Date, TotalSGTubeNumber
+            Bundle, RunStart_CalendarDate, Date, HeatTransferTimeStep, Bundle.InnerOxLoading,
+            Bundle.OuterOxLoading, RemainingPHTMassFlow, SecondarySidePressure, x_pht, TotalSGTubeNumber
             )
         
         SteamGeneratorOutputNode = SteamGenerator[Default_Tube].NodeNumber - 1
@@ -1469,8 +1481,8 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransfe
        
     return RIHT
 
-         
+          
 # print (energy_balance(
-#     ld.SteamGenerator_2, 0.01, DividerPlateLeakage= 0.03, Date= (1984, 4, 8), HeatTransferTimeStep = nc.TIME_STEP * 1,
-#     SGFastMode="yes"
+#     ld.SteamGenerator_2, x_pht=0.012, DividerPlateLeakage=0.035, RunStart_CalendarDate=DayStartup, Date=DayStartup,
+#     HeatTransferTimeStep=nc.TIME_STEP
 #     )- 273.15)

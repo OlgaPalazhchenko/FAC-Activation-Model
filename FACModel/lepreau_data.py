@@ -260,7 +260,7 @@ def steam_generator_properties(SteamGenerator):
         # u-bend split into 4 nodes, but length is just a float 
         Bundle.Length.magnitude = hot_leg_length + [length / 4] * 4 + cold_leg_length
         Bundle.TubeNumber = i
-        Bundle.SludgeLoading = [0.002] * Bundle.NodeNumber
+        Bundle.SludgeLoading = [0.0005] * Bundle.NodeNumber
         
         Bundle.Diameter = [1.368] * Bundle.NodeNumber
         Bundle.Velocity = [

@@ -26,22 +26,39 @@ elif Loop == "full":
 else:
     None
 
+HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
+
+PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
+RunStart_CalendarDate = (1983, 4, 8)
+RunEnd_CalendarDate = (1999, 3, 1)
+
+a = PLNGSStartUp_CalendarDate
+b = datetime(*RunStart_CalendarDate)
+delta = b - a
+delta = (delta.days * 24) / nc.TIME_STEP
+SimulationStartHours = round(delta)
+
+a = PLNGSStartUp_CalendarDate
+b = datetime(*RunEnd_CalendarDate)
+delta = b - a
+delta = (delta.days * 24) / nc.TIME_STEP
+SimulationEndHours = round(delta)
+
+
 def initial_conditions():
     
     # initial temperatures in steam generator(s)
     RIHT1 = SGHX.energy_balance(
-        ld.SteamGenerator, x_pht = 0.01, DividerPlateLeakage= 0.03, Date= (1983, 4, 8),
-        HeatTransferTimeStep = nc.TIME_STEP * 73, SGFastMode = SGHX.SGFastMode
-        )
+        ld.SteamGenerator, x_pht=0.01, DividerPlateLeakage=0.03, RunStart_CalendarDate=RunStart_CalendarDate, 
+        Date=RunStart_CalendarDate, HeatTransferTimeStep = HeatTransferTimeStep)
     ld.InletFeeder.PrimaryBulkTemperature = [RIHT1] * ld.InletFeeder.NodeNumber
         
     RIHT2 = SGHX.energy_balance(
-        ld.SteamGenerator_2, x_pht = 0.01, DividerPlateLeakage= 0.03, Date= (1983, 4, 8),
-        HeatTransferTimeStep = nc.TIME_STEP * 73, SGFastMode = SGHX.SGFastMode
+        ld.SteamGenerator_2, x_pht=0.01, DividerPlateLeakage=0.03, RunStart_CalendarDate=RunStart_CalendarDate, 
+        Date=RunStart_CalendarDate, HeatTransferTimeStep=HeatTransferTimeStep
         )
     
     ld.InletFeeder_2.PrimaryBulkTemperature = [RIHT2] * ld.InletFeeder_2.NodeNumber
-  
         
     for Section in Sections:
         
@@ -253,9 +270,7 @@ class PHTS():
 
 
         # RK4 oxide thickness calculation (no spalling)
-        rk_4.oxide_layers(
-            self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, SGHX.SGFastMode
-            )
+        rk_4.oxide_layers(self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j)
                 
         # Spalling    
         self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
@@ -447,10 +462,10 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
         OuterFe3O4Rows.append(x)
      
     for k, Pipe in zip(InnerIronOxRows, AllPipes):
-        Pipe.InnerIronOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
+        Pipe.InnerOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
          
     for k, Pipe in zip(OuterFe3O4Rows, AllPipes):
-        Pipe.OuterFe3O4Loading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
+        Pipe.OuterOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
  
     for Bundle in SteamGenerator:
         Bundle.SludgeLoading = [float(InputParametersReader[277][i]) for i in range(0, Bundle.NodeNumber)]
@@ -461,29 +476,11 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     
     print (
         'from input file: steam frac', x, 'fe3o4',
-        SteamGenerator[0].OuterFe3O4Loading[21], 'sludge', SteamGenerator[0].SludgeLoading[21], 'DP:',
+        SteamGenerator[0].OuterOxLoading[21], 'sludge', SteamGenerator[0].SludgeLoading[21], 'DP:',
         DividerPlateLeakage 
         )
 
-    return DividerPlateLeakage, x
-
-
-PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
-RunStart_CalendarDate = (1994, 3, 25)
-RunEnd_CalendarDate = (2008, 3, 1)
-
-a = PLNGSStartUp_CalendarDate
-b = datetime(*RunStart_CalendarDate)
-delta = b - a
-delta = (delta.days * 24) / nc.TIME_STEP
-SimulationStartHours = round(delta)
-
-a = datetime(*RunStart_CalendarDate)
-b = datetime(*RunEnd_CalendarDate)
-delta = b - a
-delta = (delta.days * 24) / nc.TIME_STEP
-SimulationEndHours = round(delta)
-
+    return DividerPlateLeakage
 
 import time
 start_time = time.time()
@@ -534,7 +531,7 @@ for j in range(SimulationStartHours, SimulationEndHours):
     if j == SimulationStartHours:
         if SimulationStartHours == 0:
             x_pht = 0.009
-            DividerPlateLeakage = 0.03 # fraction of PHTS mass flow (3%)
+            DividerPlateLeakage = 0.035 # fraction of PHTS mass flow (3%)
         else:
             DividerPlateLeakage, x_pht = system_input(
                 ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2
@@ -546,11 +543,8 @@ for j in range(SimulationStartHours, SimulationEndHours):
                     )
     else: 
         None
-    
-    
+     
     # parameters tracked/updated with time
-    HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
-    
     if j % (HeatTransferTimeStep / nc.TIME_STEP) == 0:
                                    
         delta = timedelta(hours = j * nc.TIME_STEP)
@@ -559,13 +553,12 @@ for j in range(SimulationStartHours, SimulationEndHours):
 
         if Loop == "full":
             RIHT_1 = (
-                SGHX.energy_balance(
-                    ld.SteamGenerator, x_pht, DividerPlateLeakage, Date, HeatTransferTimeStep, SGHX.SGFastMode
-                    ) - 273.15
+                SGHX.energy_balance(ld.SteamGenerator, x_pht, DividerPlateLeakage, RunStart_CalendarDate, Date,
+                                    HeatTransferTimeStep) - 273.15
                       )
             RIHT_2 = (
                 SGHX.energy_balance(
-                    ld.SteamGenerator_2, x_pht, DividerPlateLeakage, Date, HeatTransferTimeStep, SGHX.SGFastMode
+                    ld.SteamGenerator_2, x_pht, DividerPlateLeakage, RunStart_CalendarDate, Date, HeatTransferTimeStep
                     ) - 273.15
                       )
             ld.InletFeeder_2.PrimaryBulkTemperature = [RIHT_2 + 273.15] * ld.InletFeeder_2.NodeNumber
@@ -574,7 +567,7 @@ for j in range(SimulationStartHours, SimulationEndHours):
             #SG 2 is in the half and full loop configurations (default steam generator)
             RIHT_2 = (
                 SGHX.energy_balance(
-                    ld.SteamGenerator_2, x_pht, DividerPlateLeakage, Date, HeatTransferTimeStep, SGHX.SGFastMode
+                    ld.SteamGenerator_2, x_pht, DividerPlateLeakage, RunStart_CalendarDate, Date, HeatTransferTimeStep
                     ) - 273.15
                 )
             RIHT_1 = RIHT_2 * 1  # output logging function needs value for both RIHT's and inlet header 1 needs input 
@@ -595,7 +588,7 @@ for j in range(SimulationStartHours, SimulationEndHours):
 
         if j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
             print (
-                Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterFe3O4Loading[21], 'sludge:',
+                Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
                 ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
                 )
                 
@@ -603,8 +596,8 @@ for j in range(SimulationStartHours, SimulationEndHours):
                 OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power,
                 DividerPlateLeakage, j, InletFeeder_1_Loop1.Section1.Bulk.FeTotal,
                 OutletFeeder_2_Loop1.Section1.Bulk.FeTotal, FuelChannel_1_Loop1.Section1.Bulk.FeTotal,
-                SteamGeneratorTube_2_Loop1.Section1.OuterFe3O4Loading,
-                SteamGeneratorTube_2_Loop1.Section1.InnerIronOxLoading
+                SteamGeneratorTube_2_Loop1.Section1.OuterOxLoading,
+                SteamGeneratorTube_2_Loop1.Section1.InnerOxLoading
             )
     else:
         None

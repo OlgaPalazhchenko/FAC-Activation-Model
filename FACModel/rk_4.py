@@ -239,7 +239,7 @@ def pht_cleaning(Bundle, InnerOxide, OuterOxide, j):
     return InnerOxide, OuterOxide
 
 
-def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, SGFastMode):  
+def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j):  
     
     start = datetime(*SGHX.DayStartup)
     delta = timedelta(hours = j * nc.TIME_STEP)
