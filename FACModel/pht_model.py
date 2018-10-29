@@ -30,7 +30,7 @@ HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
 
 PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
 RunStart_CalendarDate = (1983, 4, 8)
-RunEnd_CalendarDate = (1999, 3, 1)
+RunEnd_CalendarDate = (1995, 4, 12)
 
 a = PLNGSStartUp_CalendarDate
 b = datetime(*RunStart_CalendarDate)
@@ -282,24 +282,28 @@ FACRate_OutletFeeder = []
 RIHT_average = []
 RIHT_InletFeeder1 = []
 RIHT_InletFeeder2 = []
-OutletTemperature_Bundle_1 = [] 
-OutletTemperature_Bundle_2 = []
+# OutletTemperature_Bundle_1 = [] 
+# OutletTemperature_Bundle_2 = []
 pht_SteamFraction = []
 DP_leakage = []
 Years = []
 
 Time = []
-InletBulkConcentration = []
-OutletBulkConcentration = []
-FuelChannelBulkConcentration = []
+# InletBulkConcentration = []
+# OutletBulkConcentration = []
+# FuelChannelBulkConcentration = []
 SteamGeneratorInnerOx = []
 SteamGeneratorOuterOx = []
 InletSolubility = []
 Power_withtime = []
 
+
 def output_time_logging(
-        FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, DividerPlateLeakage, j, InletBulkFe, OutletBulkFe, FCBulkFe,
-        SGOuterOx, SGInnerOx):
+        FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, DividerPlateLeakage, j, SGOuterOx, SGInnerOx):
+
+# def output_time_logging(
+#         FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, DividerPlateLeakage, j, InletBulkFe, OutletBulkFe, FCBulkFe,
+#         SGOuterOx, SGInnerOx):
     
 #     InletSolubility.append(InletFeSat)
     FACRate_OutletFeeder.append(FACRate)
@@ -308,9 +312,9 @@ def output_time_logging(
     RIHT_average.append(RIHT_avg)
     pht_SteamFraction.append(x)
     DP_leakage.append(DividerPlateLeakage)
-    InletBulkConcentration.append(InletBulkFe.copy())
-    OutletBulkConcentration.append(OutletBulkFe.copy())
-    FuelChannelBulkConcentration.append(FCBulkFe.copy())
+#     InletBulkConcentration.append(InletBulkFe.copy())
+#     OutletBulkConcentration.append(OutletBulkFe.copy())
+#     FuelChannelBulkConcentration.append(FCBulkFe.copy())
     SteamGeneratorInnerOx.append(SGInnerOx)
     SteamGeneratorOuterOx.append(SGOuterOx)
     Power_withtime.append(Power)
@@ -360,7 +364,7 @@ def output_time_logging(
     
     RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Power'] >= Shutdown]
     RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['Power'] >= Shutdown]
-    
+
     RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['RIHT'] >= 265.2]
     
     
@@ -369,7 +373,7 @@ def output_time_logging(
     RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] >= Deratings]
     RIHT_phase5 = RIHT_phase5[RIHT_phase5['Power'] >= Shutdown]
     
-    if j % (8) == 0: #updates list in csv file (list itself appended to monthly)
+    if j % (16) == 0: #updates list in csv file (list itself appended to monthly)
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
          
         RIHT_phase1_preCPP.to_excel(writer, sheet_name = 'Phase 1 Pre CPP')
@@ -398,10 +402,12 @@ def output_time_logging(
          
         writer.save()
 
-    return (
-        FACRate_OutletFeeder, DividerPlateLeakage, x, j, Time, InletBulkConcentration, OutletBulkConcentration,
-        FuelChannelBulkConcentration, SGInnerOx, SGOuterOx
-        ) 
+#     return (
+#         FACRate_OutletFeeder, DividerPlateLeakage, x, j, Time, InletBulkConcentration, OutletBulkConcentration,
+#         FuelChannelBulkConcentration, SGInnerOx, SGOuterOx
+#         ) 
+
+    return (FACRate_OutletFeeder, DividerPlateLeakage, x, j, Time, SGInnerOx, SGOuterOx) 
 
 
 # just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
@@ -586,18 +592,23 @@ for j in range(SimulationStartHours, SimulationEndHours):
             # update solubility based on new temperatures in steam generators and inlet heades/feeders
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
-        if j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
-            print (
-                Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
-                ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
-                )
-                
-            output = output_time_logging(
-                OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power,
-                DividerPlateLeakage, j, InletFeeder_1_Loop1.Section1.Bulk.FeTotal,
-                OutletFeeder_2_Loop1.Section1.Bulk.FeTotal, FuelChannel_1_Loop1.Section1.Bulk.FeTotal,
-                SteamGeneratorTube_2_Loop1.Section1.OuterOxLoading,
-                SteamGeneratorTube_2_Loop1.Section1.InnerOxLoading
+#         if j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
+#         print (
+#             Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
+#             ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
+#             )
+            
+#         output = output_time_logging(
+#             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power,
+#             DividerPlateLeakage, j, InletFeeder_1_Loop1.Section1.Bulk.FeTotal,
+#             OutletFeeder_2_Loop1.Section1.Bulk.FeTotal, FuelChannel_1_Loop1.Section1.Bulk.FeTotal,
+#             SteamGeneratorTube_2_Loop1.Section1.OuterOxLoading,
+#             SteamGeneratorTube_2_Loop1.Section1.InnerOxLoading
+#         )
+        
+        output = output_time_logging(
+            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, DividerPlateLeakage, j,
+            SteamGeneratorTube_2_Loop1.Section1.OuterOxLoading, SteamGeneratorTube_2_Loop1.Section1.InnerOxLoading
             )
     else:
         None

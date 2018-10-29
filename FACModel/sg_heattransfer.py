@@ -514,7 +514,7 @@ def sludge_fouling_resistance(Bundle, RunStart_CalendarDate, Date, HeatTransferT
     
     # [g/cm^2] /year
     RegularTubeGrowth = 0.0013
-    ReducedTubeGrowth = 0.0003  
+    ReducedTubeGrowth = 0.0005  
     
     if Date in TrackedOutageDays:
         Growth = 0
@@ -530,7 +530,7 @@ def sludge_fouling_resistance(Bundle, RunStart_CalendarDate, Date, HeatTransferT
         
     
     if Date == DayOutage or WeeklyDate == WeekOutage:
-        Bundle.SludgeLoading[i] = 0.2 * Bundle.SludgeLoading[i]
+        Bundle.SludgeLoading[i] = 0.3 * Bundle.SludgeLoading[i]
     
     # estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
     # CPP installation (late 1986) reduces secondary side crud by 40-50% 
@@ -1338,7 +1338,7 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
     # time input (j) is in hours, converted to yearly
     Time_Step = HeatTransferTimeStep / 24 / 365 # hr --> yr
     
-    PostOutageYearlyLeakage = 0.0006 # per year rate
+    PostOutageYearlyLeakage = 0.0004 # per year rate
     
     # (year, week number in the year, day number in the week) 
     CalendarDate = datetime(*Date).isocalendar() 
@@ -1352,7 +1352,7 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
         LeakageRate = 0
         
     elif Date < DayOutage:
-        LeakageRate = 0.0035 # per year rate
+        LeakageRate = 0.002 # per year rate
     
     elif Date >= DayOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate
@@ -1368,18 +1368,21 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
     # impulse input of leak site
     
     if Date == (1983, 6, 1) or WeeklyDate == (1983, 22):
-        DividerPlateLeakage = 0.045
+        DividerPlateLeakage = 0.05
     
     elif Date == (1984, 5, 24) or WeeklyDate == (1984, 21):
-        DividerPlateLeakage = 0.055
+        DividerPlateLeakage = 0.06
         
     elif Date == DayOutage or WeeklyDate == WeekOutage:
-        DividerPlateLeakage = 0.025
+        DividerPlateLeakage = 0.04
+    
+    else:
+        None
     
     # Development of additional leak site
     # impulse input of leak site
-    elif Date == (1996, 2, 20) or WeeklyDate == (1996, 8):
-        DividerPlateLeakage = 0.046
+#     elif Date == (1996, 2, 20) or WeeklyDate == (1996, 8):
+#         DividerPlateLeakage = 0.046
  
     DividerPlateLeakage = DividerPlateLeakage + Time_Step * LeakageRate
     
@@ -1416,12 +1419,12 @@ def secondary_side_pressure(SteamGenerator, Date):
         SecondarySidePressure = 4.593  # MPa
     
     # PLNGS pressure reduction in 1992 (september) by 125 kPa
-    elif FirstPressureReduction <= Date <= DayOutageRestart:
+    elif FirstPressureReduction <= Date < (1996, 1, 26):
         SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
     
     # return to full boiler secondary side pressure, 4.593 MPa
     # pressure restored shortly after reactor back online from refurb.
-    elif (1996, 1, 26) < Date < SecondPressureReduction:
+    elif (1996, 1, 26) <= Date < SecondPressureReduction:
         SecondarySidePressure = 4.593
     
     elif Date >= SecondPressureReduction:

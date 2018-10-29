@@ -144,10 +144,10 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
 def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
     
     #would have to select tubes from SG2 as well (in SG module)
-    InnerOxide = []
-    OuterOxide = []
+#     InnerOxide = []
     TotalOxide = []
-    TotalDistance = []
+#     TotalArea = []
+    TotalGrams = []
     CorrosionRate = []
     kp_Tdependent = []
     CorrosionRate_um = [] 
@@ -159,23 +159,21 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
     AllPipes = [InletFeeder, FuelChannel, OutletFeeder] + SteamGenerator
     
     for Pipe in AllPipes:
-        x = Pipe.InnerIronOxLoading
-        y = Pipe.OuterFe3O4Loading
-        z = [i / 100 for i in Pipe.Distance]
-        q = [i + j for i, j in zip(x, y)]
+#         x = Pipe.InnerIronOxLoading
+        x = [x + y for x, y in zip(Pipe.OuterFe3O4Loading, Pipe.InnerIronOxLoading)]
+        y = [np.pi * i * j for i, j in zip(Pipe.Length.magnitude, Pipe.Diameter)]
+        z = [i * j for i, j in zip(x, y)]
 
-        TotalDistance.append(z)
-        InnerOxide.append(x)
-        OuterOxide.append(y) 
-
+#         InnerOxide.append(x)
+        TotalOxide.append(x)
+#         TotalArea.append(y)
+        TotalGrams.append(z) 
 
     DividerPlateLeakage = Output[1]
     x_pht = Output[2]
     
-
-    Data = [TotalDistance, InnerOxide, OuterOxide]
-    
-    Labels = ["Distance (m)", "Inner Loading (g/m^2)", "Outer Loading (g/m^2)"]
+    Data = [TotalOxide, TotalGrams]    
+    Labels = ["Total Loading (g/cm^2)", "Total Grams (g)"]
       
     csvfile = FileName1
     with open(csvfile, "w") as output:
@@ -194,11 +192,13 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
         writer.writerow([''])
         writer.writerow(['SteamQuality'])
         writer.writerow([x_pht])
-        
+    
+    return None   
+
 
 # if loop run in half configuration, these will be identical
 for_input_file_csv(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, "OutputSG2.csv")
-purification_csv(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2)
+# purification_csv(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2)
 
 if pht_model.Loop == "full":
     for_input_file_csv(
