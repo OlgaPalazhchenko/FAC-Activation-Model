@@ -580,6 +580,6 @@ def spall(Section, j, SimulationStart, ElapsedTime, SpallTime, ElementTracking):
         
         if Section not in ld.FuelSections:
             if Section.InnerIronOxLoading[i] <= 5e-6:
-                Section.InnerIronOxLoading[i] = 0.000025  # Resets to original thickness
+                Section.InnerIronOxLoading[i] = 0.000013  # Resets to original thickness
 
     return ElapsedTime, SpallTime

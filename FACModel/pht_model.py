@@ -363,12 +363,13 @@ def output_time_logging(
     Deratings = SGHX.FULLPOWER * 0.89
     
     RIHT_phase1_preCPP = RIHT_phase1_preCPP[RIHT_phase1_preCPP['Power'] >= Shutdown]
+    
     RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['Power'] >= Shutdown]
-
     RIHT_phase1_postCPP = RIHT_phase1_postCPP[RIHT_phase1_postCPP['RIHT'] >= 265.2]
     
-    
     RIHT_phase2 = RIHT_phase2[RIHT_phase2['Power'] >= Shutdown]
+    RIHT_phase2 = RIHT_phase2[RIHT_phase2['RIHT'] >= 265.5]
+    
     RIHT_phase3 = RIHT_phase3[RIHT_phase3['Power'] >= Shutdown]
     RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] >= Deratings]
     RIHT_phase5 = RIHT_phase5[RIHT_phase5['Power'] >= Shutdown]
@@ -460,33 +461,41 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     InnerIronOxRows = []
     OuterFe3O4Rows = []
     for i in range(90):
-        x = 93 + i
+        x = 1 + i
         InnerIronOxRows.append(x)
         
     for i in range(90):
-        x = 185 + i
+        x = 93 + i
         OuterFe3O4Rows.append(x)
      
     for k, Pipe in zip(InnerIronOxRows, AllPipes):
-        Pipe.InnerOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
+        Pipe.InnerIronOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
          
     for k, Pipe in zip(OuterFe3O4Rows, AllPipes):
-        Pipe.OuterOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
+        Pipe.OuterFe3O4Loading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
  
     for Bundle in SteamGenerator:
-        Bundle.SludgeLoading = [float(InputParametersReader[277][i]) for i in range(0, Bundle.NodeNumber)]
+        Bundle.SludgeLoading = [float(InputParametersReader[188][i]) for i in range(0, Bundle.NodeNumber)]
      
-    DividerPlateLeakage = float(InputParametersReader[280][0])
+    # would be different if Ni and Co were being tracked
+#     for Pipe in AllPipes:
+#         Pipe.InnerOxLoading = Pipe.InnerIronOxLoading.copy()
+#         Pipe.OuterOxLoading = Pipe.OuterFe3O4Loading.copy()
+    
+    DividerPlateLeakage = float(InputParametersReader[191][0])
      
-    x = float(InputParametersReader[283][0])
+    x = float(InputParametersReader[194][0])
     
     print (
-        'from input file: steam frac', x, 'fe3o4',
-        SteamGenerator[0].OuterOxLoading[21], 'sludge', SteamGenerator[0].SludgeLoading[21], 'DP:',
+        'from input file: steam frac', x, 'fe3o4', SteamGenerator[0].OuterOxLoading[21],
+        'sludge', SteamGenerator[0].SludgeLoading[21], 'DP:',
         DividerPlateLeakage 
         )
 
-    return DividerPlateLeakage
+    return DividerPlateLeakage, x
+
+# system_input(ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2)
+
 
 import time
 start_time = time.time()
@@ -549,7 +558,7 @@ for j in range(SimulationStartHours, SimulationEndHours):
                     )
     else: 
         None
-     
+    
     # parameters tracked/updated with time
     if j % (HeatTransferTimeStep / nc.TIME_STEP) == 0:
                                    

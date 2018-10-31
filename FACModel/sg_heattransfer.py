@@ -373,6 +373,7 @@ def primaryside_cleaned_tubes(SteamGenerator, Date):
         None
     
     TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Date)
+    bundle_sizes(SteamGenerator, TotalSGTubeNumber)
     
     #amount of tubes cleaned per each cleaning will have to be custom
     if Date == DayOutage or WeeklyDate == WeekOutage:
@@ -390,9 +391,9 @@ def primaryside_cleaned_tubes(SteamGenerator, Date):
     # chooses tube bundles until % of total sg tube number reached, adds all chosen to "cleaned" tube list
     Cleaned = []
     NumberTubes = []
-    AllTubes = list(range(0, 86))
+    AllTubes = list(range(0, 87))
     random.shuffle(AllTubes)
-    
+   
     for i in range(len(SteamGenerator)):
         x = AllTubes[i]
         

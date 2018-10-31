@@ -144,13 +144,15 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
 def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, FileName1):
     
     #would have to select tubes from SG2 as well (in SG module)
-#     InnerOxide = []
+    InnerOxide = []
+    OuterOxide = []
     TotalOxide = []
 #     TotalArea = []
     TotalGrams = []
     CorrosionRate = []
     kp_Tdependent = []
-    CorrosionRate_um = [] 
+    CorrosionRate_um = []
+    SG_grams_all_tubes = []
     
     FeSolubility_SteamGeneratorTubes = []
     FeConcentration_SteamGeneratorTubes = []
@@ -159,21 +161,26 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
     AllPipes = [InletFeeder, FuelChannel, OutletFeeder] + SteamGenerator
     
     for Pipe in AllPipes:
-#         x = Pipe.InnerIronOxLoading
-        x = [x + y for x, y in zip(Pipe.OuterFe3O4Loading, Pipe.InnerIronOxLoading)]
+        q = Pipe.InnerIronOxLoading
+        w = Pipe.OuterFe3O4Loading
+        x = [x + y for x, y in zip(q, w)]
         y = [np.pi * i * j for i, j in zip(Pipe.Length.magnitude, Pipe.Diameter)]
         z = [i * j for i, j in zip(x, y)]
+        
+        if Pipe in SteamGenerator:
+            k = sum([i * Pipe.TubeNumber for i in z])
+            SG_grams_all_tubes.append(k)
 
-#         InnerOxide.append(x)
-        TotalOxide.append(x)
-#         TotalArea.append(y)
-        TotalGrams.append(z) 
-
+        InnerOxide.append(q)
+        OuterOxide.append(w)
+#         TotalOxide.append(x)
+#         TotalGrams.append(z) 
+        
     DividerPlateLeakage = Output[1]
     x_pht = Output[2]
     
-    Data = [TotalOxide, TotalGrams]    
-    Labels = ["Total Loading (g/cm^2)", "Total Grams (g)"]
+    Data = [InnerOxide, OuterOxide]    
+    Labels = ["Inner Oxide", "Outer Oxide"]
       
     csvfile = FileName1
     with open(csvfile, "w") as output:
@@ -184,6 +191,10 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
             writer.writerows(j)
             writer.writerow([''])
         
+        writer.writerow(['Total SG Oxide per Bundle (g)'])
+        writer.writerow(SG_grams_all_tubes)
+        writer.writerow([''])
+         
         writer.writerow(['Sludge Loading (g/cm^2)'])
         writer.writerow(SteamGenerator[pht_model.Default_Tube].SludgeLoading)
         writer.writerow([''])

@@ -52,6 +52,7 @@ def Diffusion(Section, Element):
 def MetalOxideInterfaceConcentration(
         Section, Element, SolutionOxideInterfaceConcentration, InnerOxLoading, OuterOxLoading, Corrosion
         ):
+        
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
         OxideDensity = nc.NiFe2O4Density
     
@@ -67,6 +68,11 @@ def MetalOxideInterfaceConcentration(
     elif Element == "Co":
         Diffusivity = [nc.CoDiffusivity] * Section.NodeNumber
         MolarMass = nc.CoMolarMass
+    
+#     if Section not in ld.FuelSections:
+#         for ox in Section.InnerIronOxLoading:
+#             if ox <= 5e-6:
+#                 ox = 0.00013  # Resets to original thickness
     
     PathLength = [(x * nc.Fe3O4Tortuosity / (OxideDensity * (1 - nc.Fe3O4Porosity_inner)))
                   + (y * nc.Fe3O4Tortuosity / (OxideDensity * (1 - nc.Fe3O4Porosity_outer)))
