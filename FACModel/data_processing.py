@@ -26,9 +26,9 @@ def purification_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
     
     OutletCorrosionRate = Output[0]
     Time = Output[4]
-    InletBulkConcentration = Output[5]
-    OutletBulkConcentration = Output[6]
-    FuelChannelBulkConcentration = Output[7]
+#     InletBulkConcentration = Output[5]
+#     OutletBulkConcentration = Output[6]
+#     FuelChannelBulkConcentration = Output[7]
 #     SteamGeneratorBulkConcentration = Output[8]
 #     InletSolubility = Output[9]
     
@@ -159,7 +159,7 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
     Output = pht_model.output
             
     AllPipes = [InletFeeder, FuelChannel, OutletFeeder] + SteamGenerator
-    
+            
     for Pipe in AllPipes:
         q = Pipe.InnerIronOxLoading
         w = Pipe.OuterFe3O4Loading
@@ -203,7 +203,8 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
         writer.writerow([''])
         writer.writerow(['SteamQuality'])
         writer.writerow([x_pht])
-    
+    print (SteamGenerator[0].KpFe3O4electrochem)
+    print (SteamGenerator[0].Bulk.FeTotal)
     return None   
 
 

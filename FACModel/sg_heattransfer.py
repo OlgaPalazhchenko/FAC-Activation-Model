@@ -1448,7 +1448,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_Calendar
     Energy = []
 
     TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Date)
-    
+   
     # adjusts how many tubes per bundle to account for tubes plugged
     bundle_sizes(SteamGenerator, TotalSGTubeNumber)
     
@@ -1461,7 +1461,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_Calendar
     RemainingPHTMassFlow = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude
 
     for Bundle in SteamGenerator:
-        
+
         [Bundle.PrimaryBulkTemperature, Bundle.HeatFlux] = temperature_profile(
             Bundle, RunStart_CalendarDate, Date, HeatTransferTimeStep, Bundle.InnerOxLoading,
             Bundle.OuterOxLoading, RemainingPHTMassFlow, SecondarySidePressure, x_pht, TotalSGTubeNumber

@@ -29,8 +29,8 @@ else:
 HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
 
 PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
-RunStart_CalendarDate = (1983, 4, 8)
-RunEnd_CalendarDate = (1995, 4, 12)
+RunStart_CalendarDate = (1983, 4, 8) #(1995, 4, 12)#
+RunEnd_CalendarDate = (1983, 12, 8)#(1996, 12, 27)
 
 a = PLNGSStartUp_CalendarDate
 b = datetime(*RunStart_CalendarDate)
@@ -272,10 +272,14 @@ class PHTS():
         # RK4 oxide thickness calculation (no spalling)
         rk_4.oxide_layers(self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j)
                 
-        # Spalling    
-        self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
-            self.Section1, j, SimulationStartHours, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking
-            )
+        # Spalling
+        
+        if self.Section1 in ld.OutletSections:   
+            self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
+                self.Section1, j, SimulationStartHours, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking
+                )
+        else:
+            None
 
 
 FACRate_OutletFeeder = []
@@ -299,11 +303,8 @@ Power_withtime = []
 
 
 def output_time_logging(
-        FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, DividerPlateLeakage, j, SGOuterOx, SGInnerOx):
+        FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, DividerPlateLeakage, j):
 
-# def output_time_logging(
-#         FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, DividerPlateLeakage, j, InletBulkFe, OutletBulkFe, FCBulkFe,
-#         SGOuterOx, SGInnerOx):
     
 #     InletSolubility.append(InletFeSat)
     FACRate_OutletFeeder.append(FACRate)
@@ -315,8 +316,8 @@ def output_time_logging(
 #     InletBulkConcentration.append(InletBulkFe.copy())
 #     OutletBulkConcentration.append(OutletBulkFe.copy())
 #     FuelChannelBulkConcentration.append(FCBulkFe.copy())
-    SteamGeneratorInnerOx.append(SGInnerOx)
-    SteamGeneratorOuterOx.append(SGOuterOx)
+#     SteamGeneratorInnerOx.append(SGInnerOx)
+#     SteamGeneratorOuterOx.append(SGOuterOx)
     Power_withtime.append(Power)
     Time.append(j)
     
@@ -403,12 +404,7 @@ def output_time_logging(
          
         writer.save()
 
-#     return (
-#         FACRate_OutletFeeder, DividerPlateLeakage, x, j, Time, InletBulkConcentration, OutletBulkConcentration,
-#         FuelChannelBulkConcentration, SGInnerOx, SGOuterOx
-#         ) 
-
-    return (FACRate_OutletFeeder, DividerPlateLeakage, x, j, Time, SGInnerOx, SGOuterOx) 
+    return (FACRate_OutletFeeder, DividerPlateLeakage, x, j, Time) 
 
 
 # just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
@@ -446,7 +442,7 @@ def sg_heat_transfer(Outlet, Inlet, SteamGenerator, j):
     return Tubes
 
 
-def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
+def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, ElementTracking):
     
     if InletFeeder == ld.InletFeeder:
         FileName = 'SG2 Input Phase 2.csv'
@@ -478,9 +474,26 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator):
         Bundle.SludgeLoading = [float(InputParametersReader[188][i]) for i in range(0, Bundle.NodeNumber)]
      
     # would be different if Ni and Co were being tracked
-#     for Pipe in AllPipes:
-#         Pipe.InnerOxLoading = Pipe.InnerIronOxLoading.copy()
-#         Pipe.OuterOxLoading = Pipe.OuterFe3O4Loading.copy()
+    for Pipe in AllPipes:
+        
+        for i in range(Pipe.NodeNumber):
+            # Oxide totals for RK4 iterations (M/O Concentration depends on total oxide thickness)
+            if Pipe.OuterFe3O4Loading[i] > 0:  # from previous time step
+                # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer
+                if ElementTracking == "yes":
+                    Pipe.OuterOxLoading[i] = (Pipe.OuterFe3O4Loading[i] + Pipe.CoLoading[i] + Pipe.NiLoading[i])
+                else:
+                    Pipe.OuterOxLoading[i] = Pipe.OuterFe3O4Loading[i]
+                
+                Pipe.InnerOxLoading[i] = Pipe.InnerIronOxLoading[i]
+            
+            else:  
+                if ElementTracking == "yes":
+                    Pipe.InnerOxLoading[i] = (
+                        Pipe.InnerIronOxLoading[i] + Pipe.CoLoading[i] + Pipe.NiLoading[i]
+                        )
+                else:
+                    Pipe.InnerOxLoading[i] = Pipe.InnerIronOxLoading[i]
     
     DividerPlateLeakage = float(InputParametersReader[191][0])
      
@@ -504,7 +517,24 @@ start_time = time.time()
 initial_conditions()
 
 for j in range(SimulationStartHours, SimulationEndHours):     
-    
+   
+    if j == SimulationStartHours:
+        if SimulationStartHours == 0:
+            x_pht = 0.009
+            DividerPlateLeakage = 0.035 # fraction of PHTS mass flow (3%)
+        else:
+            DividerPlateLeakage, x_pht = system_input(
+                ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2, ElementTracking
+                )
+             
+            if Loop == "full":
+                DividerPlateLeakage, x_pht = system_input(
+                    ld.InletFeeder_2,ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator
+                    )
+    else: 
+        None
+   
+   
     InletFeeder_1_Loop1 = PHTS(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j)
     
     FuelChannel_1_Loop1 = PHTS(ld.FuelChannel, ld.OutletFeeder_2, ElementTracking, Activation, ConstantRate, j)
@@ -543,21 +573,7 @@ for j in range(SimulationStartHours, SimulationEndHours):
       
     
     # if dividing left by right side (%) gives zero remainder (== 0):
-    if j == SimulationStartHours:
-        if SimulationStartHours == 0:
-            x_pht = 0.009
-            DividerPlateLeakage = 0.035 # fraction of PHTS mass flow (3%)
-        else:
-            DividerPlateLeakage, x_pht = system_input(
-                ld.InletFeeder, ld.FuelChannel, ld.OutletFeeder_2, ld.SteamGenerator_2
-                )
-             
-            if Loop == "full":
-                DividerPlateLeakage, x_pht = system_input(
-                    ld.InletFeeder_2,ld.FuelChannel_2, ld.OutletFeeder, ld.SteamGenerator
-                    )
-    else: 
-        None
+    
     
     # parameters tracked/updated with time
     if j % (HeatTransferTimeStep / nc.TIME_STEP) == 0:
@@ -602,22 +618,13 @@ for j in range(SimulationStartHours, SimulationEndHours):
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
 #         if j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
-#         print (
-#             Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
-#             ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
-#             )
-            
-#         output = output_time_logging(
-#             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power,
-#             DividerPlateLeakage, j, InletFeeder_1_Loop1.Section1.Bulk.FeTotal,
-#             OutletFeeder_2_Loop1.Section1.Bulk.FeTotal, FuelChannel_1_Loop1.Section1.Bulk.FeTotal,
-#             SteamGeneratorTube_2_Loop1.Section1.OuterOxLoading,
-#             SteamGeneratorTube_2_Loop1.Section1.InnerOxLoading
-#         )
+        print (
+            Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
+            ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
+            )
         
         output = output_time_logging(
-            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, DividerPlateLeakage, j,
-            SteamGeneratorTube_2_Loop1.Section1.OuterOxLoading, SteamGeneratorTube_2_Loop1.Section1.InnerOxLoading
+            OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, DividerPlateLeakage, j
             )
     else:
         None
