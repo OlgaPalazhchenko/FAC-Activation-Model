@@ -29,8 +29,8 @@ else:
 HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
 
 PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
-RunStart_CalendarDate = (1983, 4, 8) #(1995, 4, 12)#
-RunEnd_CalendarDate = (1983, 12, 8)#(1996, 12, 27)
+RunStart_CalendarDate = (1983, 4, 8)#(1983, 5, 20) #(1995, 4, 12)#
+RunEnd_CalendarDate = (1983, 5, 31)#(1996, 12, 27)
 
 a = PLNGSStartUp_CalendarDate
 b = datetime(*RunStart_CalendarDate)
@@ -43,7 +43,7 @@ b = datetime(*RunEnd_CalendarDate)
 delta = b - a
 delta = (delta.days * 24) / nc.TIME_STEP
 SimulationEndHours = round(delta)
-
+print (delta, SimulationEndHours)
 
 def initial_conditions():
     
@@ -137,7 +137,7 @@ Tags = ["Co60", "Co58", "Fe59", "Fe55", "Mn54", "Cr51", "Ni63"]
 
 
 class PHTS():
-    def __init__(self, ActiveSection, OutgoingSection, ElementTracking, Activation, ConstantRate, j):  
+    def __init__(self, ActiveSection, OutgoingSection, ElementTracking, Activation, ConstantRate, j, Date):  
         # j = time step
         self.Section1 = ActiveSection
         self.Section2 = OutgoingSection
@@ -266,20 +266,24 @@ class PHTS():
 #                                                           self.Section1.InnerOxLoading, self.Section1.Bulk.Cr51, j, "Cr51")
 #             
 #             self.Section1.MetalOxide.Ni63 = a.SurfaceActivity(self.Section1, self.Section1.CorrRate, self.Section1.SolutionOxide.FeSatFe3O4, \
-#                                                           self.Section1.InnerOxLoading, self.Section1.Bulk.Ni63, j, "Ni63")
-
-
-        # RK4 oxide thickness calculation (no spalling)
-        rk_4.oxide_layers(self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j)
-                
-        # Spalling
+#                                                           self.Section1.InnerOxLoading, self.Section1.Bulk.Ni63, j, "Ni63")        
         
-        if self.Section1 in ld.OutletSections:   
-            self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
-                self.Section1, j, SimulationStartHours, self.Section1.ElapsedTime, self.Section1.SpallTime, ElementTracking
-                )
-        else:
+        
+        # RK4 oxide thickness calculation (no spalling)
+        rk_4.oxide_layers(self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, Date)
+           
+        # Spalling
+        if Date in SGHX.TrackedOutageDays:
             None
+
+        else: 
+            if self.Section1 in ld.OutletSections:
+                self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
+                    self.Section1, j, SimulationStartHours, self.Section1.ElapsedTime, self.Section1.SpallTime,
+                    ElementTracking
+                    )
+            else:
+                None
 
 
 FACRate_OutletFeeder = []
@@ -404,14 +408,14 @@ def output_time_logging(
          
         writer.save()
 
-    return (FACRate_OutletFeeder, DividerPlateLeakage, x, j, Time) 
+    return (FACRate_OutletFeeder, DividerPlateLeakage, x, j, Years) 
 
 
 # just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
 Default_Tube = SGHX.closest_ubend(1.52 * 100)
 
 
-def sg_heat_transfer(Outlet, Inlet, SteamGenerator, j):
+def sg_heat_transfer(Outlet, Inlet, SteamGenerator, j, Date):
     Tubes = []
     # Set input concentrations for all SG zones to be same as output of outlet feeder
     BulkOutletActivityOutput = [
@@ -436,7 +440,7 @@ def sg_heat_transfer(Outlet, Inlet, SteamGenerator, j):
                 x[0] = y[Outlet.NodeNumber - 1]
                 z[0] = q[Outlet.NodeNumber - 1]
             
-            w = PHTS(Bundle, Inlet, ElementTracking, Activation, ConstantRate, j)   
+            w = PHTS(Bundle, Inlet, ElementTracking, Activation, ConstantRate, j, Date)   
             Tubes.append(w)
     
     return Tubes
@@ -445,55 +449,61 @@ def sg_heat_transfer(Outlet, Inlet, SteamGenerator, j):
 def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, ElementTracking):
     
     if InletFeeder == ld.InletFeeder:
-        FileName = 'SG2 Input Phase 2.csv'
+        FileName = 'OutputSG2.csv'
     else:
-        FileName = 'SG1 Input Phase 2.csv'
+        FileName = 'OutputSG1.csv'
 
-    AllPipes = [InletFeeder, FuelChannel, OutletFeeder] + SteamGenerator 
+    AllSections = [InletFeeder, FuelChannel, OutletFeeder] + SteamGenerator 
+    LengthAllSections = len(AllSections)
      
     InputParameters = open(FileName, 'r')
     InputParametersReader = list(csv.reader(InputParameters, delimiter=','))  
      
     InnerIronOxRows = []
     OuterFe3O4Rows = []
-    for i in range(90):
+    FeSOConcRows = []
+    
+    for i in range(LengthAllSections): # 87 SG bundles + 3 other PHT sections = 90
         x = 1 + i
+        y = 93 + i
+        z = 197 + i
         InnerIronOxRows.append(x)
+        OuterFe3O4Rows.append(y)
+        FeSOConcRows.append(z)
         
-    for i in range(90):
-        x = 93 + i
-        OuterFe3O4Rows.append(x)
-     
-    for k, Pipe in zip(InnerIronOxRows, AllPipes):
-        Pipe.InnerIronOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
+  
+    for k, j, h, Section in zip(InnerIronOxRows, OuterFe3O4Rows, FeSOConcRows, AllSections):
+        Section.InnerIronOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Section.NodeNumber)]
+        Section.OuterFe3O4Loading = [float(InputParametersReader[j][i]) for i in range(0, Section.NodeNumber)]
+        Section.SolutionOxide.FeTotal = [float(InputParametersReader[h][i]) for i in range(0, Section.NodeNumber)]
          
-    for k, Pipe in zip(OuterFe3O4Rows, AllPipes):
-        Pipe.OuterFe3O4Loading = [float(InputParametersReader[k][i]) for i in range(0, Pipe.NodeNumber)]
- 
+    
     for Bundle in SteamGenerator:
         Bundle.SludgeLoading = [float(InputParametersReader[188][i]) for i in range(0, Bundle.NodeNumber)]
      
     # would be different if Ni and Co were being tracked
-    for Pipe in AllPipes:
+    for Section in AllSections:
         
-        for i in range(Pipe.NodeNumber):
+        for i in range(Section.NodeNumber):
             # Oxide totals for RK4 iterations (M/O Concentration depends on total oxide thickness)
-            if Pipe.OuterFe3O4Loading[i] > 0:  # from previous time step
+            if Section.OuterFe3O4Loading[i] > 0:  # from previous time step
                 # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer
                 if ElementTracking == "yes":
-                    Pipe.OuterOxLoading[i] = (Pipe.OuterFe3O4Loading[i] + Pipe.CoLoading[i] + Pipe.NiLoading[i])
+                    Section.OuterOxLoading[i] = (
+                        Section.OuterFe3O4Loading[i] + Section.CoLoading[i] + Section.NiLoading[i]
+                        )
                 else:
-                    Pipe.OuterOxLoading[i] = Pipe.OuterFe3O4Loading[i]
+                    Section.OuterOxLoading[i] = Section.OuterFe3O4Loading[i]
                 
-                Pipe.InnerOxLoading[i] = Pipe.InnerIronOxLoading[i]
+                Section.InnerOxLoading[i] = Section.InnerIronOxLoading[i]
             
             else:  
                 if ElementTracking == "yes":
-                    Pipe.InnerOxLoading[i] = (
-                        Pipe.InnerIronOxLoading[i] + Pipe.CoLoading[i] + Pipe.NiLoading[i]
+                    Section.InnerOxLoading[i] = (
+                        Section.InnerIronOxLoading[i] + Section.CoLoading[i] + Section.NiLoading[i]
                         )
                 else:
-                    Pipe.InnerOxLoading[i] = Pipe.InnerIronOxLoading[i]
+                    Section.InnerOxLoading[i] = Section.InnerIronOxLoading[i]
     
     DividerPlateLeakage = float(InputParametersReader[191][0])
      
@@ -518,9 +528,9 @@ initial_conditions()
 
 for j in range(SimulationStartHours, SimulationEndHours):     
    
-    if j == SimulationStartHours:
-        if SimulationStartHours == 0:
-            x_pht = 0.009
+    if j == SimulationStartHours: 
+        if j == 0:
+            x_pht = 0.01
             DividerPlateLeakage = 0.035 # fraction of PHTS mass flow (3%)
         else:
             DividerPlateLeakage, x_pht = system_input(
@@ -535,41 +545,50 @@ for j in range(SimulationStartHours, SimulationEndHours):
         None
    
    
-    InletFeeder_1_Loop1 = PHTS(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j)
+    delta = timedelta(hours = j * nc.TIME_STEP)
+    CalendarYear = PLNGSStartUp_CalendarDate + delta
+    Date = (CalendarYear.year, CalendarYear.month, CalendarYear.day)
     
-    FuelChannel_1_Loop1 = PHTS(ld.FuelChannel, ld.OutletFeeder_2, ElementTracking, Activation, ConstantRate, j)
+    
+    InletFeeder_1_Loop1 = PHTS(ld.InletFeeder, ld.FuelChannel, ElementTracking, Activation, ConstantRate, j, Date)
+    
+    FuelChannel_1_Loop1 = PHTS(ld.FuelChannel, ld.OutletFeeder_2, ElementTracking, Activation, ConstantRate, j, Date)
     
     OutletFeeder_2_Loop1 = PHTS(
-    ld.OutletFeeder_2, ld.SteamGenerator_2[Default_Tube], ElementTracking, Activation, ConstantRate, j
+    ld.OutletFeeder_2, ld.SteamGenerator_2[Default_Tube], ElementTracking, Activation, ConstantRate, j, Date
     )
     
     if Loop == "full":
         SteamGeneratorTube_2_Loop1 = PHTS(
-        ld.SteamGenerator_2[Default_Tube], ld.InletFeeder_2, ElementTracking, Activation, ConstantRate, j
+        ld.SteamGenerator_2[Default_Tube], ld.InletFeeder_2, ElementTracking, Activation, ConstantRate, j, Date
         )
-        SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, ld.InletFeeder_2, ld.SteamGenerator_2, j)
+        SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, ld.InletFeeder_2, ld.SteamGenerator_2, j, Date)
         
-        InletFeeder_2_Loop1 = PHTS(ld.InletFeeder_2, ld.FuelChannel_2, ElementTracking, Activation, ConstantRate, j)
+        InletFeeder_2_Loop1 = PHTS(
+            ld.InletFeeder_2, ld.FuelChannel_2, ElementTracking, Activation, ConstantRate, j, Date
+            )
         
-        FuelChannel_2_Loop1 = PHTS(ld.FuelChannel_2, ld.OutletFeeder, ElementTracking, Activation, ConstantRate, j)
+        FuelChannel_2_Loop1 = PHTS(
+            ld.FuelChannel_2, ld.OutletFeeder, ElementTracking, Activation, ConstantRate, j, Date
+            )
         
         OutletFeeder_1_Loop1 = PHTS(
-        ld.OutletFeeder, ld.SteamGenerator[Default_Tube], ElementTracking, Activation, ConstantRate, j
+        ld.OutletFeeder, ld.SteamGenerator[Default_Tube], ElementTracking, Activation, ConstantRate, j, Date
         )
         
         SteamGeneratorTube_1_Loop1 = PHTS(
-            ld.SteamGenerator[Default_Tube], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
+            ld.SteamGenerator[Default_Tube], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j, Date
             )
         
-        SteamGeneratorTubes_1 = sg_heat_transfer(ld.OutletFeeder, ld.InletFeeder, ld.SteamGenerator, j)
+        SteamGeneratorTubes_1 = sg_heat_transfer(ld.OutletFeeder, ld.InletFeeder, ld.SteamGenerator, j, Date)
         
     else:
          # for 1/2 of single figure-of-eight loop, SG flow returned to same inlet header as that at start of loop
          # half loop iterates through 4 sections (inlet feeder 1, fuel channel 1, outlet feeder 2, sg 2, back to inlet 1) 
         SteamGeneratorTube_2_Loop1 = PHTS(
-        ld.SteamGenerator_2[Default_Tube], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j
+        ld.SteamGenerator_2[Default_Tube], ld.InletFeeder, ElementTracking, Activation, ConstantRate, j, Date
         )
-        SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, ld.InletFeeder, ld.SteamGenerator_2, j)
+        SteamGeneratorTubes_2 = sg_heat_transfer(ld.OutletFeeder_2, ld.InletFeeder, ld.SteamGenerator_2, j, Date)
       
     
     # if dividing left by right side (%) gives zero remainder (== 0):
@@ -577,10 +596,7 @@ for j in range(SimulationStartHours, SimulationEndHours):
     
     # parameters tracked/updated with time
     if j % (HeatTransferTimeStep / nc.TIME_STEP) == 0:
-                                   
-        delta = timedelta(hours = j * nc.TIME_STEP)
-        CalendarYear = PLNGSStartUp_CalendarDate + delta
-        Date = (CalendarYear.year, CalendarYear.month, CalendarYear.day)
+        print (j, Date)
 
         if Loop == "full":
             RIHT_1 = (
@@ -618,11 +634,11 @@ for j in range(SimulationStartHours, SimulationEndHours):
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
 #         if j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
-        print (
-            Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
-            ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
-            )
-        
+#         print (
+#             Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
+#             ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
+#             )
+            
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, DividerPlateLeakage, j
             )

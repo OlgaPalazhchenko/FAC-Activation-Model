@@ -146,7 +146,7 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
     #would have to select tubes from SG2 as well (in SG module)
     InnerOxide = []
     OuterOxide = []
-    TotalOxide = []
+#     TotalOxide = []
 #     TotalArea = []
     TotalGrams = []
     CorrosionRate = []
@@ -155,29 +155,33 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
     SG_grams_all_tubes = []
     
     FeSolubility_SteamGeneratorTubes = []
-    FeConcentration_SteamGeneratorTubes = []
+    FeConcentration = []
     Output = pht_model.output
             
-    AllPipes = [InletFeeder, FuelChannel, OutletFeeder] + SteamGenerator
+    AllSections = [InletFeeder, FuelChannel, OutletFeeder] + SteamGenerator
             
-    for Pipe in AllPipes:
-        q = Pipe.InnerIronOxLoading
-        w = Pipe.OuterFe3O4Loading
+    for Section in AllSections:
+        q = Section.InnerIronOxLoading
+        w = Section.OuterFe3O4Loading
         x = [x + y for x, y in zip(q, w)]
-        y = [np.pi * i * j for i, j in zip(Pipe.Length.magnitude, Pipe.Diameter)]
+        y = [np.pi * i * j for i, j in zip(Section.Length.magnitude, Section.Diameter)]
         z = [i * j for i, j in zip(x, y)]
+        r = Section.SolutionOxide.FeTotal
         
-        if Pipe in SteamGenerator:
-            k = sum([i * Pipe.TubeNumber for i in z])
+        if Section in SteamGenerator:
+            k = sum([i * Section.TubeNumber for i in z])
             SG_grams_all_tubes.append(k)
 
         InnerOxide.append(q)
         OuterOxide.append(w)
+        FeConcentration.append(r)
+#         CorrosionRate.append(r)
 #         TotalOxide.append(x)
 #         TotalGrams.append(z) 
         
     DividerPlateLeakage = Output[1]
     x_pht = Output[2]
+    Date = Output[4]
     
     Data = [InnerOxide, OuterOxide]    
     Labels = ["Inner Oxide", "Outer Oxide"]
@@ -198,13 +202,22 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
         writer.writerow(['Sludge Loading (g/cm^2)'])
         writer.writerow(SteamGenerator[pht_model.Default_Tube].SludgeLoading)
         writer.writerow([''])
+        
         writer.writerow(['Divider Plate Leakage'])
         writer.writerow([DividerPlateLeakage])
         writer.writerow([''])
+        
         writer.writerow(['SteamQuality'])
         writer.writerow([x_pht])
-    print (SteamGenerator[0].KpFe3O4electrochem)
-    print (SteamGenerator[0].Bulk.FeTotal)
+        writer.writerow([''])
+        
+        writer.writerow(['Fe Tot (S/O) (g/cm^3)'])
+        writer.writerows(FeConcentration)
+        writer.writerow([''])
+        
+        writer.writerow(['Time (date)'])
+        writer.writerow(Date)
+      
     return None   
 
 

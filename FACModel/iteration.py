@@ -12,8 +12,8 @@ from datetime import date, timedelta, datetime
 # Fe: 264860.0725
 # H2: 262286.4165
 
-ACTIVATION_ENERGY_ALLOY800 = 321276.4779
-ACTIVATION_ENERGYH2onALLOY800 = 310324.6997
+ACTIVATION_ENERGY_ALLOY800 = 295595.2051
+ACTIVATION_ENERGYH2onALLOY800 = 284643.4269
 
 
 def Diffusion(Section, Element):
@@ -55,8 +55,10 @@ def MetalOxideInterfaceConcentration(
     
     if Section not in ld.FuelSections:
         for i in range(Section.NodeNumber-1):
-            if InnerOxLoading[i] < 5e-6:
+            if InnerOxLoading[i] == 0:
+                print('lol', i, Section.NodeNumber, InnerOxLoading)
                 InnerOxLoading[i] = 0.00013 # Resets to original thickness
+                print (InnerOxLoading)
     
     
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
@@ -166,7 +168,7 @@ def SolutionOxide(
     
     # Same operation applied to all nodes
     OxideKinetics = InterfaceOxideKinetics(Section, KineticConstant, SaturationConcentration, MolarMass)
-
+    
     Oxide = [x + y for x, y in zip(InnerOxLoading, OuterOxLoading)]
     
     for i in range(Section.NodeNumber):  

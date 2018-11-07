@@ -13,7 +13,7 @@ FullTubeComplement = 3542
 
 DayStartup = (1983, 4, 8)
 DayCPP = (1987, 6, 1)
-DayOutage = (1995, 4, 13)
+DayOutage = (1983, 5, 25)# (1995, 4, 13) #
 DayOutageRestart = (1996, 1, 1)
 DayRefurbishment = (2008, 3, 29)
 DayRefurbishmentRestart = (2012, 12, 10)
@@ -993,7 +993,7 @@ def outside_bundle_pool_boiling(
         ):
     
     #for large number of tubes the bundle effect may disappear
-    F = .18 # bundle boiling factor (empirical)
+    F = .15 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -1459,7 +1459,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_Calendar
     
     # g / s
     RemainingPHTMassFlow = MassFlow_h.magnitude - MasssFlow_dividerplate.magnitude
-
+  
     for Bundle in SteamGenerator:
 
         [Bundle.PrimaryBulkTemperature, Bundle.HeatFlux] = temperature_profile(
@@ -1487,6 +1487,6 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_Calendar
 
           
 # print (energy_balance(
-#     ld.SteamGenerator_2, x_pht=0.012, DividerPlateLeakage=0.035, RunStart_CalendarDate=DayStartup, Date=DayStartup,
+#     ld.SteamGenerator_2, x_pht=0.01, DividerPlateLeakage=0.035, RunStart_CalendarDate=DayStartup, Date=DayStartup,
 #     HeatTransferTimeStep=nc.TIME_STEP
 #     )- 273.15)

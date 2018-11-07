@@ -323,7 +323,7 @@ for Section in FullLoop:
 
     # Oxide thicknesses [g/cm^2]
     if Section in SteamGenerator or Section in SteamGenerator_2:
-        Section.OuterFe3O4Loading = [1.3E-4] * Section.NodeNumber
+        Section.OuterFe3O4Loading = [2.5E-4] * Section.NodeNumber
         Section.NiLoading = [1.3E-4] * Section.NodeNumber
         Section.OuterOxLoading = [x + y for x, y in zip(Section.OuterFe3O4Loading, Section.NiLoading)]
 

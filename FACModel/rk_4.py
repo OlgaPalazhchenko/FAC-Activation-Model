@@ -213,9 +213,10 @@ def pht_cleaning(Bundle, InnerOxide, OuterOxide, j):
         CleanedOutage = SGHX.CleanedOutageSG2
         CleanedRefurb = SGHX.CleanedRefurbishmentSG2
 
+#     print (j, Outage_hours, OuterOxide, 'before')
     #need cleaning efficiency for each individual clean 
     if j == Outage_hours:
-#         print (j, 'outage', OuterOxide)
+#         print (j, Outage_hours, OuterOxide, 'outage')
         if Bundle in CleanedOutage:
             CleaningEfficiency = 0.6
         else:
@@ -235,19 +236,28 @@ def pht_cleaning(Bundle, InnerOxide, OuterOxide, j):
         else:
             InnerOxide[i] = InnerOxide[i] * (1 - CleaningEfficiency) #inner layer reduced in thickness instead
             OuterOxide[i] = OuterOxide[i] # remains zero
-            
+    
+#     print (j, Outage_hours,OuterOxide, 'after')        
     return InnerOxide, OuterOxide
 
 
-def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j):  
+def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, Date):  
     
-    start = datetime(*SGHX.DayStartup)
-    delta = timedelta(hours = j * nc.TIME_STEP)
-    CalendarDate = start + delta
+    if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
+        Section.InnerIronOxLoading, Section.OuterFe3O4Loading = pht_cleaning(
+            Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, j
+            )  
+
+    else:
+        None
     
-    Date = (CalendarDate.year, CalendarDate.month, CalendarDate.day)
     
     for i in range(Section.NodeNumber):
+        
+        if Section not in ld.FuelSections:
+            if Section.InnerIronOxLoading[i] < 5e-6:
+                Section.InnerIronOxLoading[i] = 1.3e-4   
+        
         # Oxide totals for RK4 iterations (M/O Concentration depends on total oxide thickness)
         if Section.OuterFe3O4Loading[i] > 0:  # from previous time step
             # With outer magnetite layer present, Ni and Co incorporate into overall "outer" oxide layer
@@ -255,7 +265,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
                 Section.OuterOxLoading[i] = (Section.OuterFe3O4Loading[i] + Section.CoLoading[i] + Section.NiLoading[i])
             else:
                 Section.OuterOxLoading[i] = Section.OuterFe3O4Loading[i]
-            
+
             Section.InnerOxLoading[i] = Section.InnerIronOxLoading[i]
         
         else:  
@@ -265,33 +275,16 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
                     )
             else:
                 Section.InnerOxLoading[i] = Section.InnerIronOxLoading[i]
+                Section.OuterOxLoading[i] = Section.OuterFe3O4Loading[i]   
     
-    
-    if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
-        
-        #cleaning based on entire outer and entire inner oxide layers
-        [Section.InnerIronOxLoading, Section.OuterOxLoading] = pht_cleaning(
-            Section, Section.InnerIronOxLoading, Section.InnerOxLoading, j)  
-    else:
+    if Date in SGHX.TrackedOutageDays: 
         None
     
-    
-    if Date in SGHX.TrackedOutageDays:
-         # no oxide growth anywhere in the PHT system
-        Section.InnerIronOxLoading = Section.InnerIronOxLoading.copy()
-        Section.OuterFe3O4Loading = Section.OuterFe3O4Loading.copy()
-        Section.OuterOxLoading = Section.OuterOxLoading.copy()
-        Section.InnerOxLoading = Section.InnerOxLoading.copy()
-        
-        if ElementTracking == "yes":
-            Section.NiLoading = Section.NiLoading.copy()
-            Section.CoLoading = Section.CoLoading.copy()
-        else:
-            None
-        
+    # no oxide growth anywhere in the PHT system    
     else:    
         # linear oxide growth
         if ConstantRate == "yes":
+            
             # updates M/O and S/O concentrations based on oxide total inner and outer thicknesses
             it.interface_concentrations(
                 Section, ConstantRate, BulkConcentrations, Saturations, Section.InnerOxLoading,
@@ -321,13 +314,13 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
         
         else:
         # FAC solver for rate   
-            RK4_InnerIronOxLoading = Section.InnerIronOxLoading
-            RK4_OuterFe3O4Loading = Section.OuterFe3O4Loading
-            RK4_OuterOxLoading = Section.OuterOxLoading
-            RK4_InnerOxLoading = Section.InnerOxLoading
+            RK4_InnerIronOxLoading = Section.InnerIronOxLoading.copy()
+            RK4_OuterFe3O4Loading = Section.OuterFe3O4Loading.copy()
+            RK4_OuterOxLoading = Section.OuterOxLoading.copy()
+            RK4_InnerOxLoading = Section.InnerOxLoading.copy()
             # If element tracking is off, Co/Ni thickness remains same as initial loadings
-            RK4_NiLoading = Section.NiLoading
-            RK4_CoLoading = Section.CoLoading
+            RK4_NiLoading = Section.NiLoading.copy()
+            RK4_CoLoading = Section.CoLoading.copy()
             
             L = []
             M = []
@@ -568,8 +561,10 @@ def spall(Section, j, SimulationStart, ElapsedTime, SpallTime, ElementTracking):
                     Section.OuterOxLoading[i] = layer_spalling(
                         Section.OuterOxLoading[i], Section.OuterOxLoading[i], Section.Particle[i]
                         )  # new total outer ox
+                    
                 
-                else:  # OuterOxLoading == 0, spalling takes place at inner layer  
+                else:  # OuterOxLoading == 0, spalling takes place at inner layer
+                    
                     Section.InnerIronOxLoading[i] = layer_spalling(
                         Section.InnerIronOxLoading[i], Section.InnerOxLoading[i], Section.Particle[i]
                         )
@@ -599,12 +594,15 @@ def spall(Section, j, SimulationStart, ElapsedTime, SpallTime, ElementTracking):
             else:  # not enough time has passed
                 ElapsedTime[i] = ElapsedTime[i] + nc.TIME_INCREMENT / 3600
 
-    for i in range(Section.NodeNumber):
-        
+
         if Section in ld.OutletSections:  # Outlet header spalling corrector 
             
             if SpallTime[i] > 4000:
-                SpallTime[i] = 3000 
+                SpallTime[i] = 3000
+                
+        if Section not in ld.FuelSections:
+            if Section.InnerIronOxLoading[i] < 5e-6:
+                Section.InnerIronOxLoading[i] = 1.3e-4 
         
 
     return ElapsedTime, SpallTime
