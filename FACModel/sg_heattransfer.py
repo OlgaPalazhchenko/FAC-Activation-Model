@@ -13,7 +13,7 @@ FullTubeComplement = 3542
 
 DayStartup = (1983, 4, 8)
 DayCPP = (1987, 6, 1)
-DayOutage = (1983, 5, 25)# (1995, 4, 13) #
+DayOutage = (1995, 4, 13) #
 DayOutageRestart = (1996, 1, 1)
 DayRefurbishment = (2008, 3, 29)
 DayRefurbishmentRestart = (2012, 12, 10)
@@ -310,6 +310,7 @@ def total_tubes_plugged(SteamGenerator, Date):
     
     #plug events arbitrarily assumed to happen at the start of each year (no month/quarter granularity currently used) 
     if SteamGenerator == ld.SteamGenerator:
+        
         DatePlugged = [
             (1983, 4, 8), (1988, 1, 8), (1992, 1, 8), (1993, 1, 8), (1994, 1, 8), (1996, 1, 8), (1999, 1, 8),
             (2002, 1, 8), (2009, 1, 8)
@@ -328,9 +329,9 @@ def total_tubes_plugged(SteamGenerator, Date):
     elif Date >= DatePlugged[len(DatePlugged) - 1]:
         NumberPluggedTubes = sum(AmountPlugged)
     
+    
     else:
         for i in range(len(DatePlugged) - 1):
-
             if DatePlugged[i] <= Date < DatePlugged[i + 1]:
                 # last tube in range not included, hence the + 1
                 # e.g., SG 1: if date 1989-4, Date is <= i =1, so amount plugged summed from 0 to 1 --> 1 + 1 =2 

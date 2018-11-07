@@ -29,8 +29,8 @@ else:
 HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
 
 PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
-RunStart_CalendarDate = (1983, 4, 8)#(1983, 5, 20) #(1995, 4, 12)#
-RunEnd_CalendarDate = (1983, 5, 31)#(1996, 12, 27)
+RunStart_CalendarDate = (1983, 4, 8)#(1983, 5, 20) ##
+RunEnd_CalendarDate = (1995, 4, 12)
 
 a = PLNGSStartUp_CalendarDate
 b = datetime(*RunStart_CalendarDate)
@@ -526,7 +526,7 @@ start_time = time.time()
 # load initial chemistry for full/half loop
 initial_conditions()
 
-for j in range(SimulationStartHours, SimulationEndHours):     
+for j in range(SimulationStartHours, SimulationEndHours + 1):     
    
     if j == SimulationStartHours: 
         if j == 0:
@@ -596,7 +596,6 @@ for j in range(SimulationStartHours, SimulationEndHours):
     
     # parameters tracked/updated with time
     if j % (HeatTransferTimeStep / nc.TIME_STEP) == 0:
-        print (j, Date)
 
         if Loop == "full":
             RIHT_1 = (
