@@ -13,7 +13,7 @@ FullTubeComplement = 3542
 
 DayStartup = (1983, 4, 8)
 DayCPP = (1987, 6, 1)
-DayOutage = (1983, 5, 4)#(1995, 4, 13) #
+DayOutage = (1983, 5, 16)#(1995, 4, 13) #
 DayOutageRestart = (1996, 1, 1)
 DayRefurbishment = (2008, 3, 29)
 DayRefurbishmentRestart = (2012, 12, 10)
@@ -358,11 +358,12 @@ def bundle_sizes(SteamGenerator, TotalSGTubeNumber):
     
     return None
 
-   
-def primaryside_cleaned_tubes(SteamGenerator, Date, TypeClean):
+
+def primaryside_cleaned_tubes(SteamGenerator, Date):
     
-#     CalendarDate = datetime(*Date).isocalendar() 
-#     WeeklyDate = (CalendarDate[0], CalendarDate[1])
+    CalendarDate = datetime(*Date).isocalendar() 
+    WeeklyDate = (CalendarDate[0], CalendarDate[1])
+    
     if SteamGenerator == ld.SteamGenerator:
         TubesCleaned = 2093
         Fraction_TubesCleaned = 0.969
@@ -373,15 +374,14 @@ def primaryside_cleaned_tubes(SteamGenerator, Date, TypeClean):
         None
     
     TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Date)
-#     bundle_sizes(SteamGenerator, TotalSGTubeNumber)
     
     #amount of tubes cleaned per each cleaning will have to be custom
-    if TypeClean == 'Outage 1995':
+    if Date == DayOutage or WeeklyDate == WeekOutage:
         # siva blast in 1995 used on only 60% of tubes due to time/spacial constraints
 
         PercentTubesCleaned = TubesCleaned / TotalSGTubeNumber
     
-    elif TypeClean == "Refurb 2008":
+    elif Date == DayRefurbishment or WeeklyDate == WeekRefurbishment:
 
         PercentTubesCleaned = Fraction_TubesCleaned
     else:
@@ -403,8 +403,15 @@ def primaryside_cleaned_tubes(SteamGenerator, Date, TypeClean):
             Cleaned.append(SteamGenerator[x])
         else:
             break
-
+    
     return Cleaned
+
+
+Cleaned_OutageSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayOutage)
+CleanedOutageSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayOutage)
+
+CleanedRefurbishmentSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayRefurbishment)
+CleanedRefurbishmentSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayRefurbishment)
 
 
 # def closest_tubelength(TubeLength):

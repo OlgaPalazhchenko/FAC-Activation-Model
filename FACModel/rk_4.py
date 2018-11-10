@@ -204,19 +204,18 @@ def oxide_growth(
     return GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt
     
 
-def pht_cleaning(Bundle, InnerOxide, OuterOxide, j, Date):
+def pht_cleaning(Bundle, InnerOxide, OuterOxide, j):
     # tubes cleaned/efficiency depends on which boiler bundle is in
     if Bundle in ld.SteamGenerator:
-        SteamGenerator = ld.SteamGenerator
-
+        CleanedOutage = SGHX.Cleaned_OutageSG1
+        CleanedRefurb = SGHX.CleanedRefurbishmentSG1
     else:
-        SteamGenerator = ld.SteamGenerator_2
+        CleanedOutage = SGHX.CleanedOutageSG2
+        CleanedRefurb = SGHX.CleanedRefurbishmentSG2
 
 #     print (j, Outage_hours, OuterOxide, 'before')
     #need cleaning efficiency for each individual clean 
     if j == Outage_hours:
-        
-        CleanedOutage = SGHX.primaryside_cleaned_tubes(SteamGenerator, Date, 'Outage 1995')
 #         print (j, Outage_hours, OuterOxide, 'outage')
         if Bundle in CleanedOutage:
             CleaningEfficiency = 0.6
@@ -224,9 +223,7 @@ def pht_cleaning(Bundle, InnerOxide, OuterOxide, j, Date):
             CleaningEfficiency = 0
         
     elif j == Refurb_hours:
-        CleanedRefurb = SGHX.primaryside_cleaned_tubes(SteamGenerator, Date, 'Refurb 1995')
-        
-        if Bundle in CleanedRefurb:
+        if Bundle in CleanedRefurbl:
             CleaningEfficiency = 0.22 #(IR-33110-0039-001-A)
     else:
         CleaningEfficiency = 0 # no cleaning, oxide layers returned without reduction in thickness
@@ -240,7 +237,7 @@ def pht_cleaning(Bundle, InnerOxide, OuterOxide, j, Date):
             InnerOxide[i] = InnerOxide[i] * (1 - CleaningEfficiency) #inner layer reduced in thickness instead
             OuterOxide[i] = OuterOxide[i] # remains zero
     
-#     print (j, Outage_hours,OuterOxide, 'after')        
+    #     print (j, Outage_hours,OuterOxide, 'after')
     return InnerOxide, OuterOxide
 
 
@@ -248,7 +245,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
     
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
         Section.InnerIronOxLoading, Section.OuterFe3O4Loading = pht_cleaning(
-            Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, j, Date
+            Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, j
             )  
 
     else:
