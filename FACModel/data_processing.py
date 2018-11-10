@@ -153,6 +153,7 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
     kp_Tdependent = []
     CorrosionRate_um = []
     SG_grams_all_tubes = []
+    TubeSize = []
     
     FeSolubility_SteamGeneratorTubes = []
     FeConcentration = []
@@ -169,6 +170,8 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
         r = Section.SolutionOxide.FeTotal
         
         if Section in SteamGenerator:
+            f = Section.TubeNumber
+            TubeSize.append(f)
             k = sum([i * Section.TubeNumber for i in z])
             SG_grams_all_tubes.append(k)
 
@@ -181,7 +184,7 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
         
     DividerPlateLeakage = Output[1]
     x_pht = Output[2]
-    Date = Output[4]
+    Date = Output[3]
     
     Data = [InnerOxide, OuterOxide]    
     Labels = ["Inner Oxide", "Outer Oxide"]
@@ -189,6 +192,18 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
     csvfile = FileName1
     with open(csvfile, "w") as output:
         writer = csv.writer(output, lineterminator='\n')
+        
+        writer.writerow(['Start Date'])
+        writer.writerow([Date[0]])
+        writer.writerow([''])
+        
+        writer.writerow(['End Date'])
+        writer.writerow([Date[len(Date) - 1]])
+        writer.writerow([''])
+        
+        writer.writerow(['Bundle Size'])
+        writer.writerow(TubeSize)
+        writer.writerow([''])
          
         for i, j in zip(Labels, Data):
             writer.writerow([i])
@@ -214,9 +229,6 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
         writer.writerow(['Fe Tot (S/O) (g/cm^3)'])
         writer.writerows(FeConcentration)
         writer.writerow([''])
-        
-        writer.writerow(['Time (date)'])
-        writer.writerow(Date)
       
     return None   
 

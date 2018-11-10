@@ -204,18 +204,19 @@ def oxide_growth(
     return GrowthInnerIronOxide, GrowthOuterMagnetite, GrowthNickel, GrowthCobalt
     
 
-def pht_cleaning(Bundle, InnerOxide, OuterOxide, j):
+def pht_cleaning(Bundle, InnerOxide, OuterOxide, j, Date):
     # tubes cleaned/efficiency depends on which boiler bundle is in
     if Bundle in ld.SteamGenerator:
-        CleanedOutage = SGHX.Cleaned_OutageSG1
-        CleanedRefurb = SGHX.CleanedRefurbishmentSG1
+        SteamGenerator = ld.SteamGenerator
+
     else:
-        CleanedOutage = SGHX.CleanedOutageSG2
-        CleanedRefurb = SGHX.CleanedRefurbishmentSG2
+        SteamGenerator = ld.SteamGenerator_2
 
 #     print (j, Outage_hours, OuterOxide, 'before')
     #need cleaning efficiency for each individual clean 
     if j == Outage_hours:
+        
+        CleanedOutage = SGHX.primaryside_cleaned_tubes(SteamGenerator, Date, 'Outage 1995')
 #         print (j, Outage_hours, OuterOxide, 'outage')
         if Bundle in CleanedOutage:
             CleaningEfficiency = 0.6
@@ -223,7 +224,9 @@ def pht_cleaning(Bundle, InnerOxide, OuterOxide, j):
             CleaningEfficiency = 0
         
     elif j == Refurb_hours:
-        if Bundle in Refurb_hours:
+        CleanedRefurb = SGHX.primaryside_cleaned_tubes(SteamGenerator, Date, 'Refurb 1995')
+        
+        if Bundle in CleanedRefurb:
             CleaningEfficiency = 0.22 #(IR-33110-0039-001-A)
     else:
         CleaningEfficiency = 0 # no cleaning, oxide layers returned without reduction in thickness
@@ -245,7 +248,7 @@ def oxide_layers(Section, ConstantRate, Saturations, BulkConcentrations, Element
     
     if Section in ld.SteamGenerator or Section in ld.SteamGenerator_2:
         Section.InnerIronOxLoading, Section.OuterFe3O4Loading = pht_cleaning(
-            Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, j
+            Section, Section.InnerIronOxLoading, Section.OuterFe3O4Loading, j, Date
             )  
 
     else:

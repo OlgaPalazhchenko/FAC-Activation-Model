@@ -13,7 +13,7 @@ FullTubeComplement = 3542
 
 DayStartup = (1983, 4, 8)
 DayCPP = (1987, 6, 1)
-DayOutage = (1995, 4, 13) #
+DayOutage = (1983, 5, 4)#(1995, 4, 13) #
 DayOutageRestart = (1996, 1, 1)
 DayRefurbishment = (2008, 3, 29)
 DayRefurbishmentRestart = (2012, 12, 10)
@@ -359,11 +359,10 @@ def bundle_sizes(SteamGenerator, TotalSGTubeNumber):
     return None
 
    
-def primaryside_cleaned_tubes(SteamGenerator, Date):
+def primaryside_cleaned_tubes(SteamGenerator, Date, TypeClean):
     
-    CalendarDate = datetime(*Date).isocalendar() 
-    WeeklyDate = (CalendarDate[0], CalendarDate[1])
-    
+#     CalendarDate = datetime(*Date).isocalendar() 
+#     WeeklyDate = (CalendarDate[0], CalendarDate[1])
     if SteamGenerator == ld.SteamGenerator:
         TubesCleaned = 2093
         Fraction_TubesCleaned = 0.969
@@ -374,15 +373,15 @@ def primaryside_cleaned_tubes(SteamGenerator, Date):
         None
     
     TotalSGTubeNumber = total_tubes_plugged(SteamGenerator, Date)
-    bundle_sizes(SteamGenerator, TotalSGTubeNumber)
+#     bundle_sizes(SteamGenerator, TotalSGTubeNumber)
     
     #amount of tubes cleaned per each cleaning will have to be custom
-    if Date == DayOutage or WeeklyDate == WeekOutage:
+    if TypeClean == 'Outage 1995':
         # siva blast in 1995 used on only 60% of tubes due to time/spacial constraints
 
         PercentTubesCleaned = TubesCleaned / TotalSGTubeNumber
     
-    elif Date == DayRefurbishment or WeeklyDate == WeekRefurbishment:
+    elif TypeClean == "Refurb 2008":
 
         PercentTubesCleaned = Fraction_TubesCleaned
     else:
@@ -1437,11 +1436,11 @@ def secondary_side_pressure(SteamGenerator, Date):
     return SecondarySidePressure
 
 
-Cleaned_OutageSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayOutage)
-CleanedOutageSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayOutage)
-
-CleanedRefurbishmentSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayRefurbishment)
-CleanedRefurbishmentSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayRefurbishment)
+# Cleaned_OutageSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayOutage)
+# CleanedOutageSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayOutage)
+# 
+# CleanedRefurbishmentSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayRefurbishment)
+# CleanedRefurbishmentSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayRefurbishment)
 
 
 def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_CalendarDate, Date, HeatTransferTimeStep):

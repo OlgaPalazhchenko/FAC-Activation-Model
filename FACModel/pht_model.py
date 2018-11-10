@@ -30,7 +30,7 @@ HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
 
 PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
 RunStart_CalendarDate = (1983, 4, 8)#(1983, 5, 20) ##
-RunEnd_CalendarDate = (1995, 4, 12)
+RunEnd_CalendarDate = (1983, 5, 3)#(1995, 4, 12)
 
 a = PLNGSStartUp_CalendarDate
 b = datetime(*RunStart_CalendarDate)
@@ -43,7 +43,7 @@ b = datetime(*RunEnd_CalendarDate)
 delta = b - a
 delta = (delta.days * 24) / nc.TIME_STEP
 SimulationEndHours = round(delta)
-print (delta, SimulationEndHours)
+
 
 def initial_conditions():
     
@@ -290,16 +290,9 @@ FACRate_OutletFeeder = []
 RIHT_average = []
 RIHT_InletFeeder1 = []
 RIHT_InletFeeder2 = []
-# OutletTemperature_Bundle_1 = [] 
-# OutletTemperature_Bundle_2 = []
 pht_SteamFraction = []
 DP_leakage = []
 Years = []
-
-Time = []
-# InletBulkConcentration = []
-# OutletBulkConcentration = []
-# FuelChannelBulkConcentration = []
 SteamGeneratorInnerOx = []
 SteamGeneratorOuterOx = []
 InletSolubility = []
@@ -309,24 +302,13 @@ Power_withtime = []
 def output_time_logging(
         FACRate, RIHT_avg, RIHT1, RIHT2, x, Power, DividerPlateLeakage, j):
 
-    
-#     InletSolubility.append(InletFeSat)
     FACRate_OutletFeeder.append(FACRate)
     RIHT_InletFeeder1.append(RIHT1)
     RIHT_InletFeeder2.append(RIHT2)
     RIHT_average.append(RIHT_avg)
     pht_SteamFraction.append(x)
     DP_leakage.append(DividerPlateLeakage)
-#     InletBulkConcentration.append(InletBulkFe.copy())
-#     OutletBulkConcentration.append(OutletBulkFe.copy())
-#     FuelChannelBulkConcentration.append(FCBulkFe.copy())
-#     SteamGeneratorInnerOx.append(SGInnerOx)
-#     SteamGeneratorOuterOx.append(SGOuterOx)
     Power_withtime.append(Power)
-    Time.append(j)
-    
-#     OutletTemperature_Bundle_1.append(Temperature1)
-#     OutletTemperature_Bundle_2.append(Temperature2)
     
     RIHT1_delta = [x-y for x, y in zip (RIHT_InletFeeder1[1:], RIHT_InletFeeder1)]
     RIHT2_delta = [x-y for x, y in zip (RIHT_InletFeeder2[1:], RIHT_InletFeeder2)]
@@ -379,7 +361,7 @@ def output_time_logging(
     RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] >= Deratings]
     RIHT_phase5 = RIHT_phase5[RIHT_phase5['Power'] >= Shutdown]
     
-    if j % (16) == 0: #updates list in csv file (list itself appended to monthly)
+    if j % (8) == 0: #updates list in csv file (list itself appended to monthly)
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
          
         RIHT_phase1_preCPP.to_excel(writer, sheet_name = 'Phase 1 Pre CPP')
@@ -408,7 +390,7 @@ def output_time_logging(
          
         writer.save()
 
-    return (FACRate_OutletFeeder, DividerPlateLeakage, x, j, Years) 
+    return (FACRate_OutletFeeder, DividerPlateLeakage, x, Years) 
 
 
 # just a tube number generator (number of the tube that has closest u-bend arc length to the avg. 1.52 m length)
@@ -463,23 +445,24 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, Element
     OuterFe3O4Rows = []
     FeSOConcRows = []
     
+    for i in range(len(SteamGenerator)):
+        SteamGenerator[i].TubeNumber = float(InputParametersReader[7][i])
+    
     for i in range(LengthAllSections): # 87 SG bundles + 3 other PHT sections = 90
-        x = 1 + i
-        y = 93 + i
-        z = 197 + i
+        x = 10 + i
+        y = 102 + i
+        z = 206 + i
         InnerIronOxRows.append(x)
         OuterFe3O4Rows.append(y)
         FeSOConcRows.append(z)
         
-  
     for k, j, h, Section in zip(InnerIronOxRows, OuterFe3O4Rows, FeSOConcRows, AllSections):
         Section.InnerIronOxLoading = [float(InputParametersReader[k][i]) for i in range(0, Section.NodeNumber)]
         Section.OuterFe3O4Loading = [float(InputParametersReader[j][i]) for i in range(0, Section.NodeNumber)]
         Section.SolutionOxide.FeTotal = [float(InputParametersReader[h][i]) for i in range(0, Section.NodeNumber)]
          
-    
     for Bundle in SteamGenerator:
-        Bundle.SludgeLoading = [float(InputParametersReader[188][i]) for i in range(0, Bundle.NodeNumber)]
+        Bundle.SludgeLoading = [float(InputParametersReader[197][i]) for i in range(0, Bundle.NodeNumber)] 
      
     # would be different if Ni and Co were being tracked
     for Section in AllSections:
@@ -505,9 +488,10 @@ def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, Element
                 else:
                     Section.InnerOxLoading[i] = Section.InnerIronOxLoading[i]
     
-    DividerPlateLeakage = float(InputParametersReader[191][0])
+    DividerPlateLeakage = float(InputParametersReader[200][0])
      
-    x = float(InputParametersReader[194][0])
+    x = float(InputParametersReader[203][0])
+    
     
     print (
         'from input file: steam frac', x, 'fe3o4', SteamGenerator[0].OuterOxLoading[21],
@@ -526,7 +510,7 @@ start_time = time.time()
 # load initial chemistry for full/half loop
 initial_conditions()
 
-for j in range(SimulationStartHours, SimulationEndHours + 1):     
+for j in range(SimulationStartHours, SimulationEndHours):     
    
     if j == SimulationStartHours: 
         if j == 0:
@@ -592,8 +576,6 @@ for j in range(SimulationStartHours, SimulationEndHours + 1):
       
     
     # if dividing left by right side (%) gives zero remainder (== 0):
-    
-    
     # parameters tracked/updated with time
     if j % (HeatTransferTimeStep / nc.TIME_STEP) == 0:
 
