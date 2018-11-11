@@ -213,10 +213,7 @@ def pht_cleaning(Bundle, InnerOxide, OuterOxide, j):
         CleanedOutage = SGHX.CleanedOutageSG2
         CleanedRefurb = SGHX.CleanedRefurbishmentSG2
 
-#     print (j, Outage_hours, OuterOxide, 'before')
-    #need cleaning efficiency for each individual clean 
     if j == Outage_hours:
-#         print (j, Outage_hours, OuterOxide, 'outage')
         if Bundle in CleanedOutage:
             CleaningEfficiency = 0.6
         else:

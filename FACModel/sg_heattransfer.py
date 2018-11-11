@@ -159,7 +159,7 @@ def boiler_pressure():
     BO_3 = 'Pressure Boiler 3'
     BO_4 = 'Pressure Boiler 4'
     
-    df.columns = ['date', 'power', BO_1, BO_2, BO_3, BO_4]
+    df.columns = ['date', 'power', BO_1, BO_2]
 
     # converts from string object to time series  
     df.date = pd.to_datetime(df.date)
@@ -167,21 +167,21 @@ def boiler_pressure():
     
     # frequency of power data changed from every few minutes to daily average
     daily_average = df.resample('D').mean().copy()
-    daily_average_no_outages = daily_average.index[daily_average['power'] > 0.89]
+#     no_outages = daily_average.index[daily_average['power'] > 0.89]
     
-    NonOutageTrackedDates = []
-    
-    for date in daily_average_no_outages.index:
-        x = (date.year, date.month, date.day)
-        NonOutageTrackedDates.append(x)
+#     NonOutageTrackedDates = []
+#     
+#     for date in no_outages:
+#         x = (date.year, date.month, date.day)
+#         NonOutageTrackedDates.append(x)
 
-    
     Pressure_BO1 = daily_average_no_outages.as_matrix([BO_1]).flatten()
+    Pressure_BO2 = daily_average_no_outages.as_matrix([BO_2]).flatten()
     
-    return NonOutageTrackedDates, Pressure_BO1
+    return Pressure_BO1, Pressure_BO2
     
 
-# NonOutageTrackedDates, Pressure_BO1 = boiler_pressure()
+Pressure_BO1, Pressure_BO2 = boiler_pressure()
 
 
 def reactor_power():
@@ -1403,53 +1403,39 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
 
 def secondary_side_pressure(SteamGenerator, Date):
     
-#     if Date in AllStationDataDates:
-#         for x in AllStationDataDates:
-#             
-#             delta_time = [x1 - x2 for (x1, x2) in zip(Date, x)] 
-#             
-#             delta_time = [abs(number) for number in delta_time]
-#             
-#             difference.append(delta_time)
-# 
-#         # min function --> smallest difference between first index in all lists in tuple compared, followed by second     
-#         # index = location of list with this minimum difference relative to that of current (year, month) input 
-#         ClosestDay = difference.index(min(difference))
-#         
-#         Pressure = [ClosestDay]
-    
-    # first drop estimated
-    FirstPressureReduction = (1992, 11, 1)
-    # second rediction date from plngs data
-    SecondPressureReduction = (1998, 11, 26)
-    
-    if Date < FirstPressureReduction:
-        SecondarySidePressure = 4.593  # MPa
-    
-    # PLNGS pressure reduction in 1992 (september) by 125 kPa
-    elif FirstPressureReduction <= Date < (1996, 1, 26):
-        SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
-    
-    # return to full boiler secondary side pressure, 4.593 MPa
-    # pressure restored shortly after reactor back online from refurb.
-    elif (1996, 1, 26) <= Date < SecondPressureReduction:
-        SecondarySidePressure = 4.593
-    
-    elif Date >= SecondPressureReduction:
-        SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
+    if SteamGenerator == ld.SteamGenerator_2:
+        P = Pressure_BO1
     else:
-        None
+        P = Pressure_BO2
+    
+    if Date in AllStationDataDates:
+        difference = []
+        for x in AllStationDataDates:
+             
+            delta_time = [x1 - x2 for (x1, x2) in zip(Date, x)] 
+            delta_time = [abs(number) for number in delta_time]
+            difference.append(delta_time)
+ 
+        # min function --> smallest difference between first index in all lists in tuple compared, followed by second     
+        # index = location of list with this minimum difference relative to that of current (year, month) input 
+        ClosestDay = difference.index(min(difference))
+         
+        Pressure = P[ClosestDay]
+        
+    else:
+        # first drop estimated
+        FirstPressureReduction = (1992, 11, 1)
+        
+        if Date < FirstPressureReduction:
+            SecondarySidePressure = 4.593  # MPa
+        
+        # PLNGS pressure reduction in 1992 (september) by 125 kPa
+        else:
+            SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
 
     return SecondarySidePressure
 
-
-# Cleaned_OutageSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayOutage)
-# CleanedOutageSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayOutage)
-# 
-# CleanedRefurbishmentSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayRefurbishment)
-# CleanedRefurbishmentSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayRefurbishment)
-
-
+print(secondary_side_pressure(ld.SteamGenerator_2, (1983,4,8)))
 def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_CalendarDate, Date, HeatTransferTimeStep):
        
     Energy = []
