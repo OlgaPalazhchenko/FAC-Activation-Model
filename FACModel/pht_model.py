@@ -29,8 +29,8 @@ else:
 HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
 
 PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
-RunStart_CalendarDate = (1983, 4, 8)#(1983, 5, 13) #(1983, 4, 8)
-RunEnd_CalendarDate = (1983, 5, 15)#(1983, 6, 6)#(1983, 6, 6)#(1983, 5, 11)#(1995, 4, 12)
+RunStart_CalendarDate = (1983, 4, 8) #(1983, 5, 7)
+RunEnd_CalendarDate = (1995, 4, 12)
 
 a = PLNGSStartUp_CalendarDate
 b = datetime(*RunStart_CalendarDate)
@@ -43,7 +43,7 @@ b = datetime(*RunEnd_CalendarDate)
 delta = b - a
 delta = (delta.days * 24) / nc.TIME_STEP
 SimulationEndHours = round(delta)
-
+print (delta, SimulationEndHours)
 
 def initial_conditions():
     

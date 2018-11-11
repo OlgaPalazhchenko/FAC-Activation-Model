@@ -13,7 +13,7 @@ FullTubeComplement = 3542
 
 DayStartup = (1983, 4, 8)
 DayCPP = (1987, 6, 1)
-DayOutage = (1983, 5, 16)#(1995, 4, 13) #
+DayOutage = (1983, 5, 14)#(1995, 4, 13) #
 DayOutageRestart = (1996, 1, 1)
 DayRefurbishment = (2008, 3, 29)
 DayRefurbishmentRestart = (2012, 12, 10)

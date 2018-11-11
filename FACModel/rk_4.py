@@ -235,7 +235,7 @@ def pht_cleaning(Bundle, InnerOxide, OuterOxide, j):
             InnerOxide[i] = InnerOxide[i]
         else:
             InnerOxide[i] = InnerOxide[i] * (1 - CleaningEfficiency) #inner layer reduced in thickness instead
-            OuterOxide[i] = OuterOxide[i] # remains zero
+            OuterOxide[i] = 0 # remains zero
     
     #     print (j, Outage_hours,OuterOxide, 'after')
     return InnerOxide, OuterOxide

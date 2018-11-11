@@ -164,15 +164,16 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
     for Section in AllSections:
         q = Section.InnerIronOxLoading
         w = Section.OuterFe3O4Loading
-        x = [x + y for x, y in zip(q, w)]
-        y = [np.pi * i * j for i, j in zip(Section.Length.magnitude, Section.Diameter)]
-        z = [i * j for i, j in zip(x, y)]
         r = Section.SolutionOxide.FeTotal
         
         if Section in SteamGenerator:
+            x = [x + y for x, y in zip(Section.InnerIronOxLoading, Section.OuterFe3O4Loading)] # total oxide
+            y = [np.pi * i * j for i, j in zip(Section.Length.magnitude, Section.Diameter)] # pi * D* L
+            z = [i * j for i, j in zip(x, y)] # grams
+            bundle_grams = [i * Section.TubeNumber for i in z]
             f = Section.TubeNumber
             TubeSize.append(f)
-            k = sum([i * Section.TubeNumber for i in z])
+            k = sum(bundle_grams)
             SG_grams_all_tubes.append(k)
 
         InnerOxide.append(q)
