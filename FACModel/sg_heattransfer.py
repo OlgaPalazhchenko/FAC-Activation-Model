@@ -168,6 +168,7 @@ def boiler_pressure():
     
     # frequency of power data changed from every few minutes to daily average
     daily_average = df.resample('D').mean().copy()
+    daily_average = daily_average.fillna(method='ffill')
 #     no_outages = daily_average.index[daily_average['power'] > 0.89]
     
 #     NonOutageTrackedDates = []
@@ -1423,6 +1424,7 @@ def secondary_side_pressure(SteamGenerator, Date):
         # index = location of list with this minimum difference relative to that of current (year, month) input 
         ClosestDay = difference.index(min(difference))
          
+        # converts station kPa logs to MPa
         SecondarySidePressure = P[ClosestDay] / 1000
         if SecondarySidePressure < 0:
             SecondarySidePressure = SecondarySidePressure * (-1)
@@ -1439,7 +1441,9 @@ def secondary_side_pressure(SteamGenerator, Date):
 
     return SecondarySidePressure
 
-print(secondary_side_pressure(ld.SteamGenerator_2, (1998,7,8)))
+
+# for i in AllStationDataDates:
+#     print(i, secondary_side_pressure(ld.SteamGenerator_2, (i)))
 def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_CalendarDate, Date, HeatTransferTimeStep):
        
     Energy = []
