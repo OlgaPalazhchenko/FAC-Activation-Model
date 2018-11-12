@@ -12,8 +12,8 @@ FULLPOWER = 2061.4 * 1000
 FullTubeComplement = 3542
 
 DayStartup = (1983, 4, 8)
-DayCPP = (1987, 6, 1)
-DayOutage = (1983, 5, 14)#(1995, 4, 13) #
+DayCPP = (1988, 4, 1)
+DayOutage = (1995, 4, 13) 
 DayOutageRestart = (1996, 1, 1)
 DayRefurbishment = (2008, 3, 29)
 DayRefurbishmentRestart = (2012, 12, 10)
@@ -30,7 +30,6 @@ WeekStartup, WeekCPP, WeekOutage, WeekOutageRestart, WeekRefurbishment, WeekRefu
 T_sat_primary = 310 + 273.15
 T_PreheaterIn = 186 + 273.15
 RecirculationRatio = 5.3
-
 
 h_i = nc.SGParameters()
 h_o = nc.SGParameters()
@@ -525,8 +524,8 @@ def sludge_fouling_resistance(Bundle, RunStart_CalendarDate, Date, HeatTransferT
     Time_Step = HeatTransferTimeStep / 24 / 365 #hr --> yr
     
     # [g/cm^2] /year
-    RegularTubeGrowth = 0.0013
-    ReducedTubeGrowth = 0.0005  
+    RegularTubeGrowth = 0.0014
+    ReducedTubeGrowth = 0.0003  
     
     if Date in TrackedOutageDays:
         Growth = 0
@@ -547,7 +546,7 @@ def sludge_fouling_resistance(Bundle, RunStart_CalendarDate, Date, HeatTransferT
     # estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
     # CPP installation (late 1986) reduces secondary side crud by 40-50% 
     elif Date == DayCPP or WeeklyDate == WeekCPP:
-        Bundle.SludgeLoading[i] = 0.4 * Bundle.SludgeLoading[i]
+        Bundle.SludgeLoading[i] = 0.3 * Bundle.SludgeLoading[i]
     
     elif Date == DayRefurbishment or WeeklyDate == WeekRefurbishment:
         Bundle.SludgeLoading[i] = 0.2 * Bundle.SludgeLoading[i]
@@ -1386,7 +1385,7 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
         DividerPlateLeakage = 0.06
         
     elif Date == DayOutage or WeeklyDate == WeekOutage:
-        DividerPlateLeakage = 0.04
+        DividerPlateLeakage = 0.045
     
     else:
         None
