@@ -88,7 +88,8 @@ TubePitch.magnitude = 2.413
 
  
 def station_RIHT():
-    Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_RIHT_raw.csv'
+#     Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_RIHT_raw.csv'
+    Filename = "C:\\Users\\Olga\\Dropbox\\PLNGS Modelling\\PLNGS_RIHT_raw.csv"
     df = pd.read_csv(Filename, header=None)
     
     Header1 = 'RIHT 2'
@@ -150,8 +151,8 @@ station_RIHT()
 
 def boiler_pressure():
     
-    Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS Pressure_raw.csv'
-    
+#     Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS Pressure_raw.csv'
+    Filename = "C:\\Users\\Olga\\Dropbox\\PLNGS Modelling\\PLNGS Pressure_raw.csv"
     df = pd.read_csv(Filename, header=None)
     
     BO_1 = 'Pressure Boiler 1'
@@ -175,8 +176,8 @@ def boiler_pressure():
 #         x = (date.year, date.month, date.day)
 #         NonOutageTrackedDates.append(x)
 
-    Pressure_BO1 = daily_average_no_outages.as_matrix([BO_1]).flatten()
-    Pressure_BO2 = daily_average_no_outages.as_matrix([BO_2]).flatten()
+    Pressure_BO1 = daily_average.as_matrix([BO_1]).flatten()
+    Pressure_BO2 = daily_average.as_matrix([BO_2]).flatten()
     
     return Pressure_BO1, Pressure_BO2
     
@@ -189,8 +190,10 @@ def reactor_power():
     EstimatedOutageDays = []
     AllStationDataDates = []
     
-    Filename_stationpower = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw.csv'
-    Filename_power_estimated = "C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw_estimated (pre 1996).csv"
+#     Filename_stationpower = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw.csv'
+    Filename_stationpower = "C:\\Users\\Olga\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw.csv"
+#     Filename_power_estimated = "C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw_estimated (pre 1996).csv"
+    Filename_power_estimated = "C:\\Users\\Olga\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw_estimated (pre 1996).csv"
     
     df = pd.read_csv(Filename_stationpower, header=None)
     df.columns = ['date','power']
@@ -1000,7 +1003,7 @@ def outside_bundle_pool_boiling(
         ):
     
     #for large number of tubes the bundle effect may disappear
-    F = .15 # bundle boiling factor (empirical)
+    F = .185 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -1420,8 +1423,9 @@ def secondary_side_pressure(SteamGenerator, Date):
         # index = location of list with this minimum difference relative to that of current (year, month) input 
         ClosestDay = difference.index(min(difference))
          
-        Pressure = P[ClosestDay]
-        
+        SecondarySidePressure = P[ClosestDay] / 1000
+        if SecondarySidePressure < 0:
+            SecondarySidePressure = SecondarySidePressure * (-1)
     else:
         # first drop estimated
         FirstPressureReduction = (1992, 11, 1)
@@ -1435,7 +1439,7 @@ def secondary_side_pressure(SteamGenerator, Date):
 
     return SecondarySidePressure
 
-print(secondary_side_pressure(ld.SteamGenerator_2, (1983,4,8)))
+print(secondary_side_pressure(ld.SteamGenerator_2, (1998,7,8)))
 def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_CalendarDate, Date, HeatTransferTimeStep):
        
     Energy = []
@@ -1479,7 +1483,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_Calendar
     return RIHT
 
           
-# print (energy_balance(
-#     ld.SteamGenerator_2, x_pht=0.01, DividerPlateLeakage=0.035, RunStart_CalendarDate=DayStartup, Date=DayStartup,
-#     HeatTransferTimeStep=nc.TIME_STEP
-#     )- 273.15)
+print (energy_balance(
+    ld.SteamGenerator_2, x_pht=0.01, DividerPlateLeakage=0.035, RunStart_CalendarDate=DayStartup, Date=DayStartup,
+    HeatTransferTimeStep=nc.TIME_STEP
+    )- 273.15)
