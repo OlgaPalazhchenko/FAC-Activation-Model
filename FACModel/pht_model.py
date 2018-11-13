@@ -30,7 +30,7 @@ HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
 
 PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
 RunStart_CalendarDate = (1983, 4, 8) #(1983, 5, 7)
-RunEnd_CalendarDate = (1995, 4, 12)
+RunEnd_CalendarDate = (1989, 4, 12) #(1995, 4, 12)
 
 a = PLNGSStartUp_CalendarDate
 b = datetime(*RunStart_CalendarDate)
@@ -43,7 +43,7 @@ b = datetime(*RunEnd_CalendarDate)
 delta = b - a
 delta = (delta.days * 24) / nc.TIME_STEP
 SimulationEndHours = round(delta)
-print (delta, SimulationEndHours)
+
 
 def initial_conditions():
     
@@ -361,7 +361,7 @@ def output_time_logging(
     RIHT_phase4 = RIHT_phase4[RIHT_phase4['Power'] >= Deratings]
     RIHT_phase5 = RIHT_phase5[RIHT_phase5['Power'] >= Shutdown]
     
-    if j % (8) == 0: #updates list in csv file (list itself appended to monthly)
+    if j % (16) == 0: #updates list in csv file (list itself appended to monthly)
         writer = pd.ExcelWriter('Modelled RIHT2.xlsx', engine='xlsxwriter', datetime_format='mm-dd-yyyy')
          
         RIHT_phase1_preCPP.to_excel(writer, sheet_name = 'Phase 1 Pre CPP')
@@ -615,10 +615,10 @@ for j in range(SimulationStartHours, SimulationEndHours):
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
 #         if j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
-        print (
-            Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
-            ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
-            )
+#         print (
+#             Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
+#             ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
+#             )
             
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, DividerPlateLeakage, j

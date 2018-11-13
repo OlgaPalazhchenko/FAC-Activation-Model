@@ -12,8 +12,8 @@ FULLPOWER = 2061.4 * 1000
 FullTubeComplement = 3542
 
 DayStartup = (1983, 4, 8)
-DayCPP = (1987, 6, 1)
-DayOutage = (1983, 5, 14)#(1995, 4, 13) #
+DayCPP = (1988, 4, 1)
+DayOutage = (1995, 4, 13) 
 DayOutageRestart = (1996, 1, 1)
 DayRefurbishment = (2008, 3, 29)
 DayRefurbishmentRestart = (2012, 12, 10)
@@ -30,7 +30,6 @@ WeekStartup, WeekCPP, WeekOutage, WeekOutageRestart, WeekRefurbishment, WeekRefu
 T_sat_primary = 310 + 273.15
 T_PreheaterIn = 186 + 273.15
 RecirculationRatio = 5.3
-
 
 h_i = nc.SGParameters()
 h_o = nc.SGParameters()
@@ -89,6 +88,7 @@ TubePitch.magnitude = 2.413
  
 def station_RIHT():
     Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_RIHT_raw.csv'
+#     Filename = "C:\\Users\\Olga\\Dropbox\\PLNGS Modelling\\PLNGS_RIHT_raw.csv"
     df = pd.read_csv(Filename, header=None)
     
     Header1 = 'RIHT 2'
@@ -151,7 +151,7 @@ station_RIHT()
 def boiler_pressure():
     
     Filename = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS Pressure_raw.csv'
-    
+#     Filename = "C:\\Users\\Olga\\Dropbox\\PLNGS Modelling\\PLNGS Pressure_raw.csv"
     df = pd.read_csv(Filename, header=None)
     
     BO_1 = 'Pressure Boiler 1'
@@ -167,6 +167,7 @@ def boiler_pressure():
     
     # frequency of power data changed from every few minutes to daily average
     daily_average = df.resample('D').mean().copy()
+
 #     non_outages = daily_average.index[daily_average['power'] > 0.89]
 #     
 #     NonOutageTrackedDates = []
@@ -174,7 +175,7 @@ def boiler_pressure():
 #     for date in non_outages:
 #         x = (date.year, date.month, date.day)
 #         NonOutageTrackedDates.append(x)
-    
+
     Pressure_BO1 = daily_average.as_matrix([BO_1]).flatten()
     Pressure_BO2 = daily_average.as_matrix([BO_2]).flatten()
 
@@ -190,7 +191,9 @@ def reactor_power():
     AllStationDataDates = []
     
     Filename_stationpower = 'C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw.csv'
+#     Filename_stationpower = "C:\\Users\\Olga\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw.csv"
     Filename_power_estimated = "C:\\Users\\opalazhc\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw_estimated (pre 1996).csv"
+#     Filename_power_estimated = "C:\\Users\\Olga\\Dropbox\\PLNGS Modelling\\PLNGS_Power_raw_estimated (pre 1996).csv"
     
     df = pd.read_csv(Filename_stationpower, header=None)
     df.columns = ['date','power']
@@ -520,8 +523,8 @@ def sludge_fouling_resistance(Bundle, RunStart_CalendarDate, Date, HeatTransferT
     Time_Step = HeatTransferTimeStep / 24 / 365 #hr --> yr
     
     # [g/cm^2] /year
-    RegularTubeGrowth = 0.0013
-    ReducedTubeGrowth = 0.0005  
+    RegularTubeGrowth = 0.0014
+    ReducedTubeGrowth = 0.0003  
     
     if Date in TrackedOutageDays:
         Growth = 0
@@ -542,7 +545,7 @@ def sludge_fouling_resistance(Bundle, RunStart_CalendarDate, Date, HeatTransferT
     # estimated decrease in pre-existing sludge deposits on tubes due to CPP installation + draining + chemistry change
     # CPP installation (late 1986) reduces secondary side crud by 40-50% 
     elif Date == DayCPP or WeeklyDate == WeekCPP:
-        Bundle.SludgeLoading[i] = 0.4 * Bundle.SludgeLoading[i]
+        Bundle.SludgeLoading[i] = 0.3 * Bundle.SludgeLoading[i]
     
     elif Date == DayRefurbishment or WeeklyDate == WeekRefurbishment:
         Bundle.SludgeLoading[i] = 0.2 * Bundle.SludgeLoading[i]
@@ -1380,7 +1383,7 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
         DividerPlateLeakage = 0.06
         
     elif Date == DayOutage or WeeklyDate == WeekOutage:
-        DividerPlateLeakage = 0.04
+        DividerPlateLeakage = 0.045
     
     else:
         None
@@ -1405,10 +1408,11 @@ def secondary_side_pressure(SteamGenerator, Date):
         P = Pressure_BO1
     else:
         P = Pressure_BO2
-     
+    
     if Date in AllStationDataDates:
         difference = []
-        for x in AllStationDataDates:             
+        for x in AllStationDataDates:
+             
             delta_time = [x1 - x2 for (x1, x2) in zip(Date, x)] 
             delta_time = [abs(number) for number in delta_time]
             difference.append(delta_time)
@@ -1417,8 +1421,10 @@ def secondary_side_pressure(SteamGenerator, Date):
         # index = location of list with this minimum difference relative to that of current (year, month) input 
         ClosestDay = difference.index(min(difference))
          
-        SecondarySidePressure = P[ClosestDay]
-        
+        # converts station kPa logs to MPa
+        SecondarySidePressure = P[ClosestDay] / 1000
+        if SecondarySidePressure < 0:
+            SecondarySidePressure = SecondarySidePressure * (-1)
     else:
         # first drop estimated
         FirstPressureReduction = (1992, 11, 1)
@@ -1429,16 +1435,11 @@ def secondary_side_pressure(SteamGenerator, Date):
         # PLNGS pressure reduction in 1992 (september) by 125 kPa
         else:
             SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
-        
+
     return SecondarySidePressure
 
-print (secondary_side_pressure(ld.SteamGenerator_2, (1996,1,8)))
-# Cleaned_OutageSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayOutage)
-# CleanedOutageSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayOutage)
-# 
-# CleanedRefurbishmentSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayRefurbishment)
-# CleanedRefurbishmentSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayRefurbishment)
 
+print (secondary_side_pressure(ld.SteamGenerator_2, (1996,1,8)))
 
 def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_CalendarDate, Date, HeatTransferTimeStep):
        
