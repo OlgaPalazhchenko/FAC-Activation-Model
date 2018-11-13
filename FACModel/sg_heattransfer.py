@@ -159,7 +159,7 @@ def boiler_pressure():
     BO_3 = 'Pressure Boiler 3'
     BO_4 = 'Pressure Boiler 4'
     
-    df.columns = ['date', 'power', BO_1, BO_2, BO_3, BO_4]
+    df.columns = ['date', 'power', BO_1, BO_2]
 
     # converts from string object to time series  
     df.date = pd.to_datetime(df.date)
@@ -167,21 +167,21 @@ def boiler_pressure():
     
     # frequency of power data changed from every few minutes to daily average
     daily_average = df.resample('D').mean().copy()
-    daily_average_no_outages = daily_average.index[daily_average['power'] > 0.89]
+#     non_outages = daily_average.index[daily_average['power'] > 0.89]
+#     
+#     NonOutageTrackedDates = []
+#     
+#     for date in non_outages:
+#         x = (date.year, date.month, date.day)
+#         NonOutageTrackedDates.append(x)
     
-    NonOutageTrackedDates = []
-    
-    for date in daily_average_no_outages.index:
-        x = (date.year, date.month, date.day)
-        NonOutageTrackedDates.append(x)
+    Pressure_BO1 = daily_average.as_matrix([BO_1]).flatten()
+    Pressure_BO2 = daily_average.as_matrix([BO_2]).flatten()
 
-    
-    Pressure_BO1 = daily_average_no_outages.as_matrix([BO_1]).flatten()
-    
-    return NonOutageTrackedDates, Pressure_BO1
+    return Pressure_BO1, Pressure_BO2
     
 
-# NonOutageTrackedDates, Pressure_BO1 = boiler_pressure()
+Pressure_BO1, Pressure_BO2 = boiler_pressure()
 
 
 def reactor_power():
@@ -218,7 +218,7 @@ def reactor_power():
     worksheet1 = writer.sheets['Daily Averaged FP']
     writer.save()
     
-    TrackedOutages = daily_average.index[daily_average['power'] < 0.5]
+    TrackedOutages = daily_average.index[daily_average['power'] < 0.89]
     
     for date in TrackedOutages:
         x = (date.year, date.month, date.day)
@@ -226,7 +226,6 @@ def reactor_power():
    
    
     StationPower = daily_average.as_matrix(['power']).flatten()
-    
 
     df2 = pd.read_csv(Filename_power_estimated, header=None)
     df2.columns = ['date','power']
@@ -244,7 +243,7 @@ def reactor_power():
     worksheet1 = writer.sheets['Daily Averaged FP']
     writer.save()
     
-    EstimatedOutages = daily_average_2.index[daily_average_2['power'] < 0.5]
+    EstimatedOutages = daily_average_2.index[daily_average_2['power'] < 0.89]
     
     
     for date in EstimatedOutages:
@@ -745,14 +744,13 @@ def outer_area(SteamGenerator):
 
 def pht_steam_quality(Temperature, Date):
    
-    CoreMassFlow =  7600  # [kg /s]
+    CoreMassFlow = 7600  # [kg /s]
 #     Delta_T = T_sat_primary - (262 + 273.15)  # [K]
 #     C_p_cold = nc.heatcapacityD2O_liquid(262 + 273.15)
 #     C_p_hot = nc.heatcapacityD2O_liquid(T_sat_primary)
 #     C_p_avg = (C_p_cold + C_p_hot) / 2  # [kJ/kg K]
 
      #CoreMassFlow * C_p_avg * Delta_T  # [kW]
-    
     difference = []
 
     # outages are accounted for in the 1996-01 to 2018-06 data via power derating
@@ -1000,7 +998,7 @@ def outside_bundle_pool_boiling(
         ):
     
     #for large number of tubes the bundle effect may disappear
-    F = .15 # bundle boiling factor (empirical)
+    F = .185 # bundle boiling factor (empirical)
     if Correlation == "FZ":
         
         h_nb = ForsterZuber_outside_tube_boiling(T_sat_secondary, T_SecondaryWall, SecondarySidePressure)
@@ -1403,46 +1401,38 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
 
 def secondary_side_pressure(SteamGenerator, Date):
     
-#     if Date in AllStationDataDates:
-#         for x in AllStationDataDates:
-#             
-#             delta_time = [x1 - x2 for (x1, x2) in zip(Date, x)] 
-#             
-#             delta_time = [abs(number) for number in delta_time]
-#             
-#             difference.append(delta_time)
-# 
-#         # min function --> smallest difference between first index in all lists in tuple compared, followed by second     
-#         # index = location of list with this minimum difference relative to that of current (year, month) input 
-#         ClosestDay = difference.index(min(difference))
-#         
-#         Pressure = [ClosestDay]
-    
-    # first drop estimated
-    FirstPressureReduction = (1992, 11, 1)
-    # second rediction date from plngs data
-    SecondPressureReduction = (1998, 11, 26)
-    
-    if Date < FirstPressureReduction:
-        SecondarySidePressure = 4.593  # MPa
-    
-    # PLNGS pressure reduction in 1992 (september) by 125 kPa
-    elif FirstPressureReduction <= Date < (1996, 1, 26):
-        SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
-    
-    # return to full boiler secondary side pressure, 4.593 MPa
-    # pressure restored shortly after reactor back online from refurb.
-    elif (1996, 1, 26) <= Date < SecondPressureReduction:
-        SecondarySidePressure = 4.593
-    
-    elif Date >= SecondPressureReduction:
-        SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
+    if SteamGenerator == ld.SteamGenerator_2:
+        P = Pressure_BO1
     else:
-        None
-
+        P = Pressure_BO2
+     
+    if Date in AllStationDataDates:
+        difference = []
+        for x in AllStationDataDates:             
+            delta_time = [x1 - x2 for (x1, x2) in zip(Date, x)] 
+            delta_time = [abs(number) for number in delta_time]
+            difference.append(delta_time)
+ 
+        # min function --> smallest difference between first index in all lists in tuple compared, followed by second     
+        # index = location of list with this minimum difference relative to that of current (year, month) input 
+        ClosestDay = difference.index(min(difference))
+         
+        SecondarySidePressure = P[ClosestDay]
+        
+    else:
+        # first drop estimated
+        FirstPressureReduction = (1992, 11, 1)
+        
+        if Date < FirstPressureReduction:
+            SecondarySidePressure = 4.593  # MPa
+        
+        # PLNGS pressure reduction in 1992 (september) by 125 kPa
+        else:
+            SecondarySidePressure = 4.593 - (125 / 1000)  # MPa
+        
     return SecondarySidePressure
 
-
+print (secondary_side_pressure(ld.SteamGenerator_2, (1996,1,8)))
 # Cleaned_OutageSG1 = primaryside_cleaned_tubes(ld.SteamGenerator, DayOutage)
 # CleanedOutageSG2 = primaryside_cleaned_tubes(ld.SteamGenerator_2, DayOutage)
 # 
