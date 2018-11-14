@@ -61,7 +61,6 @@ for i in [R_F_primary, R_F_secondary]:
 
 MassFlow_h.magnitude = 1900 * 1000
 # Steam flow for 4 steam generators in typical CANDU-6 = 1033.0 kg/s
-# 240 kg/s pulled from AECL COG document and works well with the 1900 kg/s hot-side flow ?
 MassFlow_preheater.magnitude = 239 * 1000
 MassFlow_ReheaterDrains = 0#72 * 1000 / 4
 MassFlow_downcomer.magnitude = (RecirculationRatio - 1) * MassFlow_preheater.magnitude
@@ -1439,7 +1438,7 @@ def secondary_side_pressure(SteamGenerator, Date):
     return SecondarySidePressure
 
 
-print (secondary_side_pressure(ld.SteamGenerator_2, (1996,1,8)))
+# print (secondary_side_pressure(ld.SteamGenerator_2, (1996,1,8)))
 
 def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_CalendarDate, Date, HeatTransferTimeStep):
        

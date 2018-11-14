@@ -81,7 +81,7 @@ class SGParameters():
         self.magnitude = None
         self.label = None
         self.unit = None
-        self.steam_quality = None
+#         self.steam_quality = None
 
 PrimarySidePressure = 9.86  # MPa
 # SecondarySidePressure = 4.593  # MPa
