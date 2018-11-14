@@ -523,7 +523,7 @@ def sludge_fouling_resistance(Bundle, RunStart_CalendarDate, Date, HeatTransferT
     
     # [g/cm^2] /year
     RegularTubeGrowth = 0.0014
-    ReducedTubeGrowth = 0.0003  
+    ReducedTubeGrowth = 0.00035  
     
     if Date in TrackedOutageDays:
         Growth = 0

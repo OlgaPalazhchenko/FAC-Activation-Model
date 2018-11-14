@@ -148,7 +148,7 @@ class Section():  # Defining each primary heat transport section as a class
         self.FractionFeInnerOxide = None
         self.FractionNiInnerOxide = None
 
-        self.ElapsedTime = None
+        self.ElapsedTime = []
         self.SpallTime = []
         self.TubeNumber = None
 

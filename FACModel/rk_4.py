@@ -503,12 +503,12 @@ def layer_spalling(Layer, TotalOxideThickness, Spalling):
         return Ox
 
 
-def spall(Section, j, SimulationStart, ElapsedTime, SpallTime, ElementTracking):
+def spall(Section, j, SimulationStart, ElapsedTime, SpallTime, ElementTracking, Date):
+    
     # Current time step's RK4 input from oxidegrowth function for each of InnerOx, InnerIronOx, OuterFe3O4, Co, and 
     # Ni at each node of current section 
 
     # Silences spalling for desired sections
-
     ConvertedConcentrations = []
     Concentrations = [Section.SolutionOxide.FeSatFe3O4, Section.SolutionOxide.FeTotal]
     for i in range(2):
@@ -520,7 +520,6 @@ def spall(Section, j, SimulationStart, ElapsedTime, SpallTime, ElementTracking):
     FeSat, FeTotal = ConvertedConcentrations
 
     for i in range(Section.NodeNumber):
-        
         if j == SimulationStart:  
             # First time step call generate particle sizes and calc spalling times, respectively
             x = particle_size()
@@ -533,9 +532,16 @@ def spall(Section, j, SimulationStart, ElapsedTime, SpallTime, ElementTracking):
             # list of random particle sizes based on input distribution in particle_size function
             Section.Particle.append(x)
             SpallTime.append(y)
-            ElapsedTime = [0] * Section.NodeNumber  # No time has elapsed yet at first time step for all nodes
+            ElapsedTime.append(0) # No time has elapsed yet at first time step for all nodes
+            
+        else:
+            None
+            
         
-        else:  # after first time step
+        if Date in SGHX.TrackedOutageDays:
+            None
+        
+        else:
 
             if ElapsedTime[i] >= SpallTime[i]:
                 # enough time elapsed for particle of that size (with respective spall time) to come off

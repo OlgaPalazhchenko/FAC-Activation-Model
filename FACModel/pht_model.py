@@ -29,8 +29,8 @@ else:
 HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
 
 PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
-RunStart_CalendarDate = (1989, 4, 7) #(1983, 5, 7)
-RunEnd_CalendarDate = (1995, 4, 12) #(1995, 4, 12)
+RunStart_CalendarDate = (1995, 4, 7) #(1983, 5, 7)
+RunEnd_CalendarDate = (1996, 1, 1) #(1995, 4, 12)
 
 a = PLNGSStartUp_CalendarDate
 b = datetime(*RunStart_CalendarDate)
@@ -273,17 +273,13 @@ class PHTS():
         rk_4.oxide_layers(self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, Date)
            
         # Spalling
-        if Date in SGHX.TrackedOutageDays:
+        if self.Section1 in ld.OutletSections:
+            self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
+                self.Section1, j, SimulationStartHours, self.Section1.ElapsedTime, self.Section1.SpallTime,
+                ElementTracking, Date
+                )
+        else:
             None
-
-        else: 
-            if self.Section1 in ld.OutletSections:
-                self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
-                    self.Section1, j, SimulationStartHours, self.Section1.ElapsedTime, self.Section1.SpallTime,
-                    ElementTracking
-                    )
-            else:
-                None
 
 
 FACRate_OutletFeeder = []
@@ -615,11 +611,11 @@ for j in range(SimulationStartHours, SimulationEndHours):
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
 #         if j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
-#         print (
-#             Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
-#             ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
-#             )
-            
+        print (
+            Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
+            ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
+            )
+             
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, DividerPlateLeakage, j
             )
