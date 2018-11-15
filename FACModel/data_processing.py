@@ -187,6 +187,21 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
     x_pht = Output[2]
     Date = Output[3]
     
+    
+    AverageTube_Fe_SO_Concentration = ld.UnitConverter(
+        SteamGenerator[SGHX.Default_Tube], "Mol per Kg", "Grams per Cm Cubed",
+        SteamGenerator[SGHX.Default_Tube].SolutionOxide.FeTotal, None, None, None, nc.FeMolarMass, None
+        )
+    
+    AverageTube_BulkTemp_C = ld.UnitConverter(SteamGenerator[SGHX.Default_Tube], "Kelvin", "Celsius", None, None, None,
+                                              None, None, SteamGenerator[SGHX.Default_Tube].PrimaryBulkTemperature
+        )
+    
+    AverageTube_Solubility = ld.UnitConverter(
+        SteamGenerator[SGHX.Default_Tube], "Mol per Kg", "Grams per Cm Cubed",
+        SteamGenerator[SGHX.Default_Tube].SolutionOxide.FeSatFe3O4, None, None, None, nc.FeMolarMass, None
+        )
+    
     Data = [InnerOxide, OuterOxide]    
     Labels = ["Inner Oxide", "Outer Oxide"]
       
@@ -230,6 +245,21 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
         writer.writerow(['Fe Tot (S/O) (g/cm^3)'])
         writer.writerows(FeConcentration)
         writer.writerow([''])
+        
+        writer.writerow(['Average Tube Temp Profile (oC)'])
+        writer.writerow(AverageTube_BulkTemp_C)
+        writer.writerows([''])
+        
+        writer.writerow(['Average Tube Concentration Profile'])
+        writer.writerow(AverageTube_Fe_SO_Concentration)
+        writer.writerows([''])
+        
+        writer.writerow(['Average Tube Distance'])
+        writer.writerow(SteamGenerator[SGHX.Default_Tube].Distance)
+        writer.writerows([''])
+        
+        writer.writerow(['SG Solublity'])
+        writer.writerow(AverageTube_Solubility)
       
     return None   
 

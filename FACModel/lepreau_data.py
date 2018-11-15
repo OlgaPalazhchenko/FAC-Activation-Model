@@ -8,6 +8,9 @@ def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, Ox
     if UnitInput == "Celsius" and UnitOutput == "Kelvin":
         return [i + 273.15 for i in Temperature]
 
+    elif UnitInput == "Kelvin" and UnitOutput == "Celsius":
+        return [i - 273.15 for i in Temperature]
+    
     # Converts surface area from /cm^2 to /m^2
     elif UnitInput == "Grams per Cm Squared" and UnitOutput == "Grams per M Squared":
         return [i * (100 ** 2) for i in Oxide]
