@@ -1360,7 +1360,7 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
         LeakageRate = 0
         
     elif Date < DayOutage:
-        LeakageRate = 0.002 # per year rate
+        LeakageRate = 0.004 # per year rate
     
     elif Date >= DayOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate
