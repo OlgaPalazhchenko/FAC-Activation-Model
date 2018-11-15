@@ -99,8 +99,8 @@ KFeOH3POLYNOMIAL = [-4.667E-10, 1.0496E-06, -0.000935775, 0.413186, -97.4709]
 
 def plngs_precipitation_kinetics(Section, j):
     
-    ActivationEnergy = 3915 * nc.R  
-    A = np.exp(3.4281)    
+    ActivationEnergy = 3244 * nc.R  
+    A = np.exp(7.91)    
     kp = [A * np.exp(-ActivationEnergy / (nc.R * i)) for i in Section.PrimaryBulkTemperature]
    
     return kp
