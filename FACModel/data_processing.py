@@ -187,7 +187,7 @@ def for_input_file_csv(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, F
     x_pht = Output[2]
     Date = Output[3]
     
-    
+    print (SteamGenerator[SGHX.Default_Tube].KpFe3O4electrochem)
     AverageTube_Fe_SO_Concentration = ld.UnitConverter(
         SteamGenerator[SGHX.Default_Tube], "Mol per Kg", "Grams per Cm Cubed",
         SteamGenerator[SGHX.Default_Tube].SolutionOxide.FeTotal, None, None, None, nc.FeMolarMass, None
