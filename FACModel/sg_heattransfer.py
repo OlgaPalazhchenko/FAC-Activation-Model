@@ -1346,7 +1346,7 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
     # time input (j) is in hours, converted to yearly
     Time_Step = HeatTransferTimeStep / 24 / 365 # hr --> yr
     
-    PostOutageYearlyLeakage = 0.0004 # per year rate
+    PostOutageYearlyLeakage = 0.0005 # per year rate
     
     # (year, week number in the year, day number in the week) 
     CalendarDate = datetime(*Date).isocalendar() 
@@ -1360,7 +1360,7 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
         LeakageRate = 0
         
     elif Date < DayOutage:
-        LeakageRate = 0.004 # per year rate
+        LeakageRate = 0.005 # per year rate
     
     elif Date >= DayOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate
@@ -1438,7 +1438,6 @@ def secondary_side_pressure(SteamGenerator, Date):
     return SecondarySidePressure
 
 
-# print (secondary_side_pressure(ld.SteamGenerator_2, (1996,1,8)))
 
 def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_CalendarDate, Date, HeatTransferTimeStep):
        
@@ -1482,7 +1481,7 @@ def energy_balance(SteamGenerator, x_pht, DividerPlateLeakage, RunStart_Calendar
        
     return RIHT
 
-          
+
 # print (energy_balance(
 #     ld.SteamGenerator_2, x_pht=0.01, DividerPlateLeakage=0.035, RunStart_CalendarDate=DayStartup, Date=DayStartup,
 #     HeatTransferTimeStep=nc.TIME_STEP
