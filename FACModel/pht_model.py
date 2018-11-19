@@ -30,7 +30,7 @@ HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
 
 PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
 RunStart_CalendarDate = (1983, 4, 7)
-RunEnd_CalendarDate = (1989, 4, 13)
+RunEnd_CalendarDate = (1995, 4, 13)
 
 a = PLNGSStartUp_CalendarDate
 b = datetime(*RunStart_CalendarDate)
