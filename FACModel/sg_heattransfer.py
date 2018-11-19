@@ -523,7 +523,7 @@ def sludge_fouling_resistance(Bundle, RunStart_CalendarDate, Date, HeatTransferT
     
     # [g/cm^2] /year
     RegularTubeGrowth = 0.0013
-    ReducedTubeGrowth = 0.0005  
+    ReducedTubeGrowth = 0.0004  
     
     if Date in TrackedOutageDays:
         Growth = 0
@@ -1360,7 +1360,7 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
         LeakageRate = 0
         
     elif Date < DayOutage:
-        LeakageRate = 0.005 # per year rate
+        LeakageRate = 0.0035 # per year rate
     
     elif Date >= DayOutage:
         LeakageRate = PostOutageYearlyLeakage # per year rate
@@ -1379,7 +1379,7 @@ def divider_plate(Date, RunStart_CalendarDate, HeatTransferTimeStep, DividerPlat
         DividerPlateLeakage = 0.05
     
     elif Date == (1984, 5, 24) or WeeklyDate == (1984, 21):
-        DividerPlateLeakage = 0.06
+        DividerPlateLeakage = 0.0625
         
     elif Date == DayOutage or WeeklyDate == WeekOutage:
         DividerPlateLeakage = 0.045

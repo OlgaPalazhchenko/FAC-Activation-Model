@@ -29,8 +29,8 @@ else:
 HeatTransferTimeStep = nc.TIME_STEP #hours, e.g., 7 * 24 h = hours in a week
 
 PLNGSStartUp_CalendarDate = datetime(*SGHX.DayStartup)
-RunStart_CalendarDate = (1983, 4, 7)
-RunEnd_CalendarDate = (1995, 4, 13)
+RunStart_CalendarDate = (1995, 7, 12)
+RunEnd_CalendarDate = (1996, 1, 19)
 
 a = PLNGSStartUp_CalendarDate
 b = datetime(*RunStart_CalendarDate)
@@ -271,7 +271,7 @@ class PHTS():
         
         # RK4 oxide thickness calculation (no spalling)
         rk_4.oxide_layers(self.Section1, ConstantRate, Saturations, BulkConcentrations, ElementTracking, j, Date)
-           
+       
         # Spalling
         if self.Section1 in ld.OutletSections:
             self.Section1.ElapsedTime, self.Section1.SpallTime = rk_4.spall(
@@ -427,7 +427,7 @@ def sg_heat_transfer(Outlet, Inlet, SteamGenerator, j, Date):
 def system_input(InletFeeder, FuelChannel, OutletFeeder, SteamGenerator, ElementTracking):
     
     if InletFeeder == ld.InletFeeder:
-        FileName = 'OutputSG2.csv'
+        FileName = 'C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\OutputSG2.csv'
     else:
         FileName = 'OutputSG1.csv'
 
@@ -611,10 +611,11 @@ for j in range(SimulationStartHours, SimulationEndHours):
             Section.Bulk.FeSatFe3O4 = c.iron_solubility_SB(Section)        
 
 #         if j % (2 * HeatTransferTimeStep / nc.TIME_STEP) == 0:
-#         print (
-#             Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
-#             ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100
-#             )
+        print (
+            Date, 'steam frac:', x_pht, 'Fe3O4:', ld.SteamGenerator_2[0].OuterOxLoading[21], 'sludge:',
+            ld.SteamGenerator_2[0].SludgeLoading[21], 'RIHT:', RIHT_1, 'divider plate:', DividerPlateLeakage * 100,
+            'kp', ld.SteamGenerator_2[SGHX.Default_Tube].KpFe3O4electrochem
+            )
              
         output = output_time_logging(
             OutletFeeder_2_Loop1.Section1.CorrRate, T_RIH_average, RIHT_1, RIHT_2, x_pht, Power, DividerPlateLeakage, j

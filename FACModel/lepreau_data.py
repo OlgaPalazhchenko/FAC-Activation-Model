@@ -51,7 +51,7 @@ def UnitConverter(Section, UnitInput, UnitOutput, Concentration, Rate, Oxide, Ox
     else:
         None
 
-SizingParameters = open('SizingParameters.txt', 'r')      
+SizingParameters = open("C:\\Users\\opalazhc\\git\\FAC-Activation-Model\\FACModel\\SizingParameters.txt", 'r')      
 SizingParametersReader = list(csv.reader(SizingParameters, delimiter=','))  
 
 
