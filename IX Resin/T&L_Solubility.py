@@ -237,3 +237,56 @@ def iron_solubility(Section, Condition):
     return FeTotalActivity
 
 print (iron_solubility(SG, "initial"))
+
+
+def iron_solubility_SB(Section):
+    
+    Section.SolutionOxide.ConcentrationH = bulkpH_calculator(Section)
+    
+    # based on high temperature henry's law constant data for H2 (some taken from T&L ref. some from sol. program DHL
+    k_H2 = [-4.1991 * i + 2633.2 for i in Section.PrimaryBulkTemperature]
+
+    # convert H2 conc. from cm^3/kg to mol/kg then concentration to P ("fugacity") using Henry's constant
+    P_H2 = [(nc.H2 * nc.H2Density / nc.H2MolarMass) * i for i in k_H2]
+
+    # no ferric (Fe3+) species considered by Sweeton and Baes
+    # [cal/mol K], but constants are unitless
+    A = [-26876, -11733, 4615, 9045] 
+    B = [9.81, 3.35, 0, 0]
+    D = [-81.21, -42.72, -23.57, -49.37]
+    
+    Fe3O4_SolubilityConstants_SB = []
+    
+    R = nc.R / 4.184 # [J/k mol to cal/K mol]
+
+    for a, b, d in zip(A, B, D):
+        k = [np.exp(((-a / i) + b * (np.log(i) - 1) + d) / R) for i in Section.PrimaryBulkTemperature]
+        Fe3O4_SolubilityConstants_SB.append(k)
+        
+    k_Fe2 = Fe3O4_SolubilityConstants_SB[0]
+    k_FeOH = Fe3O4_SolubilityConstants_SB[1]
+    k_FeOH2 = Fe3O4_SolubilityConstants_SB[2]
+    k_FeOH3 = Fe3O4_SolubilityConstants_SB[3]
+    
+    Solubility = []
+    
+    b = [0, 1, 2, 3]
+    Constants = [k_Fe2, k_FeOH, k_FeOH2, k_FeOH3]
+    
+    for hydroxyls, k in zip(b, Constants):
+        q = [
+            x * (y ** (1 / 3)) * z ** (2 - hydroxyls) for x, y, z in zip(k, P_H2, Section.SolutionOxide.ConcentrationH)
+            ]
+        
+        Solubility.append(q)
+    
+    [SolubilityFe2, SolubilityFeOH, SolubilityFeOH2, SolubilityFeOH3] = Solubility
+    
+    FeTotalSolubility = [
+        x + y + z + w for x, y, z, w in zip(SolubilityFe2, SolubilityFeOH, SolubilityFeOH2, SolubilityFeOH3)
+        ]
+    
+    AdjustmentFactor = 1#0.88 
+    FeTotalSolubility = [i * AdjustmentFactor for i in FeTotalSolubility]
+    # mol/kg
+    return FeTotalSolubility
